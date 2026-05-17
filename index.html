@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>just for you and meow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+<script>
+// ═══════════════════════════════════════════════════
+//  PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
+//  (see apps-script.gs for how to get this URL)
+// ═══════════════════════════════════════════════════
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzF_3nk8gfyd-BqE8qNDbrZBeKL4ksE5M3FHs5AGhShqqIMnnVu7LTqeRO5xSrO_pULiA/exec';
+
+const CONFIG = {
+  fps: {
+    fpsCode: '102056686',
+    payee:   'Glory On International Limited',
+    qrImage: 'images/fps-qr.png',
+  },
+  products: [
+    { id:'S',        safeId:'s',    dims:'70 × 30–40 cm',  price:590, capacity:'1 person + 1 pet' },
+    { id:'M',        safeId:'m',    dims:'100 × 40–50 cm', price:690, capacity:'2 people + 1–2 pets' },
+    { id:'L',        safeId:'l',    dims:'130 × 50–60 cm', price:990, capacity:'2+ people + 3+ pets' },
+    { id:'Mini Rug', safeId:'mini', dims:'20 cm',          price:350, capacity:'1 pet' },
+    { id:'S - Oval',     safeId:'s-oval',   dims:'70 × 30–40 cm',  price:590, capacity:'up to 6 heads' },
+    { id:'M - Oval',     safeId:'m-oval',   dims:'100 × 40–50 cm', price:690, capacity:'up to 8 heads' },
+    { id:'L - Oval',     safeId:'l-oval',   dims:'130 × 50–60 cm', price:990, capacity:'up to 10 heads' },
+    { id:'Coaster',      safeId:'coaster',  dims:'15 cm',          price:300, capacity:'1 pet' },
+  ],
+};
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#111111;--mid:#555555;--light:#EBEBEB;--bg:#FAFAF8;--white:#FFFFFF;--err:#cc3333;
+}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;font-weight:300;color:var(--black);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,3.5rem);height:50px;border-bottom:1px solid var(--light)}
+.nav-brand{font-size:.8rem;font-weight:400;letter-spacing:.01em;text-decoration:none;color:var(--black)}
+.nav-right{display:flex;gap:2rem}
+.nav-right a{font-size:.75rem;color:var(--mid);text-decoration:none;letter-spacing:.03em;transition:color .15s}
+.nav-right a:hover,.nav-right a.active{color:var(--black)}
+main{padding-top:50px}
+
+/* HERO */
+.hero{padding:clamp(2rem,4vw,3.5rem) clamp(1.5rem,5vw,3.5rem);display:flex;flex-direction:row;align-items:center;gap:clamp(1.5rem,3vw,2.5rem);flex-wrap:wrap}
+.hero-left{flex:0 1 auto;display:flex;align-items:center}
+.hero-logo{width:100%;max-width:650px;height:auto;display:block;mix-blend-mode:multiply}
+.hero-right{flex:0 1 auto;display:flex;flex-direction:column;align-items:flex-start;gap:1rem;max-width:500px}
+.hero-tagline{font-size:clamp(.82rem,1.1vw,.9rem);font-weight:300;line-height:1.75;color:var(--black)}
+.link-arrow{font-size:.78rem;font-weight:400;letter-spacing:.04em;color:var(--black);text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--black);padding-bottom:1px;transition:opacity .15s;white-space:nowrap}
+.link-arrow:hover{opacity:.45}
+@media(max-width:760px){
+  .hero{flex-direction:column;align-items:flex-start}
+  .hero-logo{max-width:500px}
+  .hero-right{max-width:100%}
+}
+
+/* COMMON */
+.rule{border:none;border-top:1px solid var(--light)}
+.section{padding:clamp(3.5rem,7vw,6rem) clamp(1.5rem,5vw,3.5rem)}
+.section-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:3rem}
+
+/* PROCESS */
+.process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}
+.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}
+.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}
+.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
+
+/* SIZES */
+.size-list{border-top:1px solid var(--light)}
+.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 2rem;align-items:center;gap:1.5rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}
+.size-row:hover{background:rgba(0,0,0,.02)}
+.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}
+.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}
+.size-cap{font-size:.78rem}
+.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}
+.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}
+.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}
+
+/* ORDER GRID */
+.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:start}
+.prog{display:flex;gap:1.5rem;margin-bottom:3rem}
+.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}
+.prog-item.on{color:var(--black);border-color:var(--black)}
+.prog-item.done{opacity:.35}
+.panel{display:none}
+.panel.on{display:block;animation:fadeUp .22s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.panel-title{font-size:1rem;font-weight:400;margin-bottom:.4rem}
+.panel-sub{font-size:.8rem;color:var(--mid);margin-bottom:2rem;line-height:1.75}
+
+/* RECAP */
+.recap{display:none;justify-content:space-between;align-items:center;border:1px solid var(--light);padding:.8rem 1rem;margin-bottom:2rem;font-size:.78rem}
+.recap.show{display:flex}
+.r-size{font-weight:500}
+.r-price{color:var(--mid)}
+.r-change{color:var(--mid);text-decoration:underline;cursor:pointer;font-size:.72rem}
+.r-change:hover{color:var(--black)}
+
+/* FIELDS */
+.field{margin-bottom:1.6rem}
+.field label{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.6rem}
+.field label small{text-transform:none;letter-spacing:0;font-weight:300;opacity:.7}
+.field input,.field textarea{width:100%;border:none;border-bottom:1px solid var(--light);background:transparent;padding:.55em 0;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:300;color:var(--black);outline:none;transition:border-color .15s}
+.field input::placeholder,.field textarea::placeholder{color:#bbb}
+.field input:focus,.field textarea:focus{border-color:var(--black)}
+.field textarea{resize:none;min-height:68px}
+.upfield{border:1px solid var(--light);padding:1.6rem;position:relative;text-align:center;cursor:pointer;transition:border-color .15s}
+.upfield:hover{border-color:var(--black)}
+.upfield input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upfield-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:500;display:block;margin-bottom:.3rem}
+.upfield-hint{font-size:.75rem;color:var(--mid)}
+.file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
+
+/* BUTTONS */
+.btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}
+.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}
+.btn-submit:hover{opacity:.65}
+.btn-submit:disabled{opacity:.25;cursor:not-allowed}
+.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}
+.btn-back:hover{color:var(--black)}
+
+/* ASIDE */
+.aside-block{border-top:1px solid var(--light);padding-top:1.4rem;margin-bottom:2rem}
+.aside-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}
+.aside-body{font-size:.78rem;color:var(--mid);line-height:1.85}
+
+/* STEP 4 */
+.order-num-box{background:var(--black);color:var(--white);padding:1.2rem 1.5rem;margin-bottom:2rem}
+.order-num-label{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:.3rem}
+.order-num-value{font-size:1.1rem;font-weight:500;letter-spacing:.04em}
+.receipt{border-top:1px solid var(--light);margin-bottom:2.5rem}
+.r-row{display:flex;justify-content:space-between;font-size:.8rem;padding:.65rem 0;border-bottom:1px solid var(--light)}
+.r-row:last-child{font-weight:500;border-color:var(--black)}
+.r-label{color:var(--mid)}
+.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}
+.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}
+.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}
+.fps-qr img{width:100%;height:100%;object-fit:contain}
+.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}
+.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}
+.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}
+.fps-instructions ol{padding-left:1.1em}
+.fps-instructions li{margin-bottom:.4rem}
+
+/* STATUS */
+.status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}
+.status-msg.show{display:block}
+.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}
+.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}
+
+/* SPINNER */
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* PAW CURSOR */
+body { cursor: none; }
+.paw-cursor-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+.paw {
+  position: absolute;
+  pointer-events: none;
+  width: 24px;
+  height: 28px;
+}
+
+@media(max-width:768px){
+  .paw-cursor-container { display: none; }
+  body { cursor: auto; }
+}
+
+/* FOOTER */
+footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+.footer-brand{font-size:.78rem;font-weight:400}
+.footer-links{display:flex;gap:1.5rem}
+.footer-links a{font-size:.72rem;color:var(--mid);text-decoration:none;transition:color .15s}
+.footer-links a:hover{color:var(--black)}
+
+/* RESPONSIVE */
+@media(max-width:780px){
+  .process{grid-template-columns:1fr 1fr}
+  .order-grid{grid-template-columns:1fr}
+  .order-aside{display:none}
+  .size-row{grid-template-columns:4rem 1fr auto 1.5rem;gap:1rem}
+  .size-cap{display:none}
+}
+@media(max-width:480px){.process{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-brand">just for you and meow</a>
+  <div class="nav-right">
+    <a href="https://www.instagram.com/justforyouandmeow/" target="_blank">Instagram</a>
+    <a href="#order" class="active">Order</a>
+  </div>
+</nav>
+
+<main>
+
+  <section class="hero">
+    <div class="hero-left">
+      <img src="images/logo.png" alt="just for you and meow" class="hero-logo">
+    </div>
+    <div class="hero-right">
+<p class="hero-tagline">Customised tufted rugs of your favourite poses of your pets<br>— made as fluffy as your meows and woofs.</p>      <a href="#order" class="link-arrow">Order yours &nbsp;&rarr;</a>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section class="section">
+    <p class="section-label">How to order</p>
+    <div class="process">
+      <div><div class="step-n">01</div><div class="step-title">Choose a size</div><p class="step-desc">S, M, or L <br>based on the number of pets you want included.</p></div>
+      <div><div class="step-n">02</div><div class="step-title">Send your photos</div><p class="step-desc">Upload clear, front-facing photos of your pets.</p></div>
+      <div><div class="step-n">03</div><div class="step-title">Approve the draft</div><p class="step-desc">We send a draft around 7 days.</p></div>
+      <div><div class="step-n">04</div><div class="step-title">We make your rug</div><p class="step-desc">Production begins after draft approval. At least 6 weeks.</p></div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <section class="section" id="sizes">
+    <p class="section-label">Sizes</p>
+    <div class="size-list" id="size-list"></div>
+  </section>
+
+  <hr class="rule">
+
+  <section class="section" id="order">
+    <p class="section-label">Place order</p>
+    <div class="order-grid">
+      <div class="order-left">
+
+        <div class="prog">
+          <span class="prog-item on" data-s="1">Size</span>
+          <span class="prog-item"    data-s="2">Details</span>
+          <span class="prog-item"    data-s="3">Photos</span>
+          <span class="prog-item"    data-s="4">Pay</span>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="panel on" id="p1">
+          <div class="panel-title">Choose a size</div>
+          <p class="panel-sub">Select the rug that fits you and your pets.</p>
+          <div id="p1-rows"></div>
+          <div class="btn-row">
+            <button class="btn-submit" id="s1n" disabled onclick="go(2)">Continue</button>
+            <a href="#sizes" class="btn-back">View size guide</a>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="panel" id="p2">
+          <div class="recap show" id="rb2">
+            <span><span class="r-size" id="rb2-size"></span>&ensp;<span class="r-price" id="rb2-price"></span></span>
+            <span class="r-change" onclick="go(1)">Change</span>
+          </div>
+          <div class="panel-title">Your details</div>
+          <p class="panel-sub">Contact and delivery information.</p>
+          <div class="field"><label>Instagram</label><input type="text" id="f-instagram" placeholder="@yourhandle"></div>
+          <div class="field"><label>Full name</label><input type="text" id="f-name" placeholder="Your full name"></div>
+          <div class="field"><label>Phone number</label><input type="tel" id="f-phone" placeholder="Your phone number"></div>
+          <div class="field"><label>Delivery address</label><input type="text" id="f-addr" placeholder="Full address"></div>
+          <div class="btn-row">
+            <button class="btn-submit" onclick="v2()">Continue</button>
+            <button class="btn-back" onclick="go(1)">Back</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="panel" id="p3">
+          <div class="recap show" id="rb3">
+            <span><span class="r-size" id="rb3-size"></span>&ensp;<span class="r-price" id="rb3-price"></span></span>
+            <span class="r-change" onclick="go(1)">Change</span>
+          </div>
+          <div class="panel-title">Upload photos</div>
+          <p class="panel-sub">Upload photos of your pets — can be separate photos. Clear, front-facing photos work best.</p>
+          <div class="field">
+            <label>Pet photos</label>
+            <div class="upfield">
+              <input type="file" id="f-photos" accept="image/*" multiple onchange="onPetFiles(this)">
+              <span class="upfield-label">Select files</span>
+              <span class="upfield-hint">JPG or PNG · up to 5 MB each</span>
+            </div>
+            <div class="file-chosen" id="pet-file-chosen"></div>
+          </div>
+          <div class="field">
+            <label>Notes <small>(optional)</small></label>
+            <textarea id="f-notes" placeholder="Background colour, pose, accessories, anything you have in mind..."></textarea>
+          </div>
+          <div id="msg-s3" class="status-msg"></div>
+          <div class="btn-row">
+            <button class="btn-submit" id="s3n" onclick="doSubmit()">Confirm order</button>
+            <button class="btn-back" onclick="go(2)">Back</button>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="panel" id="p4">
+          <div class="panel-title">Order received</div>
+          <p class="panel-sub">Complete payment via FPS within 24 hours, then upload your screenshot below.</p>
+
+          <div class="order-num-box">
+            <div class="order-num-label">Your order number</div>
+            <div class="order-num-value" id="order-num-display">—</div>
+          </div>
+
+          <div class="receipt" id="receipt"></div>
+
+          <div class="fps-block">
+            <div class="fps-eyebrow">FPS &nbsp;/&nbsp; Faster Payment System</div>
+            <div class="fps-qr">
+              <img src="images/fps-qr.png" alt="FPS QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>fps-qr.png</span>')">
+            </div>
+            <div class="fps-meta">識別代碼 &nbsp;102056686</div>
+            <div class="fps-meta" style="margin-bottom:0">支付至 &nbsp;Glory On International Limited</div>
+            <div class="fps-amount" id="famt">HK$—</div>
+            <div class="fps-instructions"><ol>
+              <li>Open your banking app and select FPS.</li>
+              <li>Add your name and order number as the reference, then take a screenshot.</li>
+              <li>Upload the screenshot below, or send it to our Instagram DM.</li>
+            </ol></div>
+          </div>
+
+          <div class="field" style="margin-top:2rem">
+            <label>Payment screenshot <small>Upload after payment</small></label>
+            <div class="upfield">
+              <input type="file" id="f-payment" accept="image/*" onchange="onPayFile(this)">
+              <span class="upfield-label">Select file</span>
+              <span class="upfield-hint">Upload your FPS payment screenshot</span>
+            </div>
+            <div class="file-chosen" id="pay-file-chosen"></div>
+          </div>
+
+          <div id="msg-s4" class="status-msg"></div>
+          <div class="btn-row">
+            <button class="btn-submit" id="s4n" onclick="submitPayment()">Submit payment proof</button>
+            <button class="btn-back" onclick="go(3)">Back</button>
+          </div>
+
+          <div style="margin-top:3rem;border-top:1px solid var(--light);padding-top:2rem">
+            <button class="btn-back" onclick="doReset()">Place another order</button>
+          </div>
+        </div>
+
+      </div><!-- order-left -->
+
+      <div class="order-aside">
+        <div class="aside-block"><div class="aside-label">Draft</div><div class="aside-body">Sent around 7 days after your order.</div></div>
+        <div class="aside-block"><div class="aside-label">Production</div><div class="aside-body">At least 6 weeks, beginning after the draft is approved.</div></div>
+        <div class="aside-block"><div class="aside-label">Shipping</div><div class="aside-body">SF Express (payment upon delivery).</div></div>
+        <div class="aside-block"><div class="aside-label">Payment</div><div class="aside-body">FPS (Hong Kong). Overseas customers may pay via PayPal with a 5% service fee.</div></div>
+        <div class="aside-block"><div class="aside-label">Revisions</div><div class="aside-body">Non-refundable after the first draft has been sent.</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span class="footer-brand">just for you and meow</span>
+  <div class="footer-links">
+    <a href="https://www.instagram.com/justforyouandmeow/" target="_blank">Instagram</a>
+    <span style="color:var(--mid);font-size:.72rem" id="yr"></span>
+  </div>
+</footer>
+
+<script>
+let sel      = null;
+let orderNum = null;
+let petFiles = [];
+let payFile  = null;
+
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+// generate order number: MEOW-0001, MEOW-0002, etc
+function genOrderNum() {
+  let lastNum = parseInt(localStorage.getItem('meow_last_order') || '0');
+  let nextNum = lastNum + 1;
+  localStorage.setItem('meow_last_order', nextNum.toString());
+  return 'MEOW-' + String(nextNum).padStart(4, '0');
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Cannot read ' + file.name));
+    r.readAsDataURL(file);
+  });
+}
+
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'status-msg ' + type + ' show';
+  el.textContent = text;
+}
+function hideMsg(id) { document.getElementById(id).className = 'status-msg'; }
+
+// build size tables
+CONFIG.products.forEach(p => {
+  const row = `
+    <div class="size-row" data-safe="${p.safeId}" onclick="pickAndScroll('${p.safeId}')">
+      <span class="size-letter">${p.id}</span>
+      <div><div class="size-dims">${p.dims}</div></div>
+      <div class="size-cap">${p.capacity}</div>
+      <div class="size-price">HK$${p.price}</div>
+      <span class="size-radio" id="sr-${p.safeId}"></span>
+    </div>`;
+  document.getElementById('size-list').insertAdjacentHTML('beforeend', row);
+
+  const wrow = `
+    <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
+      <span class="size-letter">${p.id}</span>
+      <div><div class="size-dims">${p.dims}</div></div>
+      <div class="size-cap">${p.capacity}</div>
+      <div class="size-price">HK$${p.price}</div>
+      <span class="size-radio" id="pr-${p.safeId}"></span>
+    </div>`;
+  document.getElementById('p1-rows').insertAdjacentHTML('beforeend', wrow);
+});
+
+function pick(safeId) {
+  sel = CONFIG.products.find(p => p.safeId === safeId);
+  if (!sel) return;
+  document.querySelectorAll('.size-radio').forEach(r => { r.style.background=''; r.style.borderColor=''; });
+  document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
+  ['sr-','pr-'].forEach(pf => {
+    const el = document.getElementById(pf + safeId);
+    if (el) { el.style.background='var(--black)'; el.style.borderColor='var(--black)'; }
+  });
+  const wr = document.getElementById('wr-' + safeId);
+  if (wr) wr.classList.add('sel');
+  document.getElementById('s1n').disabled = false;
+}
+
+function pickAndScroll(safeId) {
+  pick(safeId);
+  document.getElementById('order').scrollIntoView({ behavior:'smooth' });
+  setTimeout(() => go(2), 380);
+}
+
+function updateRecaps() {
+  if (!sel) return;
+  ['2','3'].forEach(n => {
+    document.getElementById('rb'+n+'-size').textContent  = sel.id;
+    document.getElementById('rb'+n+'-price').textContent = sel.dims + ' — HK$' + sel.price;
+  });
+}
+
+function go(n) {
+  if (n > 1 && !sel) return;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.getElementById('p'+n).classList.add('on');
+  document.querySelectorAll('.prog-item').forEach(w => {
+    const s = +w.dataset.s;
+    w.classList.remove('on','done');
+    if (s===n) w.classList.add('on');
+    else if (s<n) w.classList.add('done');
+  });
+  updateRecaps();
+  window.scrollTo({ top: document.getElementById('order').offsetTop - 58, behavior:'smooth' });
+}
+
+function v2() {
+  if (!document.getElementById('f-instagram').value.trim() ||
+      !document.getElementById('f-name').value.trim() ||
+      !document.getElementById('f-phone').value.trim() ||
+      !document.getElementById('f-addr').value.trim()) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+  go(3);
+}
+
+function onPetFiles(input) {
+  const files = Array.from(input.files);
+  const big   = files.filter(f => f.size > 5 * 1024 * 1024);
+  const el    = document.getElementById('pet-file-chosen');
+  if (big.length) {
+    el.textContent = big.map(f=>f.name).join(', ') + ' exceed 5 MB. Please use smaller images.';
+    el.style.color = 'var(--err)';
+    petFiles = [];
+    input.value = '';
+    return;
+  }
+  petFiles = files;
+  el.style.color = 'var(--black)';
+  el.textContent = files.length > 1 ? files.length + ' files selected' : files.length === 1 ? files[0].name : '';
+}
+
+function onPayFile(input) {
+  payFile = input.files[0] || null;
+  document.getElementById('pay-file-chosen').textContent = payFile ? payFile.name : '';
+}
+
+async function doSubmit() {
+  const ig = document.getElementById('f-instagram').value.trim();
+  const nm = document.getElementById('f-name').value.trim();
+  const ph = document.getElementById('f-phone').value.trim();
+  const ad = document.getElementById('f-addr').value.trim();
+  if (!ig||!nm||!ph||!ad) { showMsg('msg-s3','err','Please go back and complete all your details.'); go(2); return; }
+
+  const btn = document.getElementById('s3n');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting…';
+  hideMsg('msg-s3');
+
+  orderNum = genOrderNum();
+
+  try {
+    const photos = await Promise.all(petFiles.map(async f => ({
+      name: f.name, type: f.type, data: await fileToBase64(f)
+    })));
+
+    const payload = {
+      type: 'order',
+      orderNumber: orderNum,
+      instagram: ig, name: nm, phone: ph, address: ad,
+      size: sel.id, dims: sel.dims, price: sel.price,
+      notes: document.getElementById('f-notes').value.trim(),
+      petPhotos: photos,
+    };
+
+    // no-cors: response is opaque, but request reaches Apps Script
+    fetch(SCRIPT_URL, {
+      method:'POST', mode:'no-cors', redirect:'follow',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+
+    // show payment step immediately (order number already generated)
+    document.getElementById('order-num-display').textContent = orderNum;
+    document.getElementById('receipt').innerHTML = `
+      <div class="r-row"><span class="r-label">Order</span><span>${orderNum}</span></div>
+      <div class="r-row"><span class="r-label">Instagram</span><span>${ig}</span></div>
+      <div class="r-row"><span class="r-label">Name</span><span>${nm}</span></div>
+      <div class="r-row"><span class="r-label">Phone</span><span>${ph}</span></div>
+      <div class="r-row"><span class="r-label">Address</span><span>${ad}</span></div>
+      <div class="r-row"><span class="r-label">Size</span><span>${sel.id} ${sel.dims}</span></div>
+      <div class="r-row"><span class="r-label">Total</span><span>HK$${sel.price}</span></div>`;
+    document.getElementById('famt').textContent = 'HK$ ' + sel.price.toLocaleString();
+    go(4);
+
+  } catch(err) {
+    showMsg('msg-s3','err','Error: ' + err.message + '. Please try again or contact us on Instagram.');
+    btn.disabled = false;
+    btn.textContent = 'Confirm order';
+  }
+}
+
+async function submitPayment() {
+  if (!payFile) { showMsg('msg-s4','err','Please select your payment screenshot first.'); return; }
+  const btn = document.getElementById('s4n');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
+  hideMsg('msg-s4');
+  try {
+    const data = await fileToBase64(payFile);
+    fetch(SCRIPT_URL, {
+      method:'POST', mode:'no-cors', redirect:'follow',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({ type:'payment', orderNumber:orderNum, screenshot:{ name:payFile.name, type:payFile.type, data } }),
+    }).catch(()=>{});
+    btn.textContent = 'Submitted';
+    showMsg('msg-s4','ok','Payment proof submitted. We will confirm via Instagram DM shortly.');
+  } catch(err) {
+    showMsg('msg-s4','err','Upload failed: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Submit payment proof';
+  }
+}
+
+function doReset() {
+  sel=null; orderNum=null; petFiles=[]; payFile=null;
+  ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('f-photos').value='';
+  document.getElementById('f-payment').value='';
+  document.getElementById('pet-file-chosen').textContent='';
+  document.getElementById('pet-file-chosen').style.color='var(--black)';
+  document.getElementById('pay-file-chosen').textContent='';
+  document.querySelectorAll('.size-radio').forEach(r=>{r.style.background='';r.style.borderColor='';});
+  document.querySelectorAll('.size-row').forEach(r=>r.classList.remove('sel'));
+  document.getElementById('rb2-size').textContent='';
+  document.getElementById('rb2-price').textContent='';
+  document.getElementById('rb3-size').textContent='';
+  document.getElementById('rb3-price').textContent='';
+  document.getElementById('s3n').disabled=false;
+  document.getElementById('s3n').textContent='Confirm order';
+  document.getElementById('s4n').disabled=false;
+  document.getElementById('s4n').textContent='Submit payment proof';
+  document.getElementById('s1n').disabled=true;
+  hideMsg('msg-s3'); hideMsg('msg-s4');
+  go(1);
+}
+</script>
+<div class="paw-cursor-container" id="paw-cursor-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  PAW CURSOR EFFECT
+// ═══════════════════════════════════════════════════
+
+const PAW_SVG_BLACK = `<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#222"/><circle cx="48.79" cy="22.86" r="3.66" fill="#222"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#222"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#222"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#222"/></g></svg>`;
+
+const PAW_SVG_GRAY = `<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#aaa"/><circle cx="48.79" cy="22.86" r="3.66" fill="#aaa"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#aaa"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#aaa"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#aaa"/></g></svg>`;
+
+const container = document.getElementById('paw-cursor-container');
+const pawList = [];
+let lastSpawnTime = 0;
+let trailOffset = 0;
+
+// 創建游標貓爪
+const cursorPaw = document.createElement('div');
+cursorPaw.className = 'paw';
+cursorPaw.innerHTML = PAW_SVG_BLACK;
+cursorPaw.style.opacity = '1';
+container.appendChild(cursorPaw);
+
+function createPaw(x, y, offset) {
+  const paw = document.createElement('div');
+  paw.className = 'paw';
+  const waveShift = Math.sin(offset * 0.05) * 15;
+  paw.style.left = (x + waveShift) + 'px';
+  paw.style.top = y + 'px';
+  paw.style.transform = 'translate(-50%, -50%)';
+  paw.innerHTML = PAW_SVG_GRAY;
+  paw.style.opacity = '0.7';
+  container.appendChild(paw);
+  
+  return {
+    element: paw,
+    x: x,
+    y: y,
+    waveOffset: offset,
+    life: 1,
+    age: 0,
+    maxAge: 1200
+  };
+}
+
+document.addEventListener('mousemove', (e) => {
+  cursorPaw.style.left = e.clientX + 'px';
+  cursorPaw.style.top = e.clientY + 'px';
+  cursorPaw.style.transform = 'translate(-50%, -50%)';
+  
+  const now = Date.now();
+  if (now - lastSpawnTime > 150) {
+    if (pawList.length < 20) {
+      pawList.push(createPaw(e.clientX, e.clientY, trailOffset));
+      trailOffset++;
+      lastSpawnTime = now;
+    }
+  }
+});
+
+function animate() {
+  for (let i = pawList.length - 1; i >= 0; i--) {
+    const p = pawList[i];
+    p.age += 16;
+    p.life = Math.max(0, 1 - (p.age / p.maxAge));
+    p.element.style.opacity = p.life * 0.7;
+    
+    if (p.life <= 0) {
+      p.element.remove();
+      pawList.splice(i, 1);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
