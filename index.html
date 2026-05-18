@@ -14,6 +14,15 @@
 // ═══════════════════════════════════════════════════
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzF_3nk8gfyd-BqE8qNDbrZBeKL4ksE5M3FHs5AGhShqqIMnnVu7LTqeRO5xSrO_pULiA/exec';
 
+// Security: Simple hash-based signature (更安全做法見 Apps Script)
+async function generateSignature(payload) {
+  const msg = JSON.stringify(payload) + 'justforyouandmeow_client_secret';
+  const msgBuffer = new TextEncoder().encode(msg);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 const CONFIG = {
   fps: {
     fpsCode: '102056686',
@@ -517,7 +526,31 @@ async function doSubmit() {
   const nm = document.getElementById('f-name').value.trim();
   const ph = document.getElementById('f-phone').value.trim();
   const ad = document.getElementById('f-addr').value.trim();
+  
+  // Validate all required fields
   if (!ig||!nm||!ph||!ad) { showMsg('msg-s3','err','Please go back and complete all your details.'); go(2); return; }
+  
+  // Validate input lengths (prevent abuse)
+  if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
+    showMsg('msg-s3','err','Some fields are too long. Please check your entries.');
+    go(2);
+    return;
+  }
+  
+  // Validate pet photos (if any)
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+  
+  for (let f of petFiles) {
+    if (f.size > MAX_FILE_SIZE) {
+      showMsg('msg-s3','err','Pet photo too large (max 5MB each).');
+      return;
+    }
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      showMsg('msg-s3','err','Pet photos must be PNG or JPEG only.');
+      return;
+    }
+  }
 
   const btn = document.getElementById('s3n');
   btn.disabled = true;
@@ -534,29 +567,97 @@ async function doSubmit() {
     const payload = {
       type: 'order',
       orderNumber: orderNum,
-      instagram: ig, name: nm, phone: ph, address: ad,
-      size: sel.id, dims: sel.dims, price: sel.price,
+      timestamp: Date.now(), // Add timestamp for replay attack prevention
+      instagram: ig, 
+      name: nm, 
+      phone: ph, 
+      address: ad,
+      size: sel.id, 
+      dims: sel.dims, 
+      price: sel.price,
       notes: document.getElementById('f-notes').value.trim(),
       petPhotos: photos,
     };
 
-    // no-cors: response is opaque, but request reaches Apps Script
+    // Add security signature
+    const signature = await generateSignature(payload);
+
     fetch(SCRIPT_URL, {
       method:'POST', mode:'no-cors', redirect:'follow',
       headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, signature }),
     }).catch(() => {});
 
     // show payment step immediately (order number already generated)
     document.getElementById('order-num-display').textContent = orderNum;
-    document.getElementById('receipt').innerHTML = `
-      <div class="r-row"><span class="r-label">Order</span><span>${orderNum}</span></div>
-      <div class="r-row"><span class="r-label">Instagram</span><span>${ig}</span></div>
-      <div class="r-row"><span class="r-label">Name</span><span>${nm}</span></div>
-      <div class="r-row"><span class="r-label">Phone</span><span>${ph}</span></div>
-      <div class="r-row"><span class="r-label">Address</span><span>${ad}</span></div>
-      <div class="r-row"><span class="r-label">Size</span><span>${sel.id} ${sel.dims}</span></div>
-      <div class="r-row"><span class="r-label">Total</span><span>HK$${sel.price}</span></div>`;
+    
+    // Safe: Build receipt with textContent (防止 XSS)
+    const receipt = document.getElementById('receipt');
+    receipt.innerHTML = ''; // Clear first
+    
+    const rows = [
+      { label: 'Order', value: orderNum },
+      { label: 'Instagram', value: ig },
+      { label: 'Name', value: nm },
+      { label: 'Phone', value: ph },
+      { label: 'Address', value: ad },
+      { label: 'Size', value: sel.id + ' ' + sel.dims },
+      { label: 'Total', value: 'HK$' + sel.price }
+    ];
+    
+    rows.forEach(row => {
+      const div = document.createElement('div');
+      div.className = 'r-row';
+      const label = document.createElement('span');
+      label.className = 'r-label';
+      label.textContent = row.label;
+      const val = document.createElement('span');
+      val.textContent = row.value; // textContent = safe, no HTML parsing
+      div.appendChild(label);
+      div.appendChild(val);
+      receipt.appendChild(div);
+    });
+    
+    document.getElementById('famt').textContent = 'HK$ ' + sel.price.toLocaleString();
+    go(4);
+
+  } catch(err) {
+    showMsg('msg-s3','err','Error processing order. Please try again or contact us on Instagram.');
+    btn.disabled = false;
+    btn.textContent = 'Confirm order';
+  }
+}
+
+    // show payment step immediately (order number already generated)
+    document.getElementById('order-num-display').textContent = orderNum;
+    
+    // Safe: Build receipt with textContent (防止 XSS)
+    const receipt = document.getElementById('receipt');
+    receipt.innerHTML = ''; // Clear first
+    
+    const rows = [
+      { label: 'Order', value: orderNum },
+      { label: 'Instagram', value: ig },
+      { label: 'Name', value: nm },
+      { label: 'Phone', value: ph },
+      { label: 'Address', value: ad },
+      { label: 'Size', value: sel.id + ' ' + sel.dims },
+      { label: 'Total', value: 'HK$' + sel.price }
+    ];
+    
+    rows.forEach(row => {
+      const div = document.createElement('div');
+      div.className = 'r-row';
+      const label = document.createElement('span');
+      label.className = 'r-label';
+      label.textContent = row.label;
+      const val = document.createElement('span');
+      val.textContent = row.value; // textContent = safe, no HTML parsing
+      div.appendChild(label);
+      div.appendChild(val);
+      receipt.appendChild(div);
+    });
+    
     document.getElementById('famt').textContent = 'HK$ ' + sel.price.toLocaleString();
     go(4);
 
@@ -569,21 +670,54 @@ async function doSubmit() {
 
 async function submitPayment() {
   if (!payFile) { showMsg('msg-s4','err','Please select your payment screenshot first.'); return; }
+  
+  // Validate payment screenshot
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+  
+  if (payFile.size > MAX_SIZE) {
+    showMsg('msg-s4','err','Screenshot too large (max 5MB). Please compress and try again.');
+    return;
+  }
+  
+  if (!ALLOWED_TYPES.includes(payFile.type)) {
+    showMsg('msg-s4','err','Payment screenshot must be PNG or JPEG only.');
+    return;
+  }
+  
   const btn = document.getElementById('s4n');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Uploading…';
   hideMsg('msg-s4');
+  
   try {
     const data = await fileToBase64(payFile);
+    
+    const payload = {
+      type: 'payment',
+      orderNumber: orderNum,
+      timestamp: Date.now(),
+      screenshot: { 
+        name: payFile.name, 
+        type: payFile.type, 
+        size: payFile.size,
+        data 
+      }
+    };
+    
+    // Add security signature
+    const signature = await generateSignature(payload);
+    
     fetch(SCRIPT_URL, {
       method:'POST', mode:'no-cors', redirect:'follow',
       headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ type:'payment', orderNumber:orderNum, screenshot:{ name:payFile.name, type:payFile.type, data } }),
+      body: JSON.stringify({ ...payload, signature }),
     }).catch(()=>{});
+    
     btn.textContent = 'Submitted';
     showMsg('msg-s4','ok','Payment proof submitted. We will confirm via Instagram DM shortly.');
   } catch(err) {
-    showMsg('msg-s4','err','Upload failed: ' + err.message);
+    showMsg('msg-s4','err','Upload failed. Please try again or contact us on Instagram.');
     btn.disabled = false;
     btn.textContent = 'Submit payment proof';
   }
