@@ -693,7 +693,6 @@ async function submitPayment() {
     
     const fetchResponse = fetch(SCRIPT_URL, {
       method:'POST', 
-      mode:'no-cors', 
       redirect:'follow',
       headers:{'Content-Type':'text/plain'},
       body: jsonBody,
