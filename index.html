@@ -617,6 +617,16 @@ async function doSubmit() {
 
 async function submitPayment() {
   console.log('=== submitPayment called ===');
+  
+  // Fallback: If payFile is null, try to get from input element
+  if (!payFile) {
+    const fileInput = document.getElementById('f-payment');
+    if (fileInput && fileInput.files.length > 0) {
+      payFile = fileInput.files[0];
+      console.log('payFile recovered from input element:', payFile.name);
+    }
+  }
+  
   console.log('payFile:', payFile);
   
   if (!payFile) { 
