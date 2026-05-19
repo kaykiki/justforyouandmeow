@@ -616,18 +616,29 @@ async function doSubmit() {
 }
 
 async function submitPayment() {
-  if (!payFile) { showMsg('msg-s4','err','Please select your payment screenshot first.'); return; }
+  console.log('=== submitPayment called ===');
+  console.log('payFile:', payFile);
+  
+  if (!payFile) { 
+    console.log('No file selected');
+    showMsg('msg-s4','err','Please select your payment screenshot first.'); 
+    return; 
+  }
   
   // Validate payment screenshot
   const MAX_SIZE = 5 * 1024 * 1024;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
   
   if (payFile.size > MAX_SIZE) {
-    showMsg('msg-s4','err','Screenshot too large (max 5MB).'); return;
+    console.log('File too large:', payFile.size);
+    showMsg('msg-s4','err','Screenshot too large (max 5MB).'); 
+    return;
   }
   
   if (!ALLOWED_TYPES.includes(payFile.type)) {
-    showMsg('msg-s4','err','Payment screenshot must be PNG or JPEG only.'); return;
+    console.log('Invalid file type:', payFile.type);
+    showMsg('msg-s4','err','Payment screenshot must be PNG or JPEG only.'); 
+    return;
   }
   
   const btn = document.getElementById('s4n');
@@ -636,28 +647,62 @@ async function submitPayment() {
   hideMsg('msg-s4');
   
   try {
+    console.log('Converting file to base64...');
     const data = await fileToBase64(payFile);
+    console.log('Base64 conversion done, data length:', data.length);
     
     const payload = {
       type: 'payment',
       orderNumber: orderNum,
       timestamp: Date.now(),
-      screenshot: { name: payFile.name, type: payFile.type, size: payFile.size, data }
+      screenshot: { 
+        name: payFile.name, 
+        type: payFile.type, 
+        size: payFile.size, 
+        data 
+      }
     };
     
-    // Add security signature
-    const signature = await generateSignature(payload);
+    console.log('Payload created:', {
+      type: payload.type,
+      orderNumber: payload.orderNumber,
+      timestamp: payload.timestamp,
+      screenshotName: payload.screenshot.name
+    });
     
-    fetch(SCRIPT_URL, {
-      method:'POST', mode:'no-cors', redirect:'follow',
+    // Generate signature
+    console.log('Generating signature...');
+    const signature = await generateSignature(payload);
+    console.log('Signature generated:', signature.substring(0, 20) + '...');
+    
+    const payloadWithSignature = { ...payload, signature };
+    const jsonBody = JSON.stringify(payloadWithSignature);
+    
+    console.log('Sending to:', SCRIPT_URL);
+    console.log('Request body size:', jsonBody.length, 'bytes');
+    
+    const fetchResponse = fetch(SCRIPT_URL, {
+      method:'POST', 
+      mode:'no-cors', 
+      redirect:'follow',
       headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ ...payload, signature }),
-    }).catch(()=>{});
+      body: jsonBody,
+    });
+    
+    console.log('Fetch request initiated');
+    
+    fetchResponse.catch(err => {
+      console.error('Fetch error:', err);
+    });
+    
+    console.log('=== submitPayment completed ===');
     
     btn.textContent = 'Submitted';
     showMsg('msg-s4','ok','Payment proof submitted. We will confirm via Instagram DM shortly.');
   } catch(err) {
-    showMsg('msg-s4','err','Upload failed. Please try again or contact us on Instagram.');
+    console.error('Exception caught:', err);
+    console.error('Stack:', err.stack);
+    showMsg('msg-s4','err','Upload failed: ' + err.message);
     btn.disabled = false;
     btn.textContent = 'Submit payment proof';
   }
