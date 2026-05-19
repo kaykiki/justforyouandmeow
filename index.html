@@ -34,10 +34,10 @@ const CONFIG = {
     { id:'M',        safeId:'m',    dims:'100 × 40–50 cm', price:690, capacity:'2 people + 1–2 pets' },
     { id:'L',        safeId:'l',    dims:'130 × 50–60 cm', price:990, capacity:'2+ people + 3+ pets' },
     { id:'Mini Rug', safeId:'mini', dims:'20 cm',          price:350, capacity:'1 pet' },
+    { id:'Coaster',      safeId:'coaster',  dims:'15 cm',          price:300, capacity:'1 pet' },
     { id:'S - Oval',     safeId:'s-oval',   dims:'70 × 30–40 cm',  price:590, capacity:'up to 6 heads' },
     { id:'M - Oval',     safeId:'m-oval',   dims:'100 × 40–50 cm', price:690, capacity:'up to 8 heads' },
     { id:'L - Oval',     safeId:'l-oval',   dims:'130 × 50–60 cm', price:990, capacity:'up to 10 heads' },
-    { id:'Coaster',      safeId:'coaster',  dims:'15 cm',          price:300, capacity:'1 pet' },
   ],
 };
 </script>
@@ -345,7 +345,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="fps-instructions"><ol>
               <li>Open your banking app and select FPS.</li>
               <li>Add your name and order number as the reference, then take a screenshot.</li>
-              <li>Upload the screenshot below, or send it to our Instagram DM.</li>
+              <li>Please upload your screenshot below and send us a direct message (DM).</li>
             </ol></div>
           </div>
 
@@ -707,7 +707,7 @@ async function submitPayment() {
     console.log('=== submitPayment completed ===');
     
     btn.textContent = 'Submitted';
-    showMsg('msg-s4','ok','Payment proof submitted. We will confirm via Instagram DM shortly.');
+    showMsg('msg-s4','ok','Payment proof submitted and please send us a direct message (DM).Thank you ฅᨐฅ');
   } catch(err) {
     console.error('Exception caught:', err);
     console.error('Stack:', err.stack);
