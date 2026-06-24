@@ -6,12 +6,21 @@
 <title>just for you and meow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
 <script>
 const API_URL = '/api/order';
 const TURNSTILE_SITE_KEY = '0x4AAAAAADqAIDn4BwESb5wK';
 const TERMS_VERSION = '2026-06-24';
+const IS_DEPLOYED_SITE = location.hostname === 'justforyouandmeow.vercel.app' ||
+  location.hostname.endsWith('.vercel.app');
+
+if (IS_DEPLOYED_SITE) {
+  const turnstileScript = document.createElement('script');
+  turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+  turnstileScript.async = true;
+  turnstileScript.defer = true;
+  document.head.appendChild(turnstileScript);
+}
 
 const CONFIG = {
   fps: {
@@ -185,6 +194,7 @@ main{padding-top:50px}
 .status-msg.show{display:block}
 .status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}
 .status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}
+.status-msg a{color:inherit;font-weight:500;text-decoration:underline}
 
 /* SPINNER */
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}
@@ -414,6 +424,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
               <span class="upfield-hint">Upload your FPS payment screenshot</span>
             </div>
             <div class="file-chosen" id="pay-file-chosen"></div>
+            <div class="photo-list" id="payment-photo-list"></div>
           </div>
 
           <div id="msg-s4" class="status-msg"></div>
@@ -542,12 +553,36 @@ function fileToBase64(file) {
   });
 }
 
+function fileToDataUrl_(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => res(reader.result);
+    reader.onerror = () => rej(new Error('Cannot preview ' + file.name));
+    reader.readAsDataURL(file);
+  });
+}
+
 function showMsg(id, type, text) {
   const el = document.getElementById(id);
   el.className = 'status-msg ' + type + ' show';
   el.textContent = text;
 }
 function hideMsg(id) { document.getElementById(id).className = 'status-msg'; }
+
+function showPaymentSuccess_() {
+  const el = document.getElementById('msg-s4');
+  el.className = 'status-msg ok show';
+  el.textContent = 'Payment proof submitted. Please send us a direct message on ';
+
+  const link = document.createElement('a');
+  link.href = 'https://www.instagram.com/justforyouandmeow/';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = 'Instagram';
+
+  el.appendChild(link);
+  el.appendChild(document.createTextNode(' with your order number. Thank you.'));
+}
 
 loadProducts();
 
@@ -761,7 +796,7 @@ function removePetFile(index) {
   renderPetFiles_();
 }
 
-function renderPetFiles_() {
+async function renderPetFiles_() {
   const summary = document.getElementById('pet-file-chosen');
   const list = document.getElementById('pet-photo-list');
   list.innerHTML = '';
@@ -778,8 +813,9 @@ function renderPetFiles_() {
     const thumbnail = document.createElement('img');
     thumbnail.className = 'photo-thumb';
     thumbnail.alt = 'Preview ' + file.name;
-    thumbnail.src = URL.createObjectURL(file);
-    thumbnail.addEventListener('load', () => URL.revokeObjectURL(thumbnail.src), { once: true });
+    fileToDataUrl_(file)
+      .then(url => { thumbnail.src = url; })
+      .catch(() => { thumbnail.alt = 'Preview unavailable'; });
     thumbnail.addEventListener('click', () => openPhotoPreview(index));
 
     const name = document.createElement('span');
@@ -801,30 +837,88 @@ function renderPetFiles_() {
   });
 }
 
-function openPhotoPreview(index) {
+async function openPhotoPreview(index) {
   const file = petFiles[index];
   if (!file) return;
   const image = document.getElementById('photo-preview-image');
   const dialog = document.getElementById('photo-preview-dialog');
-  const url = URL.createObjectURL(file);
-  image.dataset.objectUrl = url;
-  image.src = url;
-  dialog.showModal();
+  try {
+    image.src = await fileToDataUrl_(file);
+    dialog.showModal();
+  } catch (error) {
+    image.removeAttribute('src');
+  }
 }
 
 function closePhotoPreview() {
   const image = document.getElementById('photo-preview-image');
   const dialog = document.getElementById('photo-preview-dialog');
-  const url = image.dataset.objectUrl;
   image.removeAttribute('src');
-  delete image.dataset.objectUrl;
-  if (url) URL.revokeObjectURL(url);
   dialog.close();
 }
 
 function onPayFile(input) {
   payFile = input.files[0] || null;
-  document.getElementById('pay-file-chosen').textContent = payFile ? payFile.name : '';
+  renderPayFile_();
+}
+
+function removePayFile() {
+  payFile = null;
+  document.getElementById('f-payment').value = '';
+  renderPayFile_();
+  hideMsg('msg-s4');
+}
+
+function renderPayFile_() {
+  const summary = document.getElementById('pay-file-chosen');
+  const list = document.getElementById('payment-photo-list');
+  list.innerHTML = '';
+  summary.textContent = payFile ? '1 screenshot selected' : '';
+
+  if (!payFile) return;
+
+  const currentFile = payFile;
+  const item = document.createElement('div');
+  item.className = 'photo-item';
+
+  const thumbnail = document.createElement('img');
+  thumbnail.className = 'photo-thumb';
+  thumbnail.alt = 'Preview ' + currentFile.name;
+  fileToDataUrl_(currentFile)
+    .then(url => {
+      if (payFile === currentFile) thumbnail.src = url;
+    })
+    .catch(() => { thumbnail.alt = 'Preview unavailable'; });
+  thumbnail.addEventListener('click', openPaymentPreview);
+
+  const name = document.createElement('span');
+  name.className = 'photo-name';
+  name.textContent = currentFile.name;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'photo-remove';
+  remove.textContent = '×';
+  remove.setAttribute('aria-label', 'Remove payment screenshot');
+  remove.title = 'Remove screenshot';
+  remove.addEventListener('click', removePayFile);
+
+  item.appendChild(thumbnail);
+  item.appendChild(name);
+  item.appendChild(remove);
+  list.appendChild(item);
+}
+
+async function openPaymentPreview() {
+  if (!payFile) return;
+  const image = document.getElementById('photo-preview-image');
+  const dialog = document.getElementById('photo-preview-dialog');
+  try {
+    image.src = await fileToDataUrl_(payFile);
+    dialog.showModal();
+  } catch (error) {
+    image.removeAttribute('src');
+  }
 }
 
 async function doSubmit() {
@@ -1043,7 +1137,7 @@ async function submitPayment() {
     if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
     btn.textContent = 'Submitted';
     document.getElementById('payment-back').style.display = 'none';
-    showMsg('msg-s4','ok','Payment proof submitted for manual verification. Please also send us a direct message. Thank you.');
+    showPaymentSuccess_();
   } catch(err) {
     showMsg('msg-s4','err','Upload failed. Please try again or contact us on Instagram.');
     btn.disabled = false;
@@ -1094,6 +1188,7 @@ function doReset() {
   document.getElementById('pet-photo-list').innerHTML='';
   document.getElementById('pet-file-chosen').style.color='var(--black)';
   document.getElementById('pay-file-chosen').textContent='';
+  document.getElementById('payment-photo-list').innerHTML='';
   document.querySelectorAll('.size-radio').forEach(r=>{r.style.background='';r.style.borderColor='';});
   document.querySelectorAll('.size-row').forEach(r=>r.classList.remove('sel'));
   document.querySelectorAll('.outline-option').forEach(button=>button.classList.remove('sel'));
