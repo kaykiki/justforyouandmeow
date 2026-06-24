@@ -40,30 +40,11 @@ module.exports = async function handler(req, res) {
     delete body.turnstileToken;
     delete body.apiSecret;
 
-    const upstreamResponse = await fetch(process.env.APPS_SCRIPT_URL, {
-      method: 'POST',
-      redirect: 'follow',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify({
-        ...body,
-        apiSecret: process.env.API_SHARED_SECRET
-      }),
-      signal: AbortSignal.timeout(55000)
-    });
-
-    if (!upstreamResponse.ok) {
-      throw new Error(`Apps Script returned ${upstreamResponse.status}`);
-    }
-
-    const upstreamText = await upstreamResponse.text();
-    let result;
-    try {
-      result = JSON.parse(upstreamText);
-    } catch (error) {
-      throw new Error('Apps Script returned invalid JSON');
-    }
+    const upstreamPayload = {
+      ...body,
+      apiSecret: process.env.API_SHARED_SECRET
+    };
+    const result = await callAppsScriptWithRetry(upstreamPayload);
 
     if (!result || result.success !== true) {
       return res.status(400).json({
@@ -85,6 +66,56 @@ module.exports = async function handler(req, res) {
 module.exports.config = {
   maxDuration: 60
 };
+
+async function callAppsScriptWithRetry(payload) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await callAppsScript(payload);
+    } catch (error) {
+      lastError = error;
+      console.error(`Apps Script attempt ${attempt} failed:`, error.message);
+      if (attempt < 2) await delay(500);
+    }
+  }
+
+  throw lastError;
+}
+
+async function callAppsScript(payload) {
+  const response = await fetch(process.env.APPS_SCRIPT_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(25000)
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Apps Script returned HTTP ${response.status}`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const contentType = response.headers.get('content-type') || 'unknown';
+    console.error(
+      'Invalid Apps Script response:',
+      `content-type=${contentType}`,
+      `length=${text.length}`,
+      `preview=${JSON.stringify(text.slice(0, 120))}`
+    );
+    throw new Error('Apps Script returned invalid JSON');
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function parseBody(body) {
   if (body && typeof body === 'object' && !Buffer.isBuffer(body)) {
