@@ -110,10 +110,16 @@ main{padding-top:50px}
 .upfield-hint{font-size:.75rem;color:var(--mid)}
 .file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
 .photo-list{border-top:1px solid var(--light);margin-top:.8rem}
-.photo-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}
+.photo-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:.8rem;padding:.65rem 2.2rem .65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}
+.photo-thumb{width:52px;height:52px;border:1px solid var(--light);object-fit:cover;cursor:zoom-in;background:var(--white)}
 .photo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.photo-remove{border:0;background:none;color:var(--mid);font:inherit;font-size:.7rem;text-decoration:underline;cursor:pointer;flex:0 0 auto}
-.photo-remove:hover{color:var(--black)}
+.photo-remove{position:absolute;right:0;top:50%;transform:translateY(-50%);width:28px;height:28px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:1.05rem;line-height:1;cursor:pointer}
+.photo-remove:hover{color:var(--black);border-color:var(--black)}
+.photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}
+.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}
+.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}
+.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}
+.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
 .promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}
 .promo-row{display:flex;align-items:flex-end;gap:.8rem}
 .promo-row .field{flex:1;margin:0}
@@ -122,6 +128,14 @@ main{padding-top:50px}
 .promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}
 .promo-result.ok{color:#1a6b3c}
 .promo-result.err{color:var(--err)}
+.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}
+.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}
+.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}
+.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}
+.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}
+.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}
+.outline-swatch.black{background:#111}
+.outline-swatch.white{background:#fff}
 .terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}
 .terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}
 .terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
@@ -278,6 +292,17 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
           <div class="panel-title">Choose a size</div>
           <p class="panel-sub">Select the rug that fits you and your pets.</p>
           <div id="p1-rows"></div>
+          <div class="outline-box">
+            <div class="outline-label">Outline colour</div>
+            <div class="outline-options">
+              <button type="button" class="outline-option" data-outline="Black" onclick="pickOutline('Black')">
+                <span class="outline-swatch black"></span>Black outline
+              </button>
+              <button type="button" class="outline-option" data-outline="White" onclick="pickOutline('White')">
+                <span class="outline-swatch white"></span>White outline
+              </button>
+            </div>
+          </div>
           <div class="promo-box">
             <div class="promo-row">
               <div class="field">
@@ -394,7 +419,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
           <div id="msg-s4" class="status-msg"></div>
           <div class="btn-row">
             <button class="btn-submit" id="s4n" onclick="submitPayment()">Submit payment proof</button>
-            <button class="btn-back" onclick="go(3)">Back</button>
+            <button class="btn-back" id="payment-back" onclick="go(3)">Back</button>
           </div>
 
           <div style="margin-top:3rem;border-top:1px solid var(--light);padding-top:2rem">
@@ -415,6 +440,13 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
   </section>
 
 </main>
+
+<dialog class="photo-preview-dialog" id="photo-preview-dialog">
+  <div class="photo-preview-inner">
+    <button class="photo-preview-close" type="button" onclick="closePhotoPreview()" aria-label="Close">&times;</button>
+    <img class="photo-preview-image" id="photo-preview-image" alt="Selected pet photo preview">
+  </div>
+</dialog>
 
 <dialog class="terms-dialog" id="terms-dialog">
   <div class="terms-inner">
@@ -497,6 +529,7 @@ let orderNum = null;
 let petFiles = [];
 let payFile  = null;
 let appliedPromo = null;
+let selectedOutline = null;
 
 document.getElementById('yr').textContent = new Date().getFullYear();
 
@@ -576,7 +609,20 @@ function pick(safeId) {
   if (radio) { radio.style.background='var(--black)'; radio.style.borderColor='var(--black)'; }
   const wr = document.getElementById('wr-' + safeId);
   if (wr) wr.classList.add('sel');
-  document.getElementById('s1n').disabled = false;
+  updateSizeContinue_();
+}
+
+function pickOutline(colour) {
+  if (!['Black', 'White'].includes(colour)) return;
+  selectedOutline = colour;
+  document.querySelectorAll('.outline-option').forEach(button => {
+    button.classList.toggle('sel', button.dataset.outline === colour);
+  });
+  updateSizeContinue_();
+}
+
+function updateSizeContinue_() {
+  document.getElementById('s1n').disabled = !(sel && selectedOutline);
 }
 
 function updateRecaps() {
@@ -584,7 +630,8 @@ function updateRecaps() {
   const currentPrice = appliedPromo ? appliedPromo.price : sel.price;
   ['2','3'].forEach(n => {
     document.getElementById('rb'+n+'-size').textContent  = sel.id;
-    document.getElementById('rb'+n+'-price').textContent = sel.dims + ' — HK$' + currentPrice;
+    document.getElementById('rb'+n+'-price').textContent =
+      sel.dims + ' — ' + (selectedOutline || '') + ' outline — HK$' + currentPrice;
   });
 }
 
@@ -728,6 +775,13 @@ function renderPetFiles_() {
     const item = document.createElement('div');
     item.className = 'photo-item';
 
+    const thumbnail = document.createElement('img');
+    thumbnail.className = 'photo-thumb';
+    thumbnail.alt = 'Preview ' + file.name;
+    thumbnail.src = URL.createObjectURL(file);
+    thumbnail.addEventListener('load', () => URL.revokeObjectURL(thumbnail.src), { once: true });
+    thumbnail.addEventListener('click', () => openPhotoPreview(index));
+
     const name = document.createElement('span');
     name.className = 'photo-name';
     name.textContent = file.name;
@@ -735,13 +789,37 @@ function renderPetFiles_() {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'photo-remove';
-    remove.textContent = 'Remove';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', 'Remove ' + file.name);
+    remove.title = 'Remove photo';
     remove.addEventListener('click', () => removePetFile(index));
 
+    item.appendChild(thumbnail);
     item.appendChild(name);
     item.appendChild(remove);
     list.appendChild(item);
   });
+}
+
+function openPhotoPreview(index) {
+  const file = petFiles[index];
+  if (!file) return;
+  const image = document.getElementById('photo-preview-image');
+  const dialog = document.getElementById('photo-preview-dialog');
+  const url = URL.createObjectURL(file);
+  image.dataset.objectUrl = url;
+  image.src = url;
+  dialog.showModal();
+}
+
+function closePhotoPreview() {
+  const image = document.getElementById('photo-preview-image');
+  const dialog = document.getElementById('photo-preview-dialog');
+  const url = image.dataset.objectUrl;
+  image.removeAttribute('src');
+  delete image.dataset.objectUrl;
+  if (url) URL.revokeObjectURL(url);
+  dialog.close();
 }
 
 function onPayFile(input) {
@@ -809,6 +887,7 @@ async function doSubmit() {
       termsVersion: TERMS_VERSION,
       promoCode: appliedPromo ? appliedPromo.code : '',
       productId: sel.safeId,
+      outline: selectedOutline,
       firstPhoto: {
         data: firstPhotoData
       },
@@ -874,6 +953,7 @@ async function doSubmit() {
       { label: 'Address', value: ad },
       { label: 'Size', value: sel.id + ' ' + sel.dims }
     ];
+    rows.push({ label: 'Outline', value: result.outline + ' outline' });
     if (result.promoCode) {
       rows.push({ label: 'Original price', value: 'HK$' + result.originalPrice });
       rows.push({ label: 'Promo code', value: result.promoCode });
@@ -962,6 +1042,7 @@ async function submitPayment() {
 
     if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
     btn.textContent = 'Submitted';
+    document.getElementById('payment-back').style.display = 'none';
     showMsg('msg-s4','ok','Payment proof submitted for manual verification. Please also send us a direct message. Thank you.');
   } catch(err) {
     showMsg('msg-s4','err','Upload failed. Please try again or contact us on Instagram.');
@@ -999,7 +1080,7 @@ function closeTerms() {
 }
 
 function doReset() {
-  sel=null; orderNum=null; petFiles=[]; payFile=null; appliedPromo=null;
+  sel=null; orderNum=null; petFiles=[]; payFile=null; appliedPromo=null; selectedOutline=null;
   sessionStorage.removeItem('meow_order_number');
   sessionStorage.removeItem('meow_order_token');
   sessionStorage.removeItem('meow_order_request_id');
@@ -1015,6 +1096,7 @@ function doReset() {
   document.getElementById('pay-file-chosen').textContent='';
   document.querySelectorAll('.size-radio').forEach(r=>{r.style.background='';r.style.borderColor='';});
   document.querySelectorAll('.size-row').forEach(r=>r.classList.remove('sel'));
+  document.querySelectorAll('.outline-option').forEach(button=>button.classList.remove('sel'));
   document.getElementById('rb2-size').textContent='';
   document.getElementById('rb2-price').textContent='';
   document.getElementById('rb3-size').textContent='';
@@ -1023,6 +1105,7 @@ function doReset() {
   document.getElementById('s3n').textContent='Confirm order';
   document.getElementById('s4n').disabled=false;
   document.getElementById('s4n').textContent='Submit payment proof';
+  document.getElementById('payment-back').style.display='';
   document.getElementById('s1n').disabled=true;
   hideMsg('msg-s3'); hideMsg('msg-s4');
   if (window.turnstile) window.turnstile.reset();
