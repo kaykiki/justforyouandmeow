@@ -206,8 +206,19 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
   .process{grid-template-columns:1fr 1fr}
   .order-grid{grid-template-columns:1fr}
   .order-aside{display:none}
-  .size-row{grid-template-columns:4rem 1fr auto 1.5rem;gap:1rem}
-  .size-cap{display:none}
+  .size-row{
+    grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;
+    grid-template-areas:
+      "letter details price radio"
+      "letter capacity price radio";
+    column-gap:1rem;
+    row-gap:.15rem
+  }
+  .size-letter{grid-area:letter}
+  .size-row>div:not(.size-cap):not(.size-price){grid-area:details}
+  .size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}
+  .size-price{grid-area:price}
+  .size-radio{grid-area:radio}
 }
 @media(max-width:480px){.process{grid-template-columns:1fr}}
 </style>
