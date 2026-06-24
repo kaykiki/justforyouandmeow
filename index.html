@@ -11,6 +11,7 @@
 <script>
 const API_URL = '/api/order';
 const TURNSTILE_SITE_KEY = '0x4AAAAAADqAIDn4BwESb5wK';
+const TERMS_VERSION = '2026-06-24';
 
 const CONFIG = {
   fps: {
@@ -117,6 +118,26 @@ main{padding-top:50px}
 .upfield-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:500;display:block;margin-bottom:.3rem}
 .upfield-hint{font-size:.75rem;color:var(--mid)}
 .file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
+.promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}
+.promo-row{display:flex;align-items:flex-end;gap:.8rem}
+.promo-row .field{flex:1;margin:0}
+.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.promo-apply:disabled{opacity:.35;cursor:not-allowed}
+.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}
+.promo-result.ok{color:#1a6b3c}
+.promo-result.err{color:var(--err)}
+.terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}
+.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}
+.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
+.terms-dialog{width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black)}
+.terms-dialog::backdrop{background:rgba(0,0,0,.42)}
+.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}
+.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}
+.terms-head h2{font-size:1rem;font-weight:500}
+.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}
+.terms-section{padding-top:1.5rem}
+.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}
+.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
 
 /* BUTTONS */
 .btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}
@@ -259,6 +280,17 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
           <div class="panel-title">Choose a size</div>
           <p class="panel-sub">Select the rug that fits you and your pets.</p>
           <div id="p1-rows"></div>
+          <div class="promo-box">
+            <div class="promo-row">
+              <div class="field">
+                <label for="f-promo">Promo code <small>(optional)</small></label>
+                <input type="text" id="f-promo" maxlength="30" autocomplete="off" placeholder="Enter promo code"
+                       oninput="if(appliedPromo && this.value.trim().toUpperCase() !== appliedPromo.code) clearPromo_(false)">
+              </div>
+              <button class="promo-apply" type="button" id="promo-apply" onclick="applyPromo()">Apply</button>
+            </div>
+            <div class="promo-result" id="promo-result"></div>
+          </div>
           <div class="btn-row">
             <button class="btn-submit" id="s1n" disabled onclick="go(2)">Continue</button>
             <a href="#sizes" class="btn-back">View size guide</a>
@@ -310,6 +342,13 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
                  data-action="order"
                  data-theme="light"></div>
           </div>
+          <label class="terms-check">
+            <input type="checkbox" id="f-terms">
+            <span>I have read and agree to the
+              <a href="#" onclick="openTerms(event)">Terms &amp; Conditions and Privacy Notice</a>.
+              / 我已閱讀並同意條款及私隱聲明。
+            </span>
+          </label>
           <div id="msg-s3" class="status-msg"></div>
           <div class="btn-row">
             <button class="btn-submit" id="s3n" onclick="doSubmit()">Confirm order</button>
@@ -379,6 +418,73 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
 </main>
 
+<dialog class="terms-dialog" id="terms-dialog">
+  <div class="terms-inner">
+    <div class="terms-head">
+      <h2>Terms &amp; Conditions / 注意事項</h2>
+      <button class="terms-close" type="button" onclick="closeTerms()" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="terms-section">
+      <h3>1. Custom orders and artwork / 訂製產品及圖稿</h3>
+      <p>Each product is made to order using the photos and instructions supplied by the customer. Please ensure that all submitted photos and information are clear, accurate and suitable for use.</p>
+      <p>所有產品均按照客人提供的相片及要求訂製。請確保提交的相片及資料清晰、準確並適合使用。</p>
+      <p>Please check names, subjects, layout, colours and all other artwork details carefully before approval. Production will begin only after the customer approves the final artwork. Once approved, changes may no longer be possible.</p>
+      <p>確認前請仔細檢查名稱、主體、構圖、顏色及所有圖稿細節。客人確認最終圖稿後，我們才會開始製作；圖稿一經確認，可能無法再作修改。</p>
+    </div>
+
+    <div class="terms-section">
+      <h3>2. Draft and production time / 起稿及製作時間</h3>
+      <p>The first draft is normally provided around 7 days after a complete order is received. Production takes at least 6 weeks from final artwork approval. These are estimates rather than guaranteed completion or delivery dates. Complex designs, revisions, material availability, public holidays, delivery arrangements or circumstances outside our reasonable control may require additional time.</p>
+      <p>我們一般會在收到完整訂單後約7日提供初稿。最終圖稿確認後，製作時間至少為6星期。以上時間只屬預計，並非保證完成或送達日期；複雜設計、修改、物料供應、公眾假期、運送安排或其他合理控制範圍以外的情況，均可能令所需時間延長。</p>
+    </div>
+
+    <div class="terms-section">
+      <h3>3. Revisions / 圖稿修改</h3>
+      <p>Reasonable revision requests may be made before the final artwork is approved. Revision requests must remain consistent with the original order and supplied references. Major changes to the subject, composition, size or original instructions may require an additional charge or a revised production schedule, which will be confirmed before further work proceeds.</p>
+      <p>客人可在確認最終圖稿前提出合理修改。修改內容須與原有訂單及參考資料一致。如更換主體、構圖、尺寸或大幅更改原有要求，我們可能需要收取額外費用或調整製作時間，並會在繼續處理前與客人確認。</p>
+    </div>
+
+    <div class="terms-section">
+      <h3>4. Colour, materials and handmade variations / 顏色、物料及手工差異</h3>
+      <p>Product colours should be referenced against our photos taken in natural daylight. Colours may appear slightly different between the approved digital artwork and the finished product because screens display colours differently. We will make every reasonable effort to match the physical product colours when preparing the artwork.</p>
+      <p>產品顏色請參考我們在自然日光下拍攝的實物照片。由於不同螢幕的顯色效果有所不同，最終實物與已確認的電子圖稿可能會有輕微色差。我們起稿時會盡量配合實物顏色。</p>
+      <p>Handmade rugs may have small variations in shape, dimensions, yarn direction, texture, line thickness and colour. Coasters are made from diatomaceous earth, so their printed lines, colours and surface texture may also differ slightly from the approved digital artwork. A handmade or printed product cannot be completely identical to an on-screen image. Minor differences caused by the material or normal production process are not considered defects.</p>
+      <p>手工地氈在形狀、尺寸、毛線方向、質感、線條粗幼及顏色方面可能有輕微差異。杯墊以硅藻土製成，其印刷線條、顏色及表面質感亦可能與已確認的電子圖稿略有不同。手工或印刷產品無法與螢幕上的圖像完全一致；由物料或正常製作過程造成的輕微差異並不屬於瑕疵。</p>
+    </div>
+
+    <div class="terms-section">
+      <h3>5. Payment, cancellation, refunds and remakes / 付款、取消、退款及重做</h3>
+      <p>Payment proof is subject to manual verification and an uploaded screenshot does not by itself confirm payment. As each item is personalised, the order becomes non-refundable once the first draft has been sent. After final artwork approval, cancellation, refund or remake is not available for customer-supplied errors, a change of mind, or the normal colour, material and handmade variations described above.</p>
+      <p>付款證明須經人工核實，上載付款截圖本身並不代表付款已獲確認。由於每件產品均屬個人訂製，初稿發出後訂單將不可退款。最終圖稿確認後，如因客人提供的資料有誤、改變主意，或上述正常色差、物料及手工差異而要求取消、退款或重做，恕未能受理。</p>
+      <p>If we make an error during production or the product arrives with a material defect, please contact us promptly with the order number and clear photographs. We will assess the issue and, where appropriate, arrange a reasonable remedy such as repair, remake or refund.</p>
+      <p>如錯誤由我們在製作過程中造成，或產品收到時存在實質瑕疵，請盡快提供訂單編號及清晰相片與我們聯絡。我們會核實情況，並在適當情況下安排合理處理，例如維修、重做或退款。</p>
+    </div>
+
+    <div class="terms-section">
+      <h3>6. Delivery / 送貨</h3>
+      <p>Hong Kong orders are normally sent by SF Express with delivery charges paid by the recipient, unless otherwise agreed. The customer is responsible for providing complete and accurate contact and delivery information. Any additional delivery cost caused by incorrect information, an unsuccessful delivery or a requested redirection may be charged to the customer.</p>
+      <p>除另有協議外，香港訂單一般以順豐速運到付方式寄出。客人須提供完整及正確的聯絡和送貨資料；如因資料錯誤、派送不成功或客人要求轉寄而產生額外運費，有關費用可能由客人承擔。</p>
+      <p>Estimated delivery times are provided by the carrier and are not guaranteed by us. Please contact us promptly if the parcel appears damaged on arrival and retain the packaging and photographs for assessment.</p>
+      <p>送貨時間由承運商提供，我們無法保證實際送達日期。如包裹送達時疑似受損，請保留包裝及拍攝相片，並盡快與我們聯絡以便跟進。</p>
+    </div>
+
+    <div class="terms-section">
+      <h3>7. Personal data and privacy / 個人資料及私隱</h3>
+      <p>We collect the information needed to process and fulfil an order, including the customer's name, Instagram account, phone number, delivery address, order notes, pet photographs and payment proof. Required contact and delivery information must be supplied for us to accept and fulfil the order.</p>
+      <p>我們會收集處理及完成訂單所需的資料，包括客人姓名、Instagram帳戶、電話號碼、送貨地址、訂單備註、寵物相片及付款證明。客人必須提供所需的聯絡及送貨資料，否則我們可能無法接受或完成訂單。</p>
+      <p>The data will be used only for order administration, artwork and production, payment verification, customer communication, delivery, dispute handling, record keeping and website security. We do not use the submitted information for direct marketing unless separate consent is obtained.</p>
+      <p>有關資料只會用於訂單管理、起稿及製作、付款核實、客戶聯絡、送貨、爭議處理、紀錄保存及網站安全。除非另行取得同意，我們不會把所提交的資料用於直接促銷。</p>
+      <p>Where necessary, relevant data may be processed by service providers supporting website hosting and security, cloud storage, payment administration, production or delivery, including the delivery carrier. We limit access to what is reasonably necessary for those purposes and do not sell customers' personal data.</p>
+      <p>在有需要時，相關資料可能由支援網站寄存及安全、雲端儲存、付款管理、製作或送貨的服務供應商處理，包括承運商。我們只會按上述用途提供合理所需的資料，並不會出售客人的個人資料。</p>
+      <p>Personal data will be protected by reasonable security measures and retained only for as long as reasonably necessary to fulfil the above purposes or applicable legal, accounting and dispute-handling requirements. Data that is no longer required will be deleted or anonymised where reasonably practicable.</p>
+      <p>我們會採取合理保安措施保障個人資料，並只會在完成上述用途或符合適用法律、會計及爭議處理需要的期間內保存。資料不再需要時，會在合理可行情況下刪除或匿名化。</p>
+      <p>Customers may contact us through our official Instagram account to request access to or correction of their order-related personal data, or to ask a privacy-related question. We may need to verify the requester's identity before processing the request.</p>
+      <p>客人可透過我們的官方Instagram帳戶，要求查閱或更正與訂單相關的個人資料，或提出私隱查詢。處理要求前，我們可能需要核實申請人的身份。</p>
+    </div>
+  </div>
+</dialog>
+
 <footer>
   <span class="footer-brand">just for you and meow</span>
   <div class="footer-links">
@@ -392,6 +498,7 @@ let sel      = null;
 let orderNum = null;
 let petFiles = [];
 let payFile  = null;
+let appliedPromo = null;
 
 document.getElementById('yr').textContent = new Date().getFullYear();
 
@@ -437,6 +544,7 @@ CONFIG.products.forEach(p => {
 function pick(safeId) {
   sel = CONFIG.products.find(p => p.safeId === safeId);
   if (!sel) return;
+  clearPromo_(true);
   document.querySelectorAll('.size-radio').forEach(r => { r.style.background=''; r.style.borderColor=''; });
   document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
   ['sr-','pr-'].forEach(pf => {
@@ -456,10 +564,72 @@ function pickAndScroll(safeId) {
 
 function updateRecaps() {
   if (!sel) return;
+  const currentPrice = appliedPromo ? appliedPromo.price : sel.price;
   ['2','3'].forEach(n => {
     document.getElementById('rb'+n+'-size').textContent  = sel.id;
-    document.getElementById('rb'+n+'-price').textContent = sel.dims + ' — HK$' + sel.price;
+    document.getElementById('rb'+n+'-price').textContent = sel.dims + ' — HK$' + currentPrice;
   });
+}
+
+async function applyPromo() {
+  const input = document.getElementById('f-promo');
+  const resultEl = document.getElementById('promo-result');
+  const button = document.getElementById('promo-apply');
+  const promoCode = input.value.trim().toUpperCase();
+
+  if (!sel) {
+    resultEl.className = 'promo-result err';
+    resultEl.textContent = 'Please choose a product first.';
+    return;
+  }
+  if (!promoCode) {
+    clearPromo_(false);
+    resultEl.className = 'promo-result err';
+    resultEl.textContent = 'Please enter a promo code.';
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Checking...';
+  resultEl.className = 'promo-result';
+  resultEl.textContent = '';
+
+  try {
+    const result = await postApi_({
+      type: 'promo',
+      size: sel.id,
+      promoCode
+    });
+    if (!result.success) throw new Error(result.error || 'INVALID_PROMO_CODE');
+
+    appliedPromo = {
+      code: result.promoCode,
+      originalPrice: result.originalPrice,
+      discount: result.discount,
+      price: result.price
+    };
+    input.value = result.promoCode;
+    resultEl.className = 'promo-result ok';
+    resultEl.textContent = result.promoCode + ' applied: HK$' +
+      result.originalPrice + ' → HK$' + result.price;
+    updateRecaps();
+  } catch (error) {
+    appliedPromo = null;
+    resultEl.className = 'promo-result err';
+    resultEl.textContent = 'Invalid or unavailable promo code.';
+    updateRecaps();
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Apply';
+  }
+}
+
+function clearPromo_(clearInput) {
+  appliedPromo = null;
+  if (clearInput) document.getElementById('f-promo').value = '';
+  const resultEl = document.getElementById('promo-result');
+  resultEl.className = 'promo-result';
+  resultEl.textContent = '';
 }
 
 function go(n) {
@@ -525,6 +695,10 @@ async function doSubmit() {
   if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
     showMsg('msg-s3','err','Some fields are too long.'); go(2); return;
   }
+  if (!document.getElementById('f-terms').checked) {
+    showMsg('msg-s3','err','Please read and agree to the Terms & Conditions before confirming your order.');
+    return;
+  }
 
   const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
   if (!turnstileToken) {
@@ -562,6 +736,9 @@ async function doSubmit() {
       type: 'order',
       requestId,
       turnstileToken,
+      termsAccepted: true,
+      termsVersion: TERMS_VERSION,
+      promoCode: appliedPromo ? appliedPromo.code : '',
       instagram: ig, name: nm, phone: ph, address: ad,
       size: sel.id,
       notes: document.getElementById('f-notes').value.trim()
@@ -585,6 +762,12 @@ async function doSubmit() {
       dims: result.dims,
       price: result.price
     };
+    appliedPromo = result.promoCode ? {
+      code: result.promoCode,
+      originalPrice: result.originalPrice,
+      discount: result.discount,
+      price: result.price
+    } : null;
     sessionStorage.setItem('meow_order_number', orderNum);
     sessionStorage.setItem('meow_order_token', orderToken);
 
@@ -614,9 +797,14 @@ async function doSubmit() {
       { label: 'Name', value: nm },
       { label: 'Phone', value: ph },
       { label: 'Address', value: ad },
-      { label: 'Size', value: sel.id + ' ' + sel.dims },
-      { label: 'Total', value: 'HK$' + sel.price }
+      { label: 'Size', value: sel.id + ' ' + sel.dims }
     ];
+    if (result.promoCode) {
+      rows.push({ label: 'Original price', value: 'HK$' + result.originalPrice });
+      rows.push({ label: 'Promo code', value: result.promoCode });
+      rows.push({ label: 'Discount', value: '-HK$' + result.discount });
+    }
+    rows.push({ label: 'Total', value: 'HK$' + result.price });
     
     rows.forEach(row => {
       const div = document.createElement('div');
@@ -726,14 +914,26 @@ function createRequestId_() {
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function openTerms(event) {
+  event.preventDefault();
+  document.getElementById('terms-dialog').showModal();
+}
+
+function closeTerms() {
+  document.getElementById('terms-dialog').close();
+}
+
 function doReset() {
-  sel=null; orderNum=null; petFiles=[]; payFile=null;
+  sel=null; orderNum=null; petFiles=[]; payFile=null; appliedPromo=null;
   sessionStorage.removeItem('meow_order_number');
   sessionStorage.removeItem('meow_order_token');
   sessionStorage.removeItem('meow_order_request_id');
   ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-photos').value='';
   document.getElementById('f-payment').value='';
+  document.getElementById('f-terms').checked=false;
+  document.getElementById('f-promo').value='';
+  clearPromo_(false);
   document.getElementById('pet-file-chosen').textContent='';
   document.getElementById('pet-file-chosen').style.color='var(--black)';
   document.getElementById('pay-file-chosen').textContent='';
