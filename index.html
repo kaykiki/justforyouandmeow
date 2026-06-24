@@ -322,9 +322,9 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <span class="r-change" onclick="go(1)">Change</span>
           </div>
           <div class="panel-title">Upload photos</div>
-          <p class="panel-sub">Upload photos of your pets — can be separate photos. Clear, front-facing photos work best.</p>
+          <p class="panel-sub">Upload at least one photo of your pets — can be separate photos. Clear, front-facing photos work best.</p>
           <div class="field">
-            <label>Pet photos</label>
+            <label>Pet photos <small>(required)</small></label>
             <div class="upfield">
               <input type="file" id="f-photos" accept="image/*" multiple onchange="onPetFiles(this)">
               <span class="upfield-label">Select files</span>
@@ -708,6 +708,10 @@ async function doSubmit() {
 
   const MAX_FILE_SIZE = 2.5 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+  if (petFiles.length < 1) {
+    showMsg('msg-s3','err','Please upload at least one pet photo.');
+    return;
+  }
   if (petFiles.length > 6) {
     showMsg('msg-s3','err','Please upload no more than 6 pet photos.'); return;
   }
@@ -732,6 +736,7 @@ async function doSubmit() {
       sessionStorage.setItem('meow_order_request_id', requestId);
     }
 
+    const firstPhotoData = await fileToBase64(petFiles[0]);
     const payload = {
       type: 'order',
       requestId,
@@ -739,6 +744,9 @@ async function doSubmit() {
       termsAccepted: true,
       termsVersion: TERMS_VERSION,
       promoCode: appliedPromo ? appliedPromo.code : '',
+      firstPhoto: {
+        data: firstPhotoData
+      },
       instagram: ig, name: nm, phone: ph, address: ad,
       size: sel.id,
       notes: document.getElementById('f-notes').value.trim()
@@ -771,7 +779,7 @@ async function doSubmit() {
     sessionStorage.setItem('meow_order_number', orderNum);
     sessionStorage.setItem('meow_order_token', orderToken);
 
-    for (let i = 0; i < petFiles.length; i++) {
+    for (let i = 1; i < petFiles.length; i++) {
       btn.innerHTML = '<span class="spinner"></span>Uploading photo ' +
         (i + 1) + '/' + petFiles.length + '...';
       const photoResult = await postApi_({
