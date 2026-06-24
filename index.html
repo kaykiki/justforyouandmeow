@@ -392,7 +392,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
         <!-- Step 4 -->
         <div class="panel" id="p4">
           <div class="panel-title">Order received</div>
-          <p class="panel-sub">Complete payment via FPS within 24 hours, then upload your screenshot below.</p>
+          <p class="panel-sub">Complete payment via FPS and upload your screenshot below.</p>
 
           <div class="order-num-box">
             <div class="order-num-label">Your order number</div>
@@ -541,6 +541,7 @@ let petFiles = [];
 let payFile  = null;
 let appliedPromo = null;
 let selectedOutline = null;
+let orderReadyForPayment = false;
 
 document.getElementById('yr').textContent = new Date().getFullYear();
 
@@ -733,6 +734,13 @@ function clearPromo_(clearInput) {
 
 function go(n) {
   if (n > 1 && !sel) return;
+
+  if (n === 3 && orderReadyForPayment) {
+    const submitButton = document.getElementById('s3n');
+    submitButton.disabled = false;
+    submitButton.textContent = 'Continue to payment';
+  }
+
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
   document.getElementById('p'+n).classList.add('on');
   document.querySelectorAll('.prog-item').forEach(w => {
@@ -922,6 +930,11 @@ async function openPaymentPreview() {
 }
 
 async function doSubmit() {
+  if (orderReadyForPayment) {
+    go(4);
+    return;
+  }
+
   const ig = document.getElementById('f-instagram').value.trim();
   const nm = document.getElementById('f-name').value.trim();
   const ph = document.getElementById('f-phone').value.trim();
@@ -1033,6 +1046,7 @@ async function doSubmit() {
       if (!photoResult.success) throw new Error(photoResult.error || 'PHOTO_UPLOAD_FAILED');
     }
 
+    orderReadyForPayment = true;
     document.getElementById('order-num-display').textContent = orderNum;
     
     // Safe: Build receipt with textContent (防 XSS)
@@ -1175,6 +1189,7 @@ function closeTerms() {
 
 function doReset() {
   sel=null; orderNum=null; petFiles=[]; payFile=null; appliedPromo=null; selectedOutline=null;
+  orderReadyForPayment=false;
   sessionStorage.removeItem('meow_order_number');
   sessionStorage.removeItem('meow_order_token');
   sessionStorage.removeItem('meow_order_request_id');
