@@ -6,22 +6,11 @@
 <title>just for you and meow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
 <script>
-// ═══════════════════════════════════════════════════
-//  PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
-//  (see apps-script.gs for how to get this URL)
-// ═══════════════════════════════════════════════════
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_RoSwLKTfr-daBLvMvdqy5ADEHQyARYyJaFWy8BeL1Txr15MlF5BzOwYeMlLlXMnmLQ/exec';
-
-// Security: SHA-256 Signature
-async function generateSignature(payload) {
-  const msg = JSON.stringify(payload) + 'justforyouandmeow_client_secret';
-  const msgBuffer = new TextEncoder().encode(msg);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+const API_URL = '/api/order';
+const TURNSTILE_SITE_KEY = '0x4AAAAAADqAIDn4BwESb5wK';
 
 const CONFIG = {
   fps: {
@@ -307,13 +296,19 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="upfield">
               <input type="file" id="f-photos" accept="image/*" multiple onchange="onPetFiles(this)">
               <span class="upfield-label">Select files</span>
-              <span class="upfield-hint">JPG or PNG · up to 5 MB each</span>
+              <span class="upfield-hint">JPG or PNG · up to 6 files · 2.5 MB each</span>
             </div>
             <div class="file-chosen" id="pet-file-chosen"></div>
           </div>
           <div class="field">
             <label>Notes <small>(optional)</small></label>
             <textarea id="f-notes" placeholder="Background colour, pose, accessories, anything you have in mind..."></textarea>
+          </div>
+          <div class="field">
+            <div class="cf-turnstile"
+                 data-sitekey="0x4AAAAAADqAIDn4BwESb5wK"
+                 data-action="order"
+                 data-theme="light"></div>
           </div>
           <div id="msg-s3" class="status-msg"></div>
           <div class="btn-row">
@@ -399,14 +394,6 @@ let petFiles = [];
 let payFile  = null;
 
 document.getElementById('yr').textContent = new Date().getFullYear();
-
-// generate order number: MEOW-0001, MEOW-0002, etc
-function genOrderNum() {
-  let lastNum = parseInt(localStorage.getItem('meow_last_order') || '0');
-  let nextNum = lastNum + 1;
-  localStorage.setItem('meow_last_order', nextNum.toString());
-  return 'MEOW-' + String(nextNum).padStart(4, '0');
-}
 
 function fileToBase64(file) {
   return new Promise((res, rej) => {
@@ -502,10 +489,17 @@ function v2() {
 
 function onPetFiles(input) {
   const files = Array.from(input.files);
-  const big   = files.filter(f => f.size > 5 * 1024 * 1024);
+  const big   = files.filter(f => f.size > 2.5 * 1000 * 1000);
   const el    = document.getElementById('pet-file-chosen');
+  if (files.length > 6) {
+    el.textContent = 'Please select no more than 6 photos.';
+    el.style.color = 'var(--err)';
+    petFiles = [];
+    input.value = '';
+    return;
+  }
   if (big.length) {
-    el.textContent = big.map(f=>f.name).join(', ') + ' exceed 5 MB. Please use smaller images.';
+    el.textContent = big.map(f=>f.name).join(', ') + ' exceed 2.5 MB. Please use smaller images.';
     el.style.color = 'var(--err)';
     petFiles = [];
     input.value = '';
@@ -527,18 +521,25 @@ async function doSubmit() {
   const ph = document.getElementById('f-phone').value.trim();
   const ad = document.getElementById('f-addr').value.trim();
   
-  // Validate inputs
   if (!ig||!nm||!ph||!ad) { showMsg('msg-s3','err','Please go back and complete all your details.'); go(2); return; }
   if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
     showMsg('msg-s3','err','Some fields are too long.'); go(2); return;
   }
-  
-  // Validate pet photos
-  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+  const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
+  if (!turnstileToken) {
+    showMsg('msg-s3','err','Please complete the security check.');
+    return;
+  }
+
+  const MAX_FILE_SIZE = 2.5 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+  if (petFiles.length > 6) {
+    showMsg('msg-s3','err','Please upload no more than 6 pet photos.'); return;
+  }
   for (let f of petFiles) {
     if (f.size > MAX_FILE_SIZE) {
-      showMsg('msg-s3','err','Pet photo too large (max 5MB).'); return;
+      showMsg('msg-s3','err','Pet photo too large (max 2.5MB).'); return;
     }
     if (!ALLOWED_TYPES.includes(f.type)) {
       showMsg('msg-s3','err','Pet photos must be PNG or JPEG only.'); return;
@@ -550,31 +551,49 @@ async function doSubmit() {
   btn.innerHTML = '<span class="spinner"></span>Submitting…';
   hideMsg('msg-s3');
 
-  orderNum = genOrderNum();
-
   try {
-    const photos = await Promise.all(petFiles.map(async f => ({
-      name: f.name, type: f.type, data: await fileToBase64(f)
-    })));
-
     const payload = {
       type: 'order',
-      orderNumber: orderNum,
-      timestamp: Date.now(),
+      turnstileToken,
       instagram: ig, name: nm, phone: ph, address: ad,
-      size: sel.id, dims: sel.dims, price: sel.price,
-      notes: document.getElementById('f-notes').value.trim(),
-      petPhotos: photos,
+      size: sel.id,
+      notes: document.getElementById('f-notes').value.trim()
     };
 
-    // Add security signature
-    const signature = await generateSignature(payload);
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'ORDER_FAILED');
+    }
 
-    fetch(SCRIPT_URL, {
-      method:'POST', mode:'no-cors', redirect:'follow',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ ...payload, signature }),
-    }).catch(() => {});
+    orderNum = result.orderNumber;
+    const orderToken = result.orderToken;
+    sel = {
+      ...sel,
+      id: result.size,
+      dims: result.dims,
+      price: result.price
+    };
+    sessionStorage.setItem('meow_order_number', orderNum);
+    sessionStorage.setItem('meow_order_token', orderToken);
+
+    for (let i = 0; i < petFiles.length; i++) {
+      btn.innerHTML = '<span class="spinner"></span>Uploading photo ' +
+        (i + 1) + '/' + petFiles.length + '...';
+      const photoResult = await postApi_({
+        type: 'pet_photo',
+        orderNumber: orderNum,
+        orderToken,
+        photo: {
+          data: await fileToBase64(petFiles[i])
+        }
+      });
+      if (!photoResult.success) throw new Error(photoResult.error || 'PHOTO_UPLOAD_FAILED');
+    }
 
     document.getElementById('order-num-display').textContent = orderNum;
     
@@ -609,116 +628,92 @@ async function doSubmit() {
     go(4);
 
   } catch(err) {
-    showMsg('msg-s3','err','Error processing order. Please try again or contact us on Instagram.');
-    btn.disabled = false;
-    btn.textContent = 'Confirm order';
+    const created = !!orderNum;
+    showMsg(
+      'msg-s3',
+      'err',
+      created
+        ? 'Order ' + orderNum + ' was created, but a photo failed to upload. Please contact us on Instagram before trying again.'
+        : 'Order was not submitted. Please retry the security check and try again.'
+    );
+    if (!created && window.turnstile) window.turnstile.reset();
+    btn.disabled = created;
+    btn.textContent = created ? 'Contact us with your order number' : 'Confirm order';
   }
 }
 
 async function submitPayment() {
-  console.log('=== submitPayment called ===');
-  
-  // Fallback: If payFile is null, try to get from input element
   if (!payFile) {
     const fileInput = document.getElementById('f-payment');
     if (fileInput && fileInput.files.length > 0) {
       payFile = fileInput.files[0];
-      console.log('payFile recovered from input element:', payFile.name);
     }
   }
-  
-  console.log('payFile:', payFile);
-  
+
   if (!payFile) { 
-    console.log('No file selected');
     showMsg('msg-s4','err','Please select your payment screenshot first.'); 
     return; 
   }
-  
-  // Validate payment screenshot
-  const MAX_SIZE = 5 * 1024 * 1024;
+
+  const MAX_SIZE = 2.5 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
-  
+
   if (payFile.size > MAX_SIZE) {
-    console.log('File too large:', payFile.size);
-    showMsg('msg-s4','err','Screenshot too large (max 5MB).'); 
+    showMsg('msg-s4','err','Screenshot too large (max 2.5MB).'); 
     return;
   }
-  
+
   if (!ALLOWED_TYPES.includes(payFile.type)) {
-    console.log('Invalid file type:', payFile.type);
     showMsg('msg-s4','err','Payment screenshot must be PNG or JPEG only.'); 
     return;
   }
-  
+
+  const savedOrderNumber = orderNum || sessionStorage.getItem('meow_order_number');
+  const orderToken = sessionStorage.getItem('meow_order_token');
+  if (!savedOrderNumber || !orderToken) {
+    showMsg('msg-s4','err','Order session expired. Please contact us on Instagram.');
+    return;
+  }
+
   const btn = document.getElementById('s4n');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Uploading…';
   hideMsg('msg-s4');
-  
+
   try {
-    console.log('Converting file to base64...');
     const data = await fileToBase64(payFile);
-    console.log('Base64 conversion done, data length:', data.length);
-    
-    const payload = {
+
+    const result = await postApi_({
       type: 'payment',
-      orderNumber: orderNum,
-      timestamp: Date.now(),
-      screenshot: { 
-        name: payFile.name, 
-        type: payFile.type, 
-        size: payFile.size, 
-        data 
-      }
-    };
-    
-    console.log('Payload created:', {
-      type: payload.type,
-      orderNumber: payload.orderNumber,
-      timestamp: payload.timestamp,
-      screenshotName: payload.screenshot.name
+      orderNumber: savedOrderNumber,
+      orderToken,
+      screenshot: { data }
     });
-    
-    // Generate signature
-    console.log('Generating signature...');
-    const signature = await generateSignature(payload);
-    console.log('Signature generated:', signature.substring(0, 20) + '...');
-    
-    const payloadWithSignature = { ...payload, signature };
-    const jsonBody = JSON.stringify(payloadWithSignature);
-    
-    console.log('Sending to:', SCRIPT_URL);
-    console.log('Request body size:', jsonBody.length, 'bytes');
-    
-    const fetchResponse = fetch(SCRIPT_URL, {
-      method:'POST', 
-      redirect:'follow',
-      headers:{'Content-Type':'text/plain'},
-      body: jsonBody,
-    });
-    
-    console.log('Fetch request initiated');
-    
-    fetchResponse.catch(err => {
-      console.error('Fetch error:', err);
-    });
-    
-    console.log('=== submitPayment completed ===');
-    
+
+    if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
     btn.textContent = 'Submitted';
-    showMsg('msg-s4','ok','Payment proof submitted and please send us a direct message (DM).Thank you ฅᨐฅ');
+    showMsg('msg-s4','ok','Payment proof submitted for manual verification. Please also send us a direct message. Thank you.');
   } catch(err) {
-    console.error('Exception caught:', err);
-    console.error('Stack:', err.stack);
-    showMsg('msg-s4','err','Upload failed: ' + err.message);
+    showMsg('msg-s4','err','Upload failed. Please try again or contact us on Instagram.');
     btn.disabled = false;
     btn.textContent = 'Submit payment proof';
   }
 }
 
+async function postApi_(payload) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const result = await response.json();
+  return { ...result, success: response.ok && result.success === true };
+}
+
 function doReset() {
   sel=null; orderNum=null; petFiles=[]; payFile=null;
+  sessionStorage.removeItem('meow_order_number');
+  sessionStorage.removeItem('meow_order_token');
   ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-photos').value='';
   document.getElementById('f-payment').value='';
@@ -737,6 +732,7 @@ function doReset() {
   document.getElementById('s4n').textContent='Submit payment proof';
   document.getElementById('s1n').disabled=true;
   hideMsg('msg-s3'); hideMsg('msg-s4');
+  if (window.turnstile) window.turnstile.reset();
   go(1);
 }
 </script>
