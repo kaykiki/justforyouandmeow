@@ -19,16 +19,7 @@ const CONFIG = {
     payee:   'Glory On International Limited',
     qrImage: 'images/fps-qr.png',
   },
-  products: [
-    { id:'S',        safeId:'s',    dims:'70 × 30–40 cm',  price:590, capacity:'1 person + 1 pet' },
-    { id:'M',        safeId:'m',    dims:'100 × 40–50 cm', price:690, capacity:'2 people + 1–2 pets' },
-    { id:'L',        safeId:'l',    dims:'130 × 50–60 cm', price:990, capacity:'2+ people + 3+ pets' },
-    { id:'Mini Rug', safeId:'mini', dims:'20 cm',          price:350, capacity:'1 pet' },
-    { id:'Coaster',      safeId:'coaster',  dims:'15 cm',          price:300, capacity:'1 pet' },
-    { id:'S - Oval',     safeId:'s-oval',   dims:'70 × 30–40 cm',  price:590, capacity:'up to 6 heads' },
-    { id:'M - Oval',     safeId:'m-oval',   dims:'100 × 40–50 cm', price:690, capacity:'up to 8 heads' },
-    { id:'L - Oval',     safeId:'l-oval',   dims:'130 × 50–60 cm', price:990, capacity:'up to 10 heads' },
-  ],
+  products: [],
 };
 </script>
 
@@ -518,28 +509,70 @@ function showMsg(id, type, text) {
 }
 function hideMsg(id) { document.getElementById(id).className = 'status-msg'; }
 
-// build size tables
-CONFIG.products.forEach(p => {
-  const row = `
-    <div class="size-row" data-safe="${p.safeId}" onclick="pickAndScroll('${p.safeId}')">
-      <span class="size-letter">${p.id}</span>
-      <div><div class="size-dims">${p.dims}</div></div>
-      <div class="size-cap">${p.capacity}</div>
-      <div class="size-price">HK$${p.price}</div>
-      <span class="size-radio" id="sr-${p.safeId}"></span>
-    </div>`;
-  document.getElementById('size-list').insertAdjacentHTML('beforeend', row);
+loadProducts();
 
-  const wrow = `
-    <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
-      <span class="size-letter">${p.id}</span>
-      <div><div class="size-dims">${p.dims}</div></div>
-      <div class="size-cap">${p.capacity}</div>
-      <div class="size-price">HK$${p.price}</div>
-      <span class="size-radio" id="pr-${p.safeId}"></span>
-    </div>`;
-  document.getElementById('p1-rows').insertAdjacentHTML('beforeend', wrow);
-});
+async function loadProducts() {
+  const sizeList = document.getElementById('size-list');
+  const orderRows = document.getElementById('p1-rows');
+  sizeList.textContent = 'Loading products...';
+  orderRows.textContent = 'Loading products...';
+  document.getElementById('s1n').disabled = true;
+
+  try {
+    const result = await postApi_({ type: 'products' });
+    if (!result.success || !Array.isArray(result.products) || !result.products.length) {
+      throw new Error('NO_PRODUCTS');
+    }
+    CONFIG.products = result.products;
+    renderProducts_();
+  } catch (error) {
+    sizeList.textContent = 'Products are temporarily unavailable. Please refresh or contact us on Instagram.';
+    orderRows.textContent = 'Products are temporarily unavailable.';
+  }
+}
+
+function renderProducts_() {
+  const sizeList = document.getElementById('size-list');
+  const orderRows = document.getElementById('p1-rows');
+  sizeList.innerHTML = '';
+  orderRows.innerHTML = '';
+
+  CONFIG.products.forEach(p => {
+    const id = escapeHtml_(p.id);
+    const dims = escapeHtml_(p.dims);
+    const capacity = escapeHtml_(p.capacity);
+    const price = Number(p.price).toLocaleString();
+
+    const row = `
+      <div class="size-row" data-safe="${p.safeId}" onclick="pickAndScroll('${p.safeId}')">
+        <span class="size-letter">${id}</span>
+        <div><div class="size-dims">${dims}</div></div>
+        <div class="size-cap">${capacity}</div>
+        <div class="size-price">HK$${price}</div>
+        <span class="size-radio" id="sr-${p.safeId}"></span>
+      </div>`;
+    sizeList.insertAdjacentHTML('beforeend', row);
+
+    const wrow = `
+      <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
+        <span class="size-letter">${id}</span>
+        <div><div class="size-dims">${dims}</div></div>
+        <div class="size-cap">${capacity}</div>
+        <div class="size-price">HK$${price}</div>
+        <span class="size-radio" id="pr-${p.safeId}"></span>
+      </div>`;
+    orderRows.insertAdjacentHTML('beforeend', wrow);
+  });
+}
+
+function escapeHtml_(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function pick(safeId) {
   sel = CONFIG.products.find(p => p.safeId === safeId);
@@ -597,7 +630,7 @@ async function applyPromo() {
   try {
     const result = await postApi_({
       type: 'promo',
-      size: sel.id,
+      productId: sel.safeId,
       promoCode
     });
     if (!result.success) throw new Error(result.error || 'INVALID_PROMO_CODE');
@@ -744,6 +777,7 @@ async function doSubmit() {
       termsAccepted: true,
       termsVersion: TERMS_VERSION,
       promoCode: appliedPromo ? appliedPromo.code : '',
+      productId: sel.safeId,
       firstPhoto: {
         data: firstPhotoData
       },
@@ -767,6 +801,7 @@ async function doSubmit() {
     sel = {
       ...sel,
       id: result.size,
+      safeId: result.productId || sel.safeId,
       dims: result.dims,
       price: result.price
     };
