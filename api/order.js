@@ -50,7 +50,7 @@ module.exports = async function handler(req, res) {
         ...body,
         apiSecret: process.env.API_SHARED_SECRET
       }),
-      signal: AbortSignal.timeout(25000)
+      signal: AbortSignal.timeout(55000)
     });
 
     if (!upstreamResponse.ok) {
@@ -80,6 +80,10 @@ module.exports = async function handler(req, res) {
       error: 'SERVER_ERROR'
     });
   }
+};
+
+module.exports.config = {
+  maxDuration: 60
 };
 
 function parseBody(body) {
