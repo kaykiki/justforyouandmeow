@@ -552,8 +552,15 @@ async function doSubmit() {
   hideMsg('msg-s3');
 
   try {
+    let requestId = sessionStorage.getItem('meow_order_request_id');
+    if (!requestId) {
+      requestId = createRequestId_();
+      sessionStorage.setItem('meow_order_request_id', requestId);
+    }
+
     const payload = {
       type: 'order',
+      requestId,
       turnstileToken,
       instagram: ig, name: nm, phone: ph, address: ad,
       size: sel.id,
@@ -710,10 +717,20 @@ async function postApi_(payload) {
   return { ...result, success: response.ok && result.success === true };
 }
 
+function createRequestId_() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID().replace(/-/g, '');
+  }
+  const bytes = new Uint8Array(24);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function doReset() {
   sel=null; orderNum=null; petFiles=[]; payFile=null;
   sessionStorage.removeItem('meow_order_number');
   sessionStorage.removeItem('meow_order_token');
+  sessionStorage.removeItem('meow_order_request_id');
   ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-photos').value='';
   document.getElementById('f-payment').value='';
