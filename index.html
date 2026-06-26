@@ -10,7 +10,6 @@
 <script>
 const API_URL = '/api/order';
 const TURNSTILE_SITE_KEY = '0x4AAAAAADqAIDn4BwESb5wK';
-const TERMS_VERSION = '2026-06-24';
 const IS_DEPLOYED_SITE = location.hostname === 'justforyouandmeow.vercel.app' ||
   location.hostname.endsWith('.vercel.app');
 
@@ -29,6 +28,7 @@ const CONFIG = {
     qrImage: 'images/fps-qr.png',
   },
   products: [],
+  terms: null,
 };
 </script>
 
@@ -148,7 +148,8 @@ main{padding-top:50px}
 .terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}
 .terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}
 .terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
-.terms-dialog{width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black)}
+.terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}
+.terms-dialog:focus{outline:none}
 .terms-dialog::backdrop{background:rgba(0,0,0,.42)}
 .terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}
 .terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}
@@ -392,7 +393,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
         <!-- Step 4 -->
         <div class="panel" id="p4">
           <div class="panel-title">Order received</div>
-          <p class="panel-sub">Complete payment via FPS and upload your screenshot below.</p>
+          <p class="panel-sub">Complete payment via FPS within 24 hours, then upload your screenshot below.</p>
 
           <div class="order-num-box">
             <div class="order-num-label">Your order number</div>
@@ -459,7 +460,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
   </div>
 </dialog>
 
-<dialog class="terms-dialog" id="terms-dialog">
+<dialog class="terms-dialog" id="terms-dialog" tabindex="-1">
   <div class="terms-inner">
     <div class="terms-head">
       <h2>Terms &amp; Conditions / 注意事項</h2>
@@ -586,6 +587,82 @@ function showPaymentSuccess_() {
 }
 
 loadProducts();
+loadTerms();
+
+
+async function loadTerms() {
+  try {
+    const result = await postApi_({ type: 'terms' });
+    if (!result.success || !result.terms || !result.terms.version) {
+      throw new Error('TERMS_UNAVAILABLE');
+    }
+    CONFIG.terms = result.terms;
+    renderTerms_();
+  } catch (error) {
+    CONFIG.terms = null;
+  }
+}
+
+function renderTerms_() {
+  const terms = CONFIG.terms;
+  if (!terms) return;
+
+  const inner = document.querySelector('#terms-dialog .terms-inner');
+  if (!inner) return;
+
+  inner.innerHTML = '';
+
+  const head = document.createElement('div');
+  head.className = 'terms-head';
+
+  const title = document.createElement('h2');
+  title.textContent = (terms.titleEn || 'Terms & Conditions') + ' / ' +
+    (terms.titleZh || '注意事項及私隱聲明');
+
+  const close = document.createElement('button');
+  close.className = 'terms-close';
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Close');
+  close.textContent = '×';
+  close.addEventListener('click', closeTerms);
+
+  head.appendChild(title);
+  head.appendChild(close);
+  inner.appendChild(head);
+
+  const meta = document.createElement('div');
+  meta.className = 'terms-section';
+  const metaP = document.createElement('p');
+  metaP.textContent = 'Version: ' + terms.version;
+  meta.appendChild(metaP);
+  inner.appendChild(meta);
+
+  const en = document.createElement('div');
+  en.className = 'terms-section';
+  const enTitle = document.createElement('h3');
+  enTitle.textContent = terms.titleEn || 'Terms & Conditions';
+  en.appendChild(enTitle);
+  appendTermsParagraphs_(en, terms.contentEn);
+  inner.appendChild(en);
+
+  const zh = document.createElement('div');
+  zh.className = 'terms-section';
+  const zhTitle = document.createElement('h3');
+  zhTitle.textContent = terms.titleZh || '注意事項及私隱聲明';
+  zh.appendChild(zhTitle);
+  appendTermsParagraphs_(zh, terms.contentZh);
+  inner.appendChild(zh);
+}
+
+function appendTermsParagraphs_(container, content) {
+  const blocks = String(content || '').split(/\n\s*\n/).filter(Boolean);
+  blocks.forEach(block => {
+    const p = document.createElement('p');
+    p.textContent = block.trim();
+    p.style.whiteSpace = 'pre-line';
+    container.appendChild(p);
+  });
+}
 
 async function loadProducts() {
   const orderRows = document.getElementById('p1-rows');
@@ -944,6 +1021,10 @@ async function doSubmit() {
   if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
     showMsg('msg-s3','err','Some fields are too long.'); go(2); return;
   }
+  if (!CONFIG.terms || !CONFIG.terms.version) {
+    showMsg('msg-s3','err','Terms & Conditions are temporarily unavailable. Please reload and try again.');
+    return;
+  }
   if (!document.getElementById('f-terms').checked) {
     showMsg('msg-s3','err','Please read and agree to the Terms & Conditions before confirming your order.');
     return;
@@ -991,7 +1072,7 @@ async function doSubmit() {
       requestId,
       turnstileToken,
       termsAccepted: true,
-      termsVersion: TERMS_VERSION,
+      termsVersion: CONFIG.terms.version,
       promoCode: appliedPromo ? appliedPromo.code : '',
       productId: sel.safeId,
       outline: selectedOutline,
@@ -1180,7 +1261,11 @@ function createRequestId_() {
 
 function openTerms(event) {
   event.preventDefault();
-  document.getElementById('terms-dialog').showModal();
+  const dialog = document.getElementById('terms-dialog');
+  const inner = dialog.querySelector('.terms-inner');
+  if (inner) inner.scrollTop = 0;
+  dialog.showModal();
+  setTimeout(() => dialog.focus({ preventScroll: true }), 0);
 }
 
 function closeTerms() {
