@@ -44,6 +44,7 @@ module.exports = async function handler(req, res) {
       ...body,
       apiSecret: process.env.API_SHARED_SECRET
     };
+
     const result = await callAppsScriptWithRetry(upstreamPayload);
 
     if (!result || result.success !== true) {
@@ -95,6 +96,7 @@ async function callAppsScript(payload) {
   });
 
   const text = await response.text();
+
   if (!response.ok) {
     throw new Error(`Apps Script returned HTTP ${response.status}`);
   }
@@ -180,6 +182,7 @@ function assertConfiguration() {
   ];
 
   const missing = required.filter((name) => !process.env[name]);
+
   if (missing.length) {
     throw new Error(`Missing environment variables: ${missing.join(', ')}`);
   }
