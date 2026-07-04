@@ -1126,8 +1126,10 @@ async function doSubmit() {
       productId: sel.safeId,
       outline: selectedOutline,
       firstPhoto: {
-        data: firstPhotoData
-      },
+  data: firstPhotoData,
+  type: petFiles[0].type,
+  name: petFiles[0].name
+},
       instagram: ig, name: nm, phone: ph, address: ad,
       size: sel.id,
       notes: document.getElementById('f-notes').value.trim()
@@ -1170,8 +1172,10 @@ async function doSubmit() {
         orderNumber: orderNum,
         orderToken,
         photo: {
-          data: await fileToBase64(petFiles[i])
-        }
+  data: await fileToBase64(petFiles[i]),
+  type: petFiles[i].type,
+  name: petFiles[i].name
+}
       });
       if (!photoResult.success) throw new Error(photoResult.error || 'PHOTO_UPLOAD_FAILED');
     }
