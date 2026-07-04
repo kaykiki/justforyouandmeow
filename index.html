@@ -1165,20 +1165,25 @@ async function doSubmit() {
     sessionStorage.setItem('meow_order_token', orderToken);
 
     for (let i = 1; i < petFiles.length; i++) {
-      btn.innerHTML = '<span class="spinner"></span>Uploading photo ' +
-        (i + 1) + '/' + petFiles.length + '...';
-      const photoResult = await postApi_({
-        type: 'pet_photo',
-        orderNumber: orderNum,
-        orderToken,
-        photo: {
-  data: await fileToBase64(petFiles[i]),
-  type: petFiles[i].type,
-  name: petFiles[i].name
-}
-      });
-      if (!photoResult.success) throw new Error(photoResult.error || 'PHOTO_UPLOAD_FAILED');
+  btn.innerHTML = '<span class="spinner"></span>Uploading photo ' +
+    (i + 1) + '/' + petFiles.length + '...';
+
+  const photoResult = await postApi_({
+    type: 'pet_photo',
+    orderNumber: orderNum,
+    orderToken,
+    index: i + 1,
+    photo: {
+      data: await fileToBase64(petFiles[i]),
+      type: petFiles[i].type,
+      name: petFiles[i].name
     }
+  });
+
+  if (!photoResult.success) {
+    throw new Error(photoResult.error || 'PHOTO_UPLOAD_FAILED');
+  }
+}
 
     orderReadyForPayment = true;
     document.getElementById('order-num-display').textContent = orderNum;
