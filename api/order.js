@@ -157,9 +157,18 @@ async function verifyTurnstile(token) {
   if (!response.ok) return false;
 
   const result = await response.json();
+  const allowedHostnames = getAllowedHostnames();
+
   return result.success === true &&
-    result.hostname === process.env.ALLOWED_HOSTNAME &&
+    allowedHostnames.includes(result.hostname) &&
     (!result.action || result.action === 'order');
+}
+
+function getAllowedHostnames() {
+  return String(process.env.ALLOWED_HOSTNAME || '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean);
 }
 
 function assertConfiguration() {
