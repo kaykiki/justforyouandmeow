@@ -17,10 +17,55 @@ const TURNSTILE_ALLOWED_HOSTS = [
 ];
 const IS_DEPLOYED_SITE = TURNSTILE_ALLOWED_HOSTS.includes(location.hostname);
 
+let turnstileWidgetId = null;
+let turnstileToken = '';
+
+function scheduleTurnstileRender() {
+  window.setTimeout(renderTurnstileWidget, 150);
+}
+
+function renderTurnstileWidget() {
+  if (!IS_DEPLOYED_SITE) return;
+  if (!window.turnstile) return;
+  if (turnstileWidgetId !== null) return;
+
+  const container = document.getElementById('turnstile-widget');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  turnstileWidgetId = window.turnstile.render(container, {
+    sitekey: TURNSTILE_SITE_KEY,
+    action: 'order',
+    theme: 'light',
+    callback: function(token) {
+      turnstileToken = token || '';
+      hideMsg('msg-s3');
+    },
+    'expired-callback': function() {
+      turnstileToken = '';
+    },
+    'error-callback': function() {
+      turnstileToken = '';
+      showMsg('msg-s3', 'err', 'Security check could not load. Please refresh the page and try again.');
+    }
+  });
+}
+
+function resetTurnstileWidget() {
+  turnstileToken = '';
+  if (window.turnstile && turnstileWidgetId !== null) {
+    window.turnstile.reset(turnstileWidgetId);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', scheduleTurnstileRender);
+window.addEventListener('load', scheduleTurnstileRender);
 
 if (IS_DEPLOYED_SITE) {
   const turnstileScript = document.createElement('script');
-  turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+  turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  turnstileScript.onload = scheduleTurnstileRender;
   turnstileScript.async = true;
   turnstileScript.defer = true;
   document.head.appendChild(turnstileScript);
@@ -376,10 +421,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <textarea id="f-notes" placeholder="Background colour, pose, accessories, anything you have in mind..."></textarea>
           </div>
           <div class="field">
-            <div class="cf-turnstile"
-                 data-sitekey="0x4AAAAAADqAIDn4BwESb5wK"
-                 data-action="order"
-                 data-theme="light"></div>
+            <div id="turnstile-widget"></div>
           </div>
           <label class="terms-check">
             <input type="checkbox" id="f-terms">
@@ -1035,8 +1077,7 @@ async function doSubmit() {
     return;
   }
 
-  const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value;
-  if (!turnstileToken) {
+  if (IS_DEPLOYED_SITE && !turnstileToken) {
     showMsg('msg-s3','err','Please complete the security check.');
     return;
   }
@@ -1180,7 +1221,7 @@ async function doSubmit() {
         ? 'Order ' + orderNum + ' was created, but a photo failed to upload. Please contact us on Instagram before trying again.'
         : 'Order was not submitted. Please retry the security check and try again.'
     );
-    if (!created && window.turnstile) window.turnstile.reset();
+    if (!created) resetTurnstileWidget();
     btn.disabled = created;
     btn.textContent = created ? 'Contact us with your order number' : 'Confirm order';
   }
@@ -1308,7 +1349,7 @@ function doReset() {
   document.getElementById('payment-back').style.display='';
   document.getElementById('s1n').disabled=true;
   hideMsg('msg-s3'); hideMsg('msg-s4');
-  if (window.turnstile) window.turnstile.reset();
+  resetTurnstileWidget();
   go(1);
 }
 </script>
