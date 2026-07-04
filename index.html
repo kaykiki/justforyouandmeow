@@ -10,8 +10,13 @@
 <script>
 const API_URL = '/api/order';
 const TURNSTILE_SITE_KEY = '0x4AAAAAADqAIDn4BwESb5wK';
-const IS_DEPLOYED_SITE = location.hostname === 'justforyouandmeow.vercel.app' ||
-  location.hostname.endsWith('.vercel.app');
+const TURNSTILE_ALLOWED_HOSTS = [
+  'justforyouandmeow.vercel.app',
+  'justforyouandmeow.com',
+  'www.justforyouandmeow.com'
+];
+const IS_DEPLOYED_SITE = TURNSTILE_ALLOWED_HOSTS.includes(location.hostname);
+
 
 if (IS_DEPLOYED_SITE) {
   const turnstileScript = document.createElement('script');
