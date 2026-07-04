@@ -721,7 +721,10 @@ async function loadProducts() {
     if (!result.success || !Array.isArray(result.products) || !result.products.length) {
       throw new Error('NO_PRODUCTS');
     }
-    CONFIG.products = result.products;
+    CONFIG.products = result.products.map(p => ({
+      ...p,
+      safeId: String(p.id || '').trim().toLowerCase()
+    }));
     renderProducts_();
   } catch (error) {
     orderRows.textContent = 'Products are temporarily unavailable.';
@@ -733,14 +736,14 @@ function renderProducts_() {
   orderRows.innerHTML = '';
 
   CONFIG.products.forEach(p => {
-    const id = escapeHtml_(p.id);
+    const name = escapeHtml_(p.name);
     const dims = escapeHtml_(p.dims);
     const capacity = escapeHtml_(p.capacity);
     const price = Number(p.price).toLocaleString();
 
     const wrow = `
       <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
-        <span class="size-letter">${id}</span>
+        <span class="size-letter">${name}</span>
         <div><div class="size-dims">${dims}</div></div>
         <div class="size-cap">${capacity}</div>
         <div class="size-price">HK$${price}</div>
