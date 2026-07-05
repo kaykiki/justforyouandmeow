@@ -157,7 +157,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
   <section class="section">
     <p class="section-label">How to order</p>
     <div class="process">
-      <div><div class="step-n">01</div><div class="step-title">Choose product(s)</div><p class="step-desc">S, M, or L <br>based on the number of pets you want included.</p></div>
+      <div><div class="step-n">01</div><div class="step-title">Choose product(s)</div><p class="step-desc">Pick one or more rug sizes / add-ons based on what you need.</p></div>
       <div><div class="step-n">02</div><div class="step-title">Send your photos</div><p class="step-desc">Upload clear, front-facing photos of your pets.</p></div>
       <div><div class="step-n">03</div><div class="step-title">Approve the draft</div><p class="step-desc">We send a draft around 7 days.</p></div>
       <div><div class="step-n">04</div><div class="step-title">We make your rug</div><p class="step-desc">Production begins after draft approval. At least 6 weeks.</p></div>
@@ -177,7 +177,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
         <div class="panel on" id="p1">
           <div class="panel-title">Choose product(s)</div>
-          <p class="panel-sub">Select the rug that fits you and your pets.</p>
+          <p class="panel-sub">Select one or more products. Use + / − if you need more than one of the same item.</p>
           <div id="p1-rows"></div>
 
           <div class="outline-box">
@@ -234,7 +234,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="upfield">
               <input type="file" id="f-photos" accept="image/*" multiple onchange="onPetFiles(this)">
               <span class="upfield-label">Select files</span>
-              <span class="upfield-hint">JPG or PNG · up to 6 files · 2.5 MB each</span>
+              <span class="upfield-hint">JPG or PNG · up to 6 files · 3 MB each</span>
             </div>
             <div class="file-chosen" id="pet-file-chosen"></div>
             <div class="photo-list" id="pet-photo-list"></div>
@@ -767,9 +767,9 @@ function v2() {
 function onPetFiles(input) {
   const newFiles = Array.from(input.files);
   const el = document.getElementById('pet-file-chosen');
-  const invalid = newFiles.filter(f => f.size > 2.5 * 1000 * 1000 || !['image/png', 'image/jpeg', 'image/jpg'].includes(f.type));
+  const invalid = newFiles.filter(f => f.size > 3 * 1000 * 1000 || !['image/png', 'image/jpeg', 'image/jpg'].includes(f.type));
   if (invalid.length) {
-    el.textContent = 'Photos must be JPG or PNG and no larger than 2.5 MB each.';
+    el.textContent = 'Photos must be JPG or PNG and no larger than 3 MB each.';
     el.style.color = 'var(--err)';
     input.value = '';
     return;
@@ -946,7 +946,7 @@ async function doSubmit() {
     return;
   }
 
-  const MAX_FILE_SIZE = 2.5 * 1000 * 1000;
+  const MAX_FILE_SIZE = 3 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 
   if (petFiles.length < 1) {
@@ -961,7 +961,7 @@ async function doSubmit() {
 
   for (let f of petFiles) {
     if (f.size > MAX_FILE_SIZE) {
-      showMsg('msg-s3', 'err', 'Pet photo too large (max 2.5MB).');
+      showMsg('msg-s3', 'err', 'Pet photo too large (max 3MB).');
       return;
     }
     if (!ALLOWED_TYPES.includes(f.type)) {
@@ -1129,11 +1129,11 @@ async function submitPayment() {
     return;
   }
 
-  const MAX_SIZE = 2.5 * 1000 * 1000;
+  const MAX_SIZE = 3 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 
   if (payFile.size > MAX_SIZE) {
-    showMsg('msg-s4', 'err', 'Screenshot too large (max 2.5MB).');
+    showMsg('msg-s4', 'err', 'Screenshot too large (max 3MB).');
     return;
   }
 
@@ -1182,11 +1182,11 @@ async function submitPayment() {
 
 
 function validateImageFile_(file, label) {
-  const MAX_SIZE = 2.5 * 1000 * 1000;
+  const MAX_SIZE = 3 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 
   if (!file) throw new Error(label + ' is missing.');
-  if (file.size > MAX_SIZE) throw new Error(label + ' is too large (max 2.5MB).');
+  if (file.size > MAX_SIZE) throw new Error(label + ' is too large (max 3MB).');
   if (!ALLOWED_TYPES.includes(file.type)) throw new Error(label + ' must be PNG or JPEG only.');
 }
 

@@ -85,7 +85,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="upfield">
               <input type="file" id="m-photos" accept="image/*" multiple onchange="onManagePetFiles(this)">
               <span class="upfield-label">Select files</span>
-              <span class="upfield-hint">JPG or PNG · up to 6 files · 2.5 MB each</span>
+              <span class="upfield-hint">JPG or PNG · up to 6 files · 3 MB each</span>
             </div>
             <div class="file-chosen" id="manage-pet-file-chosen"></div>
             <div class="photo-list" id="manage-pet-photo-list"></div>
@@ -166,10 +166,10 @@ function hideMsg(id) {
 }
 
 function validateImageFile_(file, label) {
-  const MAX_SIZE = 2.5 * 1000 * 1000;
+  const MAX_SIZE = 3 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
   if (!file) throw new Error(label + ' is missing.');
-  if (file.size > MAX_SIZE) throw new Error(label + ' is too large (max 2.5MB).');
+  if (file.size > MAX_SIZE) throw new Error(label + ' is too large (max 3MB).');
   if (!ALLOWED_TYPES.includes(file.type)) throw new Error(label + ' must be PNG or JPEG only.');
 }
 
