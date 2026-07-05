@@ -195,7 +195,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
                 <span class="addon-title">Add JPG digital copy</span>
                 <span class="addon-desc">For personal / non-commercial use only.</span>
               </span>
-              <span class="addon-price">+HK$100</span>
+              <span class="addon-price">+HK$150</span>
             </button>
           </div>
 
@@ -319,7 +319,7 @@ let payFile = null;
 let appliedPromo = null;
 let selectedOutline = null;
 let selectedDigitalCopy = false;
-const DIGITAL_COPY_PRICE = 100;
+const DIGITAL_COPY_PRICE = 150;
 let orderReadyForPayment = false;
 let manageSession = null;
 let managePetFiles = [];
@@ -634,7 +634,7 @@ function getReceiptTotal_(result, digitalCopySelected, digitalCopyPrice) {
 }
 
 function getDigitalCopyText_() {
-  return selectedDigitalCopy ? 'JPG digital copy +HK$100' : 'No digital copy';
+  return selectedDigitalCopy ? 'JPG digital copy +HK$150' : 'No digital copy';
 }
 
 function getProductsSummary_() {
@@ -661,7 +661,7 @@ function updateSizeContinue_() {
 function updateRecaps() {
   if (!hasSelectedProducts_()) return;
   const parts = [(selectedOutline || '') + ' outline'];
-  if (selectedDigitalCopy) parts.push('JPG digital copy +HK$100');
+  if (selectedDigitalCopy) parts.push('JPG digital copy +HK$150');
   ['2','3'].forEach(n => {
     document.getElementById('rb' + n + '-size').textContent = getProductsSummary_();
     document.getElementById('rb' + n + '-price').textContent = parts.join(' — ') + ' — HK$' + getOrderTotal_().toLocaleString();
