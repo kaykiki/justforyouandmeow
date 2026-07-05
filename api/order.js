@@ -1,39 +1,192 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>just for you and meow</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+const MAX_BODY_BYTES = 3_600_000;
+const ALLOWED_TYPES = new Set(['products', 'terms', 'promo', 'order', 'manage_lookup', 'pet_photo', 'payment']);
 
-<script>
-const API_URL = '/api/order';
-const TURNSTILE_SITE_KEY = '0x4AAAAAADvn28RYsBENDB8b';
-const TURNSTILE_ALLOWED_HOSTS = [
-  'justforyouandmeow.vercel.app',
-  'justforyouandmeow.com',
-  'www.justforyouandmeow.com'
-];
-const IS_DEPLOYED_SITE = TURNSTILE_ALLOWED_HOSTS.includes(location.hostname);
+module.exports = async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
 
-let turnstileWidgetId = null;
-let turnstileToken = '';
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ success: false, error: 'METHOD_NOT_ALLOWED' });
+  }
 
-function scheduleTurnstileRender() {
-  window.setTimeout(renderTurnstileWidget, 150);
+  try {
+    assertConfiguration();
+
+    const contentLength = Number(req.headers['content-length'] || 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return res.status(413).json({ success: false, error: 'REQUEST_TOO_LARGE' });
+    }
+
+    const body = parseBody(req.body);
+    if (!body || !ALLOWED_TYPES.has(body.type)) {
+      return res.status(400).json({ success: false, error: 'INVALID_REQUEST' });
+    }
+
+    const measuredSize = Buffer.byteLength(JSON.stringify(body), 'utf8');
+    if (measuredSize > MAX_BODY_BYTES) {
+      return res.status(413).json({ success: false, error: 'REQUEST_TOO_LARGE' });
+    }
+
+    if (body.type === 'order') {
+      const turnstileOK = await verifyTurnstile(body.turnstileToken);
+      if (!turnstileOK) {
+        return res.status(403).json({
+          success: false,
+          error: 'BOT_CHECK_FAILED'
+        });
+      }
+    }
+
+    delete body.turnstileToken;
+    delete body.apiSecret;
+
+    const upstreamPayload = {
+      ...body,
+      apiSecret: process.env.API_SHARED_SECRET
+    };
+
+    const result = await callAppsScriptWithRetry(upstreamPayload);
+
+    if (!result || result.success !== true) {
+      return res.status(400).json({
+        success: false,
+        error: result && result.error ? result.error : 'UPSTREAM_REJECTED'
+      });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Order API error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'SERVER_ERROR'
+    });
+  }
+};
+
+module.exports.config = {
+  maxDuration: 60
+};
+
+async function callAppsScriptWithRetry(payload) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await callAppsScript(payload);
+    } catch (error) {
+      lastError = error;
+      console.error(`Apps Script attempt ${attempt} failed:`, error.message);
+      if (attempt < 2) await delay(500);
+    }
+  }
+
+  throw lastError;
 }
 
-function renderTurnstileWidget() {
-  if (!IS_DEPLOYED_SITE) return;
-  if (!window.turnstile) return;
-  if (turnstileWidgetId !== null) return;
+async function callAppsScript(payload) {
+  const response = await fetch(process.env.APPS_SCRIPT_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(25000)
+  });
 
-  const container = document.getElementById('turnstile-widget');
-  if (!container) return;
+  const text = await response.text();
 
-  container.innerHTML = '';
+  if (!response.ok) {
+    throw new Error(`Apps Script returned HTTP ${response.status}`);
+  }
 
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const contentType = response.headers.get('content-type') || 'unknown';
+    console.error(
+      'Invalid Apps Script response:',
+      `content-type=${contentType}`,
+      `length=${text.length}`,
+      `preview=${JSON.stringify(text.slice(0, 120))}`
+    );
+    throw new Error('Apps Script returned invalid JSON');
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseBody(body) {
+  if (body && typeof body === 'object' && !Buffer.isBuffer(body)) {
+    return { ...body };
+  }
+
+  if (typeof body === 'string') {
+    return JSON.parse(body);
+  }
+
+  if (Buffer.isBuffer(body)) {
+    return JSON.parse(body.toString('utf8'));
+  }
+
+  return null;
+}
+
+async function verifyTurnstile(token) {
+  if (typeof token !== 'string' || token.length < 20 || token.length > 2048) {
+    return false;
+  }
+
+  const form = new URLSearchParams();
+  form.set('secret', process.env.TURNSTILE_SECRET_KEY);
+  form.set('response', token);
+
+  const response = await fetch(
+    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: form.toString(),
+      signal: AbortSignal.timeout(10000)
+    }
+  );
+
+  if (!response.ok) return false;
+
+  const result = await response.json();
+  const allowedHostnames = getAllowedHostnames();
+
+  return result.success === true &&
+    allowedHostnames.includes(result.hostname) &&
+    (!result.action || result.action === 'order');
+}
+
+function getAllowedHostnames() {
+  return String(process.env.ALLOWED_HOSTNAME || '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean);
+}
+
+function assertConfiguration() {
+  const required = [
+    'APPS_SCRIPT_URL',
+    'API_SHARED_SECRET',
+    'TURNSTILE_SECRET_KEY',
+    'ALLOWED_HOSTNAME'
+  ];
+
+  const missing = required.filter((name) => !process.env[name]);
+
+  if (missing.length) {
+    throw new Error(`Missing environment variables: ${missing.join(', ')}`);
+  }
+}
   turnstileWidgetId = window.turnstile.render(container, {
     sitekey: TURNSTILE_SITE_KEY,
     action: 'order',
