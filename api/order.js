@@ -1,1636 +1,1560 @@
-const MAX_BODY_BYTES = 3_600_000;
-const ALLOWED_TYPES = new Set(['products', 'terms', 'promo', 'order', 'manage_lookup', 'pet_photo', 'payment']);
+/***************
+ * CONFIG
+ ***************/
+const ORDERS_SHEET = 'Orders';
+const PAYMENTS_SHEET = 'Payments';
+const SECURITY_LOGS_SHEET = 'SecurityLogs';
+const PROMOTIONS_SHEET = 'Promotions';
+const PRODUCTS_SHEET = 'Products';
+const TERMS_SHEET = 'Terms';
 
-module.exports = async function handler(req, res) {
-  res.setHeader('Cache-Control', 'no-store');
+const FINANCE_SPREADSHEET_ID = '10HB8FULJZEE7czLQI4_o1U56vw5lQpWOVfvRKWxWMfo';
+const DEFAULT_SHEET_NAME = 'Mar-Jun 2026';
+const FINANCE_SETTINGS_SHEET = 'Settings';
+const FINANCE_ACTIVE_SHEET_KEY = 'FINANCE_ACTIVE_SHEET';
 
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ success: false, error: 'METHOD_NOT_ALLOWED' });
-  }
+const MAX_PET_PHOTOS = 6;
+const MAX_IMAGE_BYTES = 2.5 * 1024 * 1024;
 
+const ORDER_STATUS_AWAITING_PROOF = 'Awaiting payment proof';
+const PAYMENT_STATUS_PROOF_SUBMITTED = 'Proof submitted - verify manually';
+
+/***************
+ * MAIN ROUTE
+ ***************/
+function doPost(e) {
   try {
-    assertConfiguration();
+    const payload = parsePayload_(e);
 
-    const contentLength = Number(req.headers['content-length'] || 0);
-    if (contentLength > MAX_BODY_BYTES) {
-      return res.status(413).json({ success: false, error: 'REQUEST_TOO_LARGE' });
+    if (!payload || !payload.type) {
+      return jsonResponse_({ success: false, error: 'INVALID_REQUEST' });
     }
 
-    const body = parseBody(req.body);
-    if (!body || !ALLOWED_TYPES.has(body.type)) {
-      return res.status(400).json({ success: false, error: 'INVALID_REQUEST' });
-    }
+    validateApiSecret_(payload);
 
-    const measuredSize = Buffer.byteLength(JSON.stringify(body), 'utf8');
-    if (measuredSize > MAX_BODY_BYTES) {
-      return res.status(413).json({ success: false, error: 'REQUEST_TOO_LARGE' });
-    }
+    if (payload.type === 'products') return listProducts_();
+    if (payload.type === 'terms') return listTerms_();
+    if (payload.type === 'promo') return validatePromo_(payload);
+    if (payload.type === 'order') return createOrder_(payload);
+    if (payload.type === 'manage_lookup') return manageOrderLookup_(payload);
+    if (payload.type === 'pet_photo') return uploadPetPhoto_(payload);
+    if (payload.type === 'payment') return submitPayment_(payload);
 
-    if (body.type === 'order') {
-      const turnstileOK = await verifyTurnstile(body.turnstileToken);
-      if (!turnstileOK) {
-        return res.status(403).json({
-          success: false,
-          error: 'BOT_CHECK_FAILED'
-        });
-      }
-    }
-
-    delete body.turnstileToken;
-    delete body.apiSecret;
-
-    const upstreamPayload = {
-      ...body,
-      apiSecret: process.env.API_SHARED_SECRET
-    };
-
-    const result = await callAppsScriptWithRetry(upstreamPayload);
-
-    if (!result || result.success !== true) {
-      return res.status(400).json({
-        success: false,
-        error: result && result.error ? result.error : 'UPSTREAM_REJECTED'
-      });
-    }
-
-    return res.status(200).json(result);
-  } catch (error) {
-    console.error('Order API error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'SERVER_ERROR'
-    });
-  }
-};
-
-module.exports.config = {
-  maxDuration: 60
-};
-
-async function callAppsScriptWithRetry(payload) {
-  let lastError;
-
-  for (let attempt = 1; attempt <= 2; attempt++) {
+    return jsonResponse_({ success: false, error: 'UNKNOWN_TYPE' });
+  } catch (err) {
     try {
-      return await callAppsScript(payload);
-    } catch (error) {
-      lastError = error;
-      console.error(`Apps Script attempt ${attempt} failed:`, error.message);
-      if (attempt < 2) await delay(500);
-    }
-  }
-
-  throw lastError;
-}
-
-async function callAppsScript(payload) {
-  const response = await fetch(process.env.APPS_SCRIPT_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(25000)
-  });
-
-  const text = await response.text();
-
-  if (!response.ok) {
-    throw new Error(`Apps Script returned HTTP ${response.status}`);
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    const contentType = response.headers.get('content-type') || 'unknown';
-    console.error(
-      'Invalid Apps Script response:',
-      `content-type=${contentType}`,
-      `length=${text.length}`,
-      `preview=${JSON.stringify(text.slice(0, 120))}`
-    );
-    throw new Error('Apps Script returned invalid JSON');
-  }
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function parseBody(body) {
-  if (body && typeof body === 'object' && !Buffer.isBuffer(body)) {
-    return { ...body };
-  }
-
-  if (typeof body === 'string') {
-    return JSON.parse(body);
-  }
-
-  if (Buffer.isBuffer(body)) {
-    return JSON.parse(body.toString('utf8'));
-  }
-
-  return null;
-}
-
-async function verifyTurnstile(token) {
-  if (typeof token !== 'string' || token.length < 20 || token.length > 2048) {
-    return false;
-  }
-
-  const form = new URLSearchParams();
-  form.set('secret', process.env.TURNSTILE_SECRET_KEY);
-  form.set('response', token);
-
-  const response = await fetch(
-    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: form.toString(),
-      signal: AbortSignal.timeout(10000)
-    }
-  );
-
-  if (!response.ok) return false;
-
-  const result = await response.json();
-  const allowedHostnames = getAllowedHostnames();
-
-  return result.success === true &&
-    allowedHostnames.includes(result.hostname) &&
-    (!result.action || result.action === 'order');
-}
-
-function getAllowedHostnames() {
-  return String(process.env.ALLOWED_HOSTNAME || '')
-    .split(',')
-    .map((host) => host.trim())
-    .filter(Boolean);
-}
-
-function assertConfiguration() {
-  const required = [
-    'APPS_SCRIPT_URL',
-    'API_SHARED_SECRET',
-    'TURNSTILE_SECRET_KEY',
-    'ALLOWED_HOSTNAME'
-  ];
-
-  const missing = required.filter((name) => !process.env[name]);
-
-  if (missing.length) {
-    throw new Error(`Missing environment variables: ${missing.join(', ')}`);
-  }
-}
-  turnstileWidgetId = window.turnstile.render(container, {
-    sitekey: TURNSTILE_SITE_KEY,
-    action: 'order',
-    theme: 'light',
-    callback: function(token) {
-      turnstileToken = token || '';
-      hideMsg('msg-s3');
-    },
-    'expired-callback': function() {
-      turnstileToken = '';
-    },
-    'error-callback': function() {
-      turnstileToken = '';
-      showMsg('msg-s3', 'err', 'Security check could not load. Please refresh the page and try again.');
-    }
-  });
-}
-
-function resetTurnstileWidget() {
-  turnstileToken = '';
-  if (window.turnstile && turnstileWidgetId !== null) {
-    window.turnstile.reset(turnstileWidgetId);
-  }
-}
-
-window.addEventListener('DOMContentLoaded', scheduleTurnstileRender);
-window.addEventListener('load', scheduleTurnstileRender);
-
-if (IS_DEPLOYED_SITE) {
-  const turnstileScript = document.createElement('script');
-  turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-  turnstileScript.onload = scheduleTurnstileRender;
-  turnstileScript.async = true;
-  turnstileScript.defer = true;
-  document.head.appendChild(turnstileScript);
-}
-
-const CONFIG = {
-  fps: {
-    fpsCode: '102056686',
-    payee: 'Glory On International Limited',
-    qrImage: 'images/fps-qr.png'
-  },
-  products: [],
-  terms: null
-};
-</script>
-
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--black:#111111;--mid:#555555;--light:#EBEBEB;--bg:#FAFAF8;--white:#FFFFFF;--err:#cc3333}
-html{font-size:14px;scroll-behavior:smooth}
-body{font-family:'Inter',sans-serif;font-weight:300;color:var(--black);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,3.5rem);height:50px;border-bottom:1px solid var(--light)}
-.nav-brand{font-size:.8rem;font-weight:400;letter-spacing:.01em;text-decoration:none;color:var(--black)}
-.nav-right{display:flex;gap:2rem}.nav-right a{font-size:.75rem;color:var(--mid);text-decoration:none;letter-spacing:.03em;transition:color .15s}.nav-right a:hover,.nav-right a.active{color:var(--black)}
-main{padding-top:50px}
-.hero{padding:clamp(2rem,4vw,3.5rem) clamp(1.5rem,5vw,3.5rem);display:flex;flex-direction:row;align-items:center;gap:clamp(1.5rem,3vw,2.5rem);flex-wrap:wrap}
-.hero-left{flex:0 1 auto;display:flex;align-items:center}.hero-logo{width:100%;max-width:650px;height:auto;display:block;mix-blend-mode:multiply}
-.hero-right{flex:0 1 auto;display:flex;flex-direction:column;align-items:flex-start;gap:1rem;max-width:500px}
-.hero-tagline{font-size:clamp(.82rem,1.1vw,.9rem);font-weight:300;line-height:1.75;color:var(--black)}
-.link-arrow{font-size:.78rem;font-weight:400;letter-spacing:.04em;color:var(--black);text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--black);padding-bottom:1px;transition:opacity .15s;white-space:nowrap}.link-arrow:hover{opacity:.45}
-@media(max-width:760px){.hero{flex-direction:column;align-items:flex-start}.hero-logo{max-width:500px}.hero-right{max-width:100%}}
-.rule{border:none;border-top:1px solid var(--light)}
-.section{padding:clamp(3.5rem,7vw,6rem) clamp(1.5rem,5vw,3.5rem)}
-.section-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:3rem}
-.process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
-.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 2rem;align-items:center;gap:1.5rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
-.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}
-.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:start}
-.prog{display:flex;gap:1.5rem;margin-bottom:3rem}.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}.prog-item.on{color:var(--black);border-color:var(--black)}.prog-item.done{opacity:.35}
-.panel{display:none}.panel.on{display:block;animation:fadeUp .22s ease}@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.panel-title{font-size:1rem;font-weight:400;margin-bottom:.4rem}.panel-sub{font-size:.8rem;color:var(--mid);margin-bottom:2rem;line-height:1.75}
-.recap{display:none;justify-content:space-between;align-items:center;border:1px solid var(--light);padding:.8rem 1rem;margin-bottom:2rem;font-size:.78rem}.recap.show{display:flex}.r-size{font-weight:500}.r-price{color:var(--mid)}.r-change{color:var(--mid);text-decoration:underline;cursor:pointer;font-size:.72rem}.r-change:hover{color:var(--black)}
-.field{margin-bottom:1.6rem}.field label{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.6rem}.field label small{text-transform:none;letter-spacing:0;font-weight:300;opacity:.7}
-.field input,.field textarea{width:100%;border:none;border-bottom:1px solid var(--light);background:transparent;padding:.55em 0;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:300;color:var(--black);outline:none;transition:border-color .15s}.field input::placeholder,.field textarea::placeholder{color:#bbb}.field input:focus,.field textarea:focus{border-color:var(--black)}.field textarea{resize:none;min-height:68px}
-.upfield{border:1px solid var(--light);padding:1.6rem;position:relative;text-align:center;cursor:pointer;transition:border-color .15s}.upfield:hover{border-color:var(--black)}.upfield input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}.upfield-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:500;display:block;margin-bottom:.3rem}.upfield-hint{font-size:.75rem;color:var(--mid)}.file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
-.photo-list{border-top:1px solid var(--light);margin-top:.8rem}.photo-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:.8rem;padding:.65rem 2.2rem .65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}.photo-thumb{width:52px;height:52px;border:1px solid var(--light);object-fit:cover;cursor:zoom-in;background:var(--white)}.photo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.photo-remove{position:absolute;right:0;top:50%;transform:translateY(-50%);width:28px;height:28px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:1.05rem;line-height:1;cursor:pointer}.photo-remove:hover{color:var(--black);border-color:var(--black)}
-.photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
-.promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.promo-row{display:flex;align-items:flex-end;gap:.8rem}.promo-row .field{flex:1;margin:0}.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.promo-apply:disabled{opacity:.35;cursor:not-allowed}.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}.promo-result.ok{color:#1a6b3c}.promo-result.err{color:var(--err)}
-.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}
-.terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
-.terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}.terms-dialog:focus{outline:none}.terms-dialog::backdrop{background:rgba(0,0,0,.42)}.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.terms-head h2{font-size:1rem;font-weight:500}.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}.terms-section{padding-top:1.5rem}.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
-.btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}.btn-submit:hover{opacity:.65}.btn-submit:disabled{opacity:.25;cursor:not-allowed}.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}.btn-back:hover{color:var(--black)}
-.aside-block{border-top:1px solid var(--light);padding-top:1.4rem;margin-bottom:2rem}.aside-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.aside-body{font-size:.78rem;color:var(--mid);line-height:1.85}
-.order-num-box{background:var(--black);color:var(--white);padding:1.2rem 1.5rem;margin-bottom:2rem}.order-num-label{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:.3rem}.order-num-value{font-size:1.1rem;font-weight:500;letter-spacing:.04em}.receipt{border-top:1px solid var(--light);margin-bottom:2.5rem}.r-row{display:flex;justify-content:space-between;font-size:.8rem;padding:.65rem 0;border-bottom:1px solid var(--light)}.r-row:last-child{font-weight:500;border-color:var(--black)}.r-label{color:var(--mid)}
-.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}.fps-qr img{width:100%;height:100%;object-fit:contain}.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}.fps-instructions ol{padding-left:1.1em}.fps-instructions li{margin-bottom:.4rem}
-.manage-wrap{max-width:760px}.manage-summary{border-top:1px solid var(--light);border-bottom:1px solid var(--light);margin:1.5rem 0 2rem}.manage-summary .r-row:last-child{font-weight:300;border-color:var(--light)}.manage-upload-panel{display:none}.manage-upload-panel.show{display:block}.manage-note{font-size:.75rem;color:var(--mid);line-height:1.8;margin-top:.8rem}.manage-actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem}
-.status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}.status-msg.show{display:block}.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}.status-msg a{color:inherit;font-weight:500;text-decoration:underline}.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}@keyframes spin{to{transform:rotate(360deg)}}
-body{cursor:none}.paw-cursor-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}.paw{position:absolute;pointer-events:none;width:24px;height:28px}
-footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.footer-brand{font-size:.78rem;font-weight:400}.footer-links{display:flex;gap:1.5rem}.footer-links a{font-size:.72rem;color:var(--mid);text-decoration:none;transition:color .15s}.footer-links a:hover{color:var(--black)}
-@media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;grid-template-areas:"letter details price radio" "letter capacity price radio";column-gap:1rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}}
-@media(max-width:480px){.process{grid-template-columns:1fr}}
-@media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
-</style>
-</head>
-<body>
-
-<nav>
-  <a href="index.html" class="nav-brand">just for you and meow</a>
-  <div class="nav-right">
-    <a href="manage-order.html">Manage order</a>
-    <a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a>
-    <a href="#order" class="active">Order</a>
-  </div>
-</nav>
-
-<main>
-  <section class="hero">
-    <div class="hero-left"><img src="images/logo.png" alt="just for you and meow" class="hero-logo"></div>
-    <div class="hero-right">
-      <p class="hero-tagline">Customised tufted rugs of your favourite poses of your pets<br>— made as fluffy as your meows and woofs.</p>
-      <a href="#order" class="link-arrow">Order yours &nbsp;&rarr;</a>
-    </div>
-  </section>
-
-  <hr class="rule">
-
-  <section class="section">
-    <p class="section-label">How to order</p>
-    <div class="process">
-      <div><div class="step-n">01</div><div class="step-title">Choose a size</div><p class="step-desc">S, M, or L <br>based on the number of pets you want included.</p></div>
-      <div><div class="step-n">02</div><div class="step-title">Send your photos</div><p class="step-desc">Upload clear, front-facing photos of your pets.</p></div>
-      <div><div class="step-n">03</div><div class="step-title">Approve the draft</div><p class="step-desc">We send a draft around 7 days.</p></div>
-      <div><div class="step-n">04</div><div class="step-title">We make your rug</div><p class="step-desc">Production begins after draft approval. At least 6 weeks.</p></div>
-    </div>
-  </section>
-
-  <section class="section" id="order">
-    <p class="section-label">Place order</p>
-    <div class="order-grid">
-      <div class="order-left">
-        <div class="prog">
-          <span class="prog-item on" data-s="1">Size</span>
-          <span class="prog-item" data-s="2">Details</span>
-          <span class="prog-item" data-s="3">Photos</span>
-          <span class="prog-item" data-s="4">Pay</span>
-        </div>
-
-        <div class="panel on" id="p1">
-          <div class="panel-title">Choose a size</div>
-          <p class="panel-sub">Select the rug that fits you and your pets.</p>
-          <div id="p1-rows"></div>
-
-          <div class="outline-box">
-            <div class="outline-label">Outline colour</div>
-            <div class="outline-options">
-              <button type="button" class="outline-option" data-outline="Black" onclick="pickOutline('Black')"><span class="outline-swatch black"></span>Black outline</button>
-              <button type="button" class="outline-option" data-outline="White" onclick="pickOutline('White')"><span class="outline-swatch white"></span>White outline</button>
-            </div>
-          </div>
-
-          <div class="promo-box">
-            <div class="promo-row">
-              <div class="field">
-                <label for="f-promo">Promo code <small>(optional)</small></label>
-                <input type="text" id="f-promo" maxlength="30" autocomplete="off" placeholder="Enter promo code"
-                       oninput="if(appliedPromo && this.value.trim().toUpperCase() !== appliedPromo.code) clearPromo_(false)">
-              </div>
-              <button class="promo-apply" type="button" id="promo-apply" onclick="applyPromo()">Apply</button>
-            </div>
-            <div class="promo-result" id="promo-result"></div>
-          </div>
-
-          <div class="btn-row"><button class="btn-submit" id="s1n" disabled onclick="go(2)">Continue</button></div>
-        </div>
-
-        <div class="panel" id="p2">
-          <div class="recap show" id="rb2"><span><span class="r-size" id="rb2-size"></span>&ensp;<span class="r-price" id="rb2-price"></span></span><span class="r-change" onclick="go(1)">Change</span></div>
-          <div class="panel-title">Your details</div>
-          <p class="panel-sub">Contact and delivery information.</p>
-          <div class="field"><label>Instagram</label><input type="text" id="f-instagram" placeholder="@accountname"></div>
-          <div class="field"><label>Full name</label><input type="text" id="f-name" placeholder="Your full name"></div>
-          <div class="field"><label>Phone number</label><input type="tel" id="f-phone" placeholder="Your phone number"></div>
-          <div class="field"><label>Delivery address</label><input type="text" id="f-addr" placeholder="Full address"></div>
-          <div class="btn-row"><button class="btn-submit" onclick="v2()">Continue</button><button class="btn-back" onclick="go(1)">Back</button></div>
-        </div>
-
-        <div class="panel" id="p3">
-          <div class="recap show" id="rb3"><span><span class="r-size" id="rb3-size"></span>&ensp;<span class="r-price" id="rb3-price"></span></span><span class="r-change" onclick="go(1)">Change</span></div>
-          <div class="panel-title">Upload photos</div>
-          <p class="panel-sub">Upload at least one photo of your pets — can be separate photos. Clear, front-facing photos work best.</p>
-          <div class="field">
-            <label>Pet photos <small>(required)</small></label>
-            <div class="upfield">
-              <input type="file" id="f-photos" accept="image/*" multiple onchange="onPetFiles(this)">
-              <span class="upfield-label">Select files</span>
-              <span class="upfield-hint">JPG or PNG · up to 6 files · 2.5 MB each</span>
-            </div>
-            <div class="file-chosen" id="pet-file-chosen"></div>
-            <div class="photo-list" id="pet-photo-list"></div>
-          </div>
-          <div class="field"><label>Notes <small>(optional)</small></label><textarea id="f-notes" placeholder="Background colour, pose, accessories, anything you have in mind..."></textarea></div>
-          <div class="field"><div id="turnstile-widget"></div></div>
-          <label class="terms-check">
-            <input type="checkbox" id="f-terms">
-            <span>I have read and agree to the <a href="#" onclick="openTerms(event)">Terms &amp; Conditions and Privacy Notice</a>. / 我已閱讀並同意條款及私隱聲明。</span>
-          </label>
-          <div id="msg-s3" class="status-msg"></div>
-          <div class="btn-row"><button class="btn-submit" id="s3n" onclick="doSubmit()">Confirm order</button><button class="btn-back" onclick="go(2)">Back</button></div>
-        </div>
-
-        <div class="panel" id="p4">
-          <div class="panel-title">Order received</div>
-          <p class="panel-sub">Complete payment via FPS within 24 hours, then upload your screenshot below.</p>
-          <div class="order-num-box"><div class="order-num-label">Your order number</div><div class="order-num-value" id="order-num-display">—</div></div>
-          <div class="receipt" id="receipt"></div>
-          <div class="fps-block">
-            <div class="fps-eyebrow">FPS &nbsp;/&nbsp; Faster Payment System</div>
-            <div class="fps-qr"><img src="images/fps-qr.png" alt="FPS QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>fps-qr.png</span>')"></div>
-            <div class="fps-meta">識別代碼 &nbsp;102056686</div>
-            <div class="fps-meta" style="margin-bottom:0">支付至 &nbsp;Glory On International Limited</div>
-            <div class="fps-amount" id="famt">HK$—</div>
-            <div class="fps-instructions"><ol><li>Open your banking app and select FPS.</li><li>Add your name and order number as the reference, then take a screenshot.</li><li>Please upload your screenshot below and send us a direct message (DM).</li></ol></div>
-          </div>
-
-          <div class="field" style="margin-top:2rem">
-            <label>Payment screenshot <small>Upload after payment</small></label>
-            <div class="upfield">
-              <input type="file" id="f-payment" accept="image/*" onchange="onPayFile(this)">
-              <span class="upfield-label">Select file</span>
-              <span class="upfield-hint">Upload your FPS payment screenshot</span>
-            </div>
-            <div class="file-chosen" id="pay-file-chosen"></div>
-            <div class="photo-list" id="payment-photo-list"></div>
-          </div>
-
-          <div id="msg-s4" class="status-msg"></div>
-          <div class="btn-row"><button class="btn-submit" id="s4n" onclick="submitPayment()">Submit payment proof</button><button class="btn-back" id="payment-back" onclick="go(3)">Back</button></div>
-          <div style="margin-top:3rem;border-top:1px solid var(--light);padding-top:2rem"><button class="btn-back" onclick="doReset()">Place another order</button></div>
-        </div>
-      </div>
-
-      <div class="order-aside">
-        <div class="aside-block"><div class="aside-label">Draft</div><div class="aside-body">Sent around 7 days after your order.</div></div>
-        <div class="aside-block"><div class="aside-label">Production</div><div class="aside-body">At least 6 weeks, beginning after the draft is approved.</div></div>
-        <div class="aside-block"><div class="aside-label">Shipping</div><div class="aside-body">SF Express (payment upon delivery).</div></div>
-        <div class="aside-block"><div class="aside-label">Payment</div><div class="aside-body">FPS (Hong Kong). Overseas customers may pay via PayPal with a 5% service fee.</div></div>
-        <div class="aside-block"><div class="aside-label">Revisions</div><div class="aside-body">Non-refundable after the first draft has been sent.</div></div>
-      </div>
-    </div>
-  </section>
-</main>
-
-<dialog class="photo-preview-dialog" id="photo-preview-dialog">
-  <div class="photo-preview-inner">
-    <button class="photo-preview-close" type="button" onclick="closePhotoPreview()" aria-label="Close">&times;</button>
-    <img class="photo-preview-image" id="photo-preview-image" alt="Selected photo preview">
-  </div>
-</dialog>
-
-<dialog class="terms-dialog" id="terms-dialog" tabindex="-1">
-  <div class="terms-inner">
-    <div class="terms-head"><h2>Terms &amp; Conditions / 注意事項</h2><button class="terms-close" type="button" onclick="closeTerms()" aria-label="Close">&times;</button></div>
-    <div class="terms-section"><p>Terms are loading from the secure backend. Please reload if they do not appear.</p></div>
-  </div>
-</dialog>
-
-<footer>
-  <span class="footer-brand">just for you and meow</span>
-  <div class="footer-links"><a href="https://www.instagram.com/justforyouandmeow/" target="_blank">Instagram</a><span style="color:var(--mid);font-size:.72rem" id="yr"></span></div>
-</footer>
-
-<script>
-let sel = null;
-let orderNum = null;
-let petFiles = [];
-let payFile = null;
-let appliedPromo = null;
-let selectedOutline = null;
-let orderReadyForPayment = false;
-let manageSession = null;
-let managePetFiles = [];
-let managePayFile = null;
-
-document.getElementById('yr').textContent = new Date().getFullYear();
-
-function fileToBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(String(r.result).split(',')[1]);
-    r.onerror = () => rej(new Error('Cannot read ' + file.name));
-    r.readAsDataURL(file);
-  });
-}
-
-function fileToDataUrl_(file) {
-  return new Promise((res, rej) => {
-    const reader = new FileReader();
-    reader.onload = () => res(reader.result);
-    reader.onerror = () => rej(new Error('Cannot preview ' + file.name));
-    reader.readAsDataURL(file);
-  });
-}
-
-function showMsg(id, type, text) {
-  const el = document.getElementById(id);
-  el.className = 'status-msg ' + type + ' show';
-  el.textContent = text;
-}
-
-function hideMsg(id) {
-  const el = document.getElementById(id);
-  if (el) el.className = 'status-msg';
-}
-
-function showPaymentSuccess_() {
-  const el = document.getElementById('msg-s4');
-  el.className = 'status-msg ok show';
-  el.textContent = 'Payment proof submitted. Please send us a direct message on ';
-  const link = document.createElement('a');
-  link.href = 'https://www.instagram.com/justforyouandmeow/';
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = 'Instagram';
-  el.appendChild(link);
-  el.appendChild(document.createTextNode(' with your order number. Thank you.'));
-}
-
-loadProducts();
-loadTerms();
-
-async function loadTerms() {
-  try {
-    const result = await postApi_({ type: 'terms' });
-    if (!result.success || !result.terms || !result.terms.version) throw new Error('TERMS_UNAVAILABLE');
-    CONFIG.terms = result.terms;
-    renderTerms_();
-  } catch (error) {
-    CONFIG.terms = null;
-  }
-}
-
-function renderTerms_() {
-  const terms = CONFIG.terms;
-  if (!terms) return;
-  const inner = document.querySelector('#terms-dialog .terms-inner');
-  if (!inner) return;
-  inner.innerHTML = '';
-
-  const head = document.createElement('div');
-  head.className = 'terms-head';
-  const title = document.createElement('h2');
-  title.textContent = (terms.titleEn || 'Terms & Conditions') + ' / ' + (terms.titleZh || '注意事項及私隱聲明');
-  const close = document.createElement('button');
-  close.className = 'terms-close';
-  close.type = 'button';
-  close.setAttribute('aria-label', 'Close');
-  close.textContent = '×';
-  close.addEventListener('click', closeTerms);
-  head.appendChild(title);
-  head.appendChild(close);
-  inner.appendChild(head);
-
-  const meta = document.createElement('div');
-  meta.className = 'terms-section';
-  const metaP = document.createElement('p');
-  metaP.textContent = 'Version: ' + terms.version;
-  meta.appendChild(metaP);
-  inner.appendChild(meta);
-
-  const en = document.createElement('div');
-  en.className = 'terms-section';
-  const enTitle = document.createElement('h3');
-  enTitle.textContent = terms.titleEn || 'Terms & Conditions';
-  en.appendChild(enTitle);
-  appendTermsParagraphs_(en, terms.contentEn);
-  inner.appendChild(en);
-
-  const zh = document.createElement('div');
-  zh.className = 'terms-section';
-  const zhTitle = document.createElement('h3');
-  zhTitle.textContent = terms.titleZh || '注意事項及私隱聲明';
-  zh.appendChild(zhTitle);
-  appendTermsParagraphs_(zh, terms.contentZh);
-  inner.appendChild(zh);
-}
-
-function appendTermsParagraphs_(container, content) {
-  const blocks = String(content || '').split(/\n\s*\n/).filter(Boolean);
-  blocks.forEach(block => {
-    const p = document.createElement('p');
-    p.textContent = block.trim();
-    p.style.whiteSpace = 'pre-line';
-    container.appendChild(p);
-  });
-}
-
-async function loadProducts() {
-  const orderRows = document.getElementById('p1-rows');
-  orderRows.textContent = 'Loading products...';
-  document.getElementById('s1n').disabled = true;
-
-  try {
-    const result = await postApi_({ type: 'products' });
-    if (!result.success || !Array.isArray(result.products) || !result.products.length) throw new Error('NO_PRODUCTS');
-    CONFIG.products = result.products.map(p => ({ ...p, safeId: String(p.id || '').trim().toLowerCase() }));
-    renderProducts_();
-  } catch (error) {
-    orderRows.textContent = 'Products are temporarily unavailable.';
-  }
-}
-
-function renderProducts_() {
-  const orderRows = document.getElementById('p1-rows');
-  orderRows.innerHTML = '';
-  CONFIG.products.forEach(p => {
-    const name = escapeHtml_(p.name);
-    const dims = escapeHtml_(p.dims);
-    const capacity = escapeHtml_(p.capacity);
-    const price = Number(p.price).toLocaleString();
-    orderRows.insertAdjacentHTML('beforeend', `
-      <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
-        <span class="size-letter">${name}</span>
-        <div><div class="size-dims">${dims}</div></div>
-        <div class="size-cap">${capacity}</div>
-        <div class="size-price">HK$${price}</div>
-        <span class="size-radio" id="pr-${p.safeId}"></span>
-      </div>`);
-  });
-}
-
-function escapeHtml_(value) {
-  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
-
-function pick(safeId) {
-  sel = CONFIG.products.find(p => p.safeId === safeId);
-  if (!sel) return;
-  clearPromo_(true);
-  document.querySelectorAll('.size-radio').forEach(r => { r.style.background = ''; r.style.borderColor = ''; });
-  document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
-  const radio = document.getElementById('pr-' + safeId);
-  if (radio) { radio.style.background = 'var(--black)'; radio.style.borderColor = 'var(--black)'; }
-  const wr = document.getElementById('wr-' + safeId);
-  if (wr) wr.classList.add('sel');
-  updateSizeContinue_();
-}
-
-function pickOutline(colour) {
-  if (!['Black', 'White'].includes(colour)) return;
-  selectedOutline = colour;
-  document.querySelectorAll('.outline-option').forEach(button => {
-    button.classList.toggle('sel', button.dataset.outline === colour);
-  });
-  updateSizeContinue_();
-}
-
-function updateSizeContinue_() {
-  document.getElementById('s1n').disabled = !(sel && selectedOutline);
-}
-
-function updateRecaps() {
-  if (!sel) return;
-  const currentPrice = appliedPromo ? appliedPromo.price : sel.price;
-  ['2','3'].forEach(n => {
-    document.getElementById('rb' + n + '-size').textContent = sel.name || sel.id;
-    document.getElementById('rb' + n + '-price').textContent = sel.dims + ' — ' + (selectedOutline || '') + ' outline — HK$' + currentPrice;
-  });
-}
-
-async function applyPromo() {
-  const input = document.getElementById('f-promo');
-  const resultEl = document.getElementById('promo-result');
-  const button = document.getElementById('promo-apply');
-  const promoCode = input.value.trim().toUpperCase();
-
-  if (!sel) {
-    resultEl.className = 'promo-result err';
-    resultEl.textContent = 'Please choose a product first.';
-    return;
-  }
-  if (!promoCode) {
-    clearPromo_(false);
-    resultEl.className = 'promo-result err';
-    resultEl.textContent = 'Please enter a promo code.';
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = 'Checking...';
-  resultEl.className = 'promo-result';
-  resultEl.textContent = '';
-
-  try {
-    const result = await postApi_({ type: 'promo', productId: sel.safeId, promoCode });
-    const promo = result.promo || result;
-    if (!result.success || !promo.valid) throw new Error(result.error || 'INVALID_PROMO_CODE');
-
-    appliedPromo = {
-      code: promo.code,
-      originalPrice: promo.originalPrice,
-      discount: promo.discount,
-      price: promo.finalPrice
-    };
-
-    input.value = promo.code;
-    resultEl.className = 'promo-result ok';
-    resultEl.textContent = promo.code + ' applied: HK$' + promo.originalPrice + ' → HK$' + promo.finalPrice;
-    updateRecaps();
-  } catch (error) {
-    appliedPromo = null;
-    resultEl.className = 'promo-result err';
-    resultEl.textContent = 'Invalid or unavailable promo code.';
-    updateRecaps();
-  } finally {
-    button.disabled = false;
-    button.textContent = 'Apply';
-  }
-}
-
-function clearPromo_(clearInput) {
-  appliedPromo = null;
-  if (clearInput) document.getElementById('f-promo').value = '';
-  const resultEl = document.getElementById('promo-result');
-  resultEl.className = 'promo-result';
-  resultEl.textContent = '';
-}
-
-function go(n) {
-  if (n > 1 && !sel) return;
-
-  if (n === 3 && orderReadyForPayment) {
-    const submitButton = document.getElementById('s3n');
-    submitButton.disabled = false;
-    submitButton.textContent = 'Continue to payment';
-  }
-
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
-  document.getElementById('p' + n).classList.add('on');
-  document.querySelectorAll('.prog-item').forEach(w => {
-    const s = +w.dataset.s;
-    w.classList.remove('on', 'done');
-    if (s === n) w.classList.add('on');
-    else if (s < n) w.classList.add('done');
-  });
-  updateRecaps();
-  window.scrollTo({ top: document.getElementById('order').offsetTop - 58, behavior: 'smooth' });
-}
-
-function v2() {
-  if (!document.getElementById('f-instagram').value.trim() ||
-      !document.getElementById('f-name').value.trim() ||
-      !document.getElementById('f-phone').value.trim() ||
-      !document.getElementById('f-addr').value.trim()) {
-    alert('Please fill in all required fields.');
-    return;
-  }
-  go(3);
-}
-
-function onPetFiles(input) {
-  const newFiles = Array.from(input.files);
-  const el = document.getElementById('pet-file-chosen');
-  const invalid = newFiles.filter(f => f.size > 2.5 * 1000 * 1000 || !['image/png', 'image/jpeg', 'image/jpg'].includes(f.type));
-  if (invalid.length) {
-    el.textContent = 'Photos must be JPG or PNG and no larger than 2.5 MB each.';
-    el.style.color = 'var(--err)';
-    input.value = '';
-    return;
-  }
-
-  const uniqueFiles = newFiles.filter(file => !petFiles.some(existing => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified));
-  if (petFiles.length + uniqueFiles.length > 6) {
-    el.textContent = 'Please select no more than 6 photos in total.';
-    el.style.color = 'var(--err)';
-    input.value = '';
-    return;
-  }
-
-  petFiles = petFiles.concat(uniqueFiles);
-  input.value = '';
-  renderPetFiles_();
-}
-
-function removePetFile(index) {
-  petFiles.splice(index, 1);
-  renderPetFiles_();
-}
-
-async function renderPetFiles_() {
-  const summary = document.getElementById('pet-file-chosen');
-  const list = document.getElementById('pet-photo-list');
-  list.innerHTML = '';
-  summary.style.color = 'var(--black)';
-  summary.textContent = petFiles.length ? petFiles.length + (petFiles.length === 1 ? ' photo selected' : ' photos selected') : '';
-
-  petFiles.forEach((file, index) => {
-    const item = document.createElement('div');
-    item.className = 'photo-item';
-
-    const thumbnail = document.createElement('img');
-    thumbnail.className = 'photo-thumb';
-    thumbnail.alt = 'Preview ' + file.name;
-    fileToDataUrl_(file).then(url => { thumbnail.src = url; }).catch(() => { thumbnail.alt = 'Preview unavailable'; });
-    thumbnail.addEventListener('click', () => openPhotoPreview(index));
-
-    const name = document.createElement('span');
-    name.className = 'photo-name';
-    name.textContent = file.name;
-
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'photo-remove';
-    remove.textContent = '×';
-    remove.setAttribute('aria-label', 'Remove ' + file.name);
-    remove.title = 'Remove photo';
-    remove.addEventListener('click', () => removePetFile(index));
-
-    item.appendChild(thumbnail);
-    item.appendChild(name);
-    item.appendChild(remove);
-    list.appendChild(item);
-  });
-}
-
-async function openPhotoPreview(index) {
-  const file = petFiles[index];
-  if (!file) return;
-  const image = document.getElementById('photo-preview-image');
-  const dialog = document.getElementById('photo-preview-dialog');
-  try {
-    image.src = await fileToDataUrl_(file);
-    dialog.showModal();
-  } catch (error) {
-    image.removeAttribute('src');
-  }
-}
-
-function closePhotoPreview() {
-  const image = document.getElementById('photo-preview-image');
-  const dialog = document.getElementById('photo-preview-dialog');
-  image.removeAttribute('src');
-  dialog.close();
-}
-
-function onPayFile(input) {
-  payFile = input.files[0] || null;
-  renderPayFile_();
-}
-
-function removePayFile() {
-  payFile = null;
-  document.getElementById('f-payment').value = '';
-  renderPayFile_();
-  hideMsg('msg-s4');
-}
-
-function renderPayFile_() {
-  const summary = document.getElementById('pay-file-chosen');
-  const list = document.getElementById('payment-photo-list');
-  list.innerHTML = '';
-  summary.textContent = payFile ? '1 screenshot selected' : '';
-  if (!payFile) return;
-
-  const currentFile = payFile;
-  const item = document.createElement('div');
-  item.className = 'photo-item';
-
-  const thumbnail = document.createElement('img');
-  thumbnail.className = 'photo-thumb';
-  thumbnail.alt = 'Preview ' + currentFile.name;
-  fileToDataUrl_(currentFile).then(url => { if (payFile === currentFile) thumbnail.src = url; }).catch(() => { thumbnail.alt = 'Preview unavailable'; });
-  thumbnail.addEventListener('click', openPaymentPreview);
-
-  const name = document.createElement('span');
-  name.className = 'photo-name';
-  name.textContent = currentFile.name;
-
-  const remove = document.createElement('button');
-  remove.type = 'button';
-  remove.className = 'photo-remove';
-  remove.textContent = '×';
-  remove.setAttribute('aria-label', 'Remove payment screenshot');
-  remove.title = 'Remove screenshot';
-  remove.addEventListener('click', removePayFile);
-
-  item.appendChild(thumbnail);
-  item.appendChild(name);
-  item.appendChild(remove);
-  list.appendChild(item);
-}
-
-async function openPaymentPreview() {
-  if (!payFile) return;
-  const image = document.getElementById('photo-preview-image');
-  const dialog = document.getElementById('photo-preview-dialog');
-  try {
-    image.src = await fileToDataUrl_(payFile);
-    dialog.showModal();
-  } catch (error) {
-    image.removeAttribute('src');
-  }
-}
-
-async function doSubmit() {
-  if (orderReadyForPayment) {
-    go(4);
-    return;
-  }
-
-  const ig = document.getElementById('f-instagram').value.trim();
-  const nm = document.getElementById('f-name').value.trim();
-  const ph = document.getElementById('f-phone').value.trim();
-  const ad = document.getElementById('f-addr').value.trim();
-
-  if (!ig || !nm || !ph || !ad) {
-    showMsg('msg-s3', 'err', 'Please go back and complete all your details.');
-    go(2);
-    return;
-  }
-
-  if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
-    showMsg('msg-s3', 'err', 'Some fields are too long.');
-    go(2);
-    return;
-  }
-
-  if (!CONFIG.terms || !CONFIG.terms.version) {
-    showMsg('msg-s3', 'err', 'Terms & Conditions are temporarily unavailable. Please reload and try again.');
-    return;
-  }
-
-  if (!document.getElementById('f-terms').checked) {
-    showMsg('msg-s3', 'err', 'Please read and agree to the Terms & Conditions before confirming your order.');
-    return;
-  }
-
-  if (IS_DEPLOYED_SITE && !turnstileToken) {
-    showMsg('msg-s3', 'err', 'Please complete the security check.');
-    return;
-  }
-
-  const MAX_FILE_SIZE = 2.5 * 1000 * 1000;
-  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
-
-  if (petFiles.length < 1) {
-    showMsg('msg-s3', 'err', 'Please upload at least one pet photo.');
-    return;
-  }
-
-  if (petFiles.length > 6) {
-    showMsg('msg-s3', 'err', 'Please upload no more than 6 pet photos.');
-    return;
-  }
-
-  for (let f of petFiles) {
-    if (f.size > MAX_FILE_SIZE) {
-      showMsg('msg-s3', 'err', 'Pet photo too large (max 2.5MB).');
-      return;
-    }
-    if (!ALLOWED_TYPES.includes(f.type)) {
-      showMsg('msg-s3', 'err', 'Pet photos must be PNG or JPEG only.');
-      return;
-    }
-  }
-
-  const btn = document.getElementById('s3n');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Submitting…';
-  hideMsg('msg-s3');
-
-  try {
-    let requestId = sessionStorage.getItem('meow_order_request_id');
-    if (!requestId) {
-      requestId = createRequestId_();
-      sessionStorage.setItem('meow_order_request_id', requestId);
-    }
-
-    const firstPhotoData = await fileToBase64(petFiles[0]);
-
-    const result = await postApi_({
-      type: 'order',
-      requestId: requestId,
-      turnstileToken: turnstileToken,
-      termsAccepted: true,
-      termsVersion: CONFIG.terms.version,
-      promoCode: appliedPromo ? appliedPromo.code : '',
-      productId: sel.safeId,
-      outline: selectedOutline,
-      firstPhoto: {
-        data: firstPhotoData
-      },
-      instagram: ig,
-      name: nm,
-      phone: ph,
-      address: ad,
-      size: sel.id,
-      notes: document.getElementById('f-notes').value.trim()
+      logSecurity_('ERROR', '', String(err && err.message ? err.message : err));
+    } catch (_) {}
+
+    return jsonResponse_({
+      success: false,
+      error: String(err && err.message ? err.message : err)
     });
-
-    if (!result.success) {
-      throw new Error(result.error || 'ORDER_FAILED');
-    }
-
-    orderNum = result.orderNumber;
-    const orderToken = result.orderToken;
-
-    sessionStorage.removeItem('meow_order_request_id');
-    sessionStorage.setItem('meow_order_number', orderNum);
-    sessionStorage.setItem('meow_order_token', orderToken);
-
-    const product = result.product || sel;
-    sel = {
-      ...sel,
-      id: product.id || sel.id,
-      safeId: product.id || sel.safeId,
-      name: product.name || sel.name,
-      dims: product.dims || sel.dims,
-      price: Number(result.price || product.price || sel.price)
-    };
-
-    appliedPromo = result.promoCode ? {
-      code: result.promoCode,
-      originalPrice: result.originalPrice,
-      discount: result.discount,
-      price: result.price
-    } : null;
-
-    /*
-      DO NOT upload pet_photo again here.
-      The first pet photo is already uploaded together with the order in Code.gs.
-      This prevents the false "Order was created, but a photo failed to upload" error.
-    */
-
-    orderReadyForPayment = true;
-    document.getElementById('order-num-display').textContent = orderNum;
-
-    const receipt = document.getElementById('receipt');
-    receipt.innerHTML = '';
-
-    const outlineText = result.outline || (selectedOutline ? selectedOutline + ' outline' : '');
-
-    const rows = [
-      { label: 'Order', value: orderNum },
-      { label: 'Instagram', value: ig },
-      { label: 'Name', value: nm },
-      { label: 'Phone', value: ph },
-      { label: 'Address', value: ad },
-      { label: 'Size', value: (sel.name || sel.id || '') + ' ' + (sel.dims || '') },
-      { label: 'Outline', value: outlineText }
-    ];
-
-    if (result.promoCode) {
-      rows.push({ label: 'Original price', value: 'HK$' + result.originalPrice });
-      rows.push({ label: 'Promo code', value: result.promoCode });
-      rows.push({ label: 'Discount', value: '-HK$' + result.discount });
-    }
-
-    rows.push({ label: 'Total', value: 'HK$' + result.price });
-
-    rows.forEach(row => {
-      const div = document.createElement('div');
-      div.className = 'r-row';
-      const label = document.createElement('span');
-      label.className = 'r-label';
-      label.textContent = row.label;
-      const val = document.createElement('span');
-      val.textContent = row.value;
-      div.appendChild(label);
-      div.appendChild(val);
-      receipt.appendChild(div);
-    });
-
-    document.getElementById('famt').textContent = 'HK$ ' + Number(result.price).toLocaleString();
-    go(4);
-
-  } catch (err) {
-    console.error('ORDER_SUBMIT_ERROR:', err);
-
-    showMsg(
-      'msg-s3',
-      'err',
-      orderNum
-        ? 'Order ' + orderNum + ' was created. Please continue to payment or contact us on Instagram with your order number.'
-        : 'Order was not submitted. Please retry the security check and try again.'
-    );
-
-    if (!orderNum) {
-      resetTurnstileWidget();
-      btn.disabled = false;
-      btn.textContent = 'Confirm order';
-    } else {
-      orderReadyForPayment = true;
-      btn.disabled = false;
-      btn.textContent = 'Continue to payment';
-    }
   }
 }
 
-async function submitPayment() {
-  if (!payFile) {
-    const fileInput = document.getElementById('f-payment');
-    if (fileInput && fileInput.files.length > 0) payFile = fileInput.files[0];
+/***************
+ * API SECURITY
+ ***************/
+function parsePayload_(e) {
+  if (!e || !e.postData || !e.postData.contents) {
+    throw new Error('EMPTY_BODY');
   }
 
-  if (!payFile) {
-    showMsg('msg-s4', 'err', 'Please select your payment screenshot first.');
-    return;
-  }
+  return JSON.parse(e.postData.contents);
+}
 
-  const MAX_SIZE = 2.5 * 1000 * 1000;
-  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+function validateApiSecret_(payload) {
+  const props = getRequiredProperties_();
 
-  if (payFile.size > MAX_SIZE) {
-    showMsg('msg-s4', 'err', 'Screenshot too large (max 2.5MB).');
-    return;
-  }
-
-  if (!ALLOWED_TYPES.includes(payFile.type)) {
-    showMsg('msg-s4', 'err', 'Payment screenshot must be PNG or JPEG only.');
-    return;
-  }
-
-  const savedOrderNumber = orderNum || sessionStorage.getItem('meow_order_number');
-  const orderToken = sessionStorage.getItem('meow_order_token');
-
-  if (!savedOrderNumber || !orderToken) {
-    showMsg('msg-s4', 'err', 'Order session expired. Please contact us on Instagram.');
-    return;
-  }
-
-  const btn = document.getElementById('s4n');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Uploading…';
-  hideMsg('msg-s4');
-
-  try {
-    const data = await fileToBase64(payFile);
-    const result = await postApi_({
-      type: 'payment',
-      orderNumber: savedOrderNumber,
-      orderToken: orderToken,
-      screenshot: {
-        data: data,
-        name: payFile.name || 'payment-proof'
-      }
-    });
-
-    if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
-
-    btn.textContent = 'Submitted';
-    document.getElementById('payment-back').style.display = 'none';
-    showPaymentSuccess_();
-  } catch (err) {
-    console.error('PAYMENT_UPLOAD_ERROR:', err);
-    showMsg('msg-s4', 'err', 'Upload failed. Please try again or contact us on Instagram.');
-    btn.disabled = false;
-    btn.textContent = 'Submit payment proof';
+  if (!payload.apiSecret || payload.apiSecret !== props.apiSecret) {
+    throw new Error('UNAUTHORIZED');
   }
 }
 
+function getRequiredProperties_() {
+  const props = PropertiesService.getScriptProperties();
 
-function validateImageFile_(file, label) {
-  const MAX_SIZE = 2.5 * 1000 * 1000;
-  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+  const sheetId = props.getProperty('SHEET_ID');
+  const folderId = props.getProperty('PARENT_FOLDER_ID');
+  const apiSecret = props.getProperty('API_SHARED_SECRET');
 
-  if (!file) throw new Error(label + ' is missing.');
-  if (file.size > MAX_SIZE) throw new Error(label + ' is too large (max 2.5MB).');
-  if (!ALLOWED_TYPES.includes(file.type)) throw new Error(label + ' must be PNG or JPEG only.');
-}
-
-async function verifyManageOrder() {
-  const orderNumber = document.getElementById('m-order').value.trim();
-  const phone = document.getElementById('m-phone').value.trim();
-
-  if (!orderNumber || !phone) {
-    showMsg('msg-manage-login', 'err', 'Please enter your order number and phone number.');
-    return;
-  }
-
-  const btn = document.getElementById('m-login-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Checking…';
-  hideMsg('msg-manage-login');
-  hideMsg('msg-manage-upload');
-
-  try {
-    const result = await postApi_({
-      type: 'manage_lookup',
-      orderNumber: orderNumber,
-      phone: phone
-    });
-
-    if (!result.success || !result.orderToken) {
-      throw new Error(result.error || 'ORDER_LOOKUP_FAILED');
-    }
-
-    manageSession = {
-      orderNumber: result.orderNumber,
-      orderToken: result.orderToken,
-      order: result.order || {}
-    };
-
-    sessionStorage.setItem('meow_manage_order_number', manageSession.orderNumber);
-    sessionStorage.setItem('meow_manage_order_token', manageSession.orderToken);
-
-    renderManageSummary_(manageSession.order);
-    document.getElementById('manage-upload-panel').classList.add('show');
-    showMsg('msg-manage-login', 'ok', 'Order found. You can upload more photos or payment proof below.');
-  } catch (error) {
-    console.error('MANAGE_LOOKUP_ERROR:', error);
-    manageSession = null;
-    document.getElementById('manage-upload-panel').classList.remove('show');
-    showMsg('msg-manage-login', 'err', 'Order not found. Please check the order number and phone number.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Find order';
-  }
-}
-
-function renderManageSummary_(order) {
-  const summary = document.getElementById('manage-summary');
-  summary.innerHTML = '';
-
-  const rows = [
-    { label: 'Order', value: manageSession.orderNumber },
-    { label: 'Name', value: order.name || '—' },
-    { label: 'Phone', value: order.phone || '—' },
-    { label: 'Size', value: [order.productName, order.dims].filter(Boolean).join(' ') || '—' },
-    { label: 'Payment status', value: order.paymentStatus || '—' }
-  ];
-
-  if (order.price) rows.push({ label: 'Total', value: 'HK$' + Number(order.price).toLocaleString() });
-
-  rows.forEach(row => {
-    const div = document.createElement('div');
-    div.className = 'r-row';
-    const label = document.createElement('span');
-    label.className = 'r-label';
-    label.textContent = row.label;
-    const value = document.createElement('span');
-    value.textContent = row.value;
-    div.appendChild(label);
-    div.appendChild(value);
-    summary.appendChild(div);
-  });
-}
-
-function onManagePetFiles(input) {
-  const newFiles = Array.from(input.files);
-  const chosen = document.getElementById('manage-pet-file-chosen');
-
-  try {
-    newFiles.forEach(file => validateImageFile_(file, 'Photo'));
-  } catch (error) {
-    chosen.textContent = error.message;
-    chosen.style.color = 'var(--err)';
-    input.value = '';
-    return;
-  }
-
-  const uniqueFiles = newFiles.filter(file => !managePetFiles.some(existing =>
-    existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
-  ));
-
-  const totalAfterAdd = managePetFiles.length + uniqueFiles.length;
-  managePetFiles = managePetFiles.concat(uniqueFiles).slice(0, 6);
-
-  if (totalAfterAdd > 6) {
-    chosen.textContent = 'Maximum 6 photos per upload. Only the first 6 files are kept.';
-    chosen.style.color = 'var(--err)';
-  } else {
-    chosen.textContent = managePetFiles.length ? managePetFiles.length + ' photo(s) selected' : '';
-    chosen.style.color = 'var(--black)';
-  }
-
-  input.value = '';
-  renderManagePetFiles_();
-}
-
-function removeManagePetFile(index) {
-  managePetFiles.splice(index, 1);
-  document.getElementById('manage-pet-file-chosen').textContent = managePetFiles.length ? managePetFiles.length + ' photo(s) selected' : '';
-  renderManagePetFiles_();
-}
-
-async function renderManagePetFiles_() {
-  const list = document.getElementById('manage-pet-photo-list');
-  list.innerHTML = '';
-
-  for (let i = 0; i < managePetFiles.length; i++) {
-    const file = managePetFiles[i];
-    const item = document.createElement('div');
-    item.className = 'photo-item';
-
-    const img = document.createElement('img');
-    img.className = 'photo-thumb';
-    img.alt = file.name;
-    img.src = await fileToDataUrl_(file);
-    img.onclick = () => openManagePhotoPreview_(file);
-
-    const name = document.createElement('div');
-    name.className = 'photo-name';
-    name.textContent = file.name;
-
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'photo-remove';
-    remove.textContent = '×';
-    remove.onclick = () => removeManagePetFile(i);
-
-    item.appendChild(img);
-    item.appendChild(name);
-    item.appendChild(remove);
-    list.appendChild(item);
-  }
-}
-
-async function openManagePhotoPreview_(file) {
-  const image = document.getElementById('photo-preview-image');
-  const dialog = document.getElementById('photo-preview-dialog');
-  image.src = await fileToDataUrl_(file);
-  dialog.showModal();
-}
-
-function onManagePayFile(input) {
-  managePayFile = input.files[0] || null;
-  const chosen = document.getElementById('manage-pay-file-chosen');
-  const list = document.getElementById('manage-payment-photo-list');
-  list.innerHTML = '';
-
-  if (!managePayFile) {
-    chosen.textContent = '';
-    return;
-  }
-
-  try {
-    validateImageFile_(managePayFile, 'Payment screenshot');
-  } catch (error) {
-    chosen.textContent = error.message;
-    chosen.style.color = 'var(--err)';
-    managePayFile = null;
-    input.value = '';
-    return;
-  }
-
-  chosen.textContent = managePayFile.name;
-  chosen.style.color = 'var(--black)';
-  renderManagePayFile_();
-}
-
-async function renderManagePayFile_() {
-  const list = document.getElementById('manage-payment-photo-list');
-  list.innerHTML = '';
-  if (!managePayFile) return;
-
-  const item = document.createElement('div');
-  item.className = 'photo-item';
-
-  const img = document.createElement('img');
-  img.className = 'photo-thumb';
-  img.alt = managePayFile.name;
-  img.src = await fileToDataUrl_(managePayFile);
-  img.onclick = () => openManagePhotoPreview_(managePayFile);
-
-  const name = document.createElement('div');
-  name.className = 'photo-name';
-  name.textContent = managePayFile.name;
-
-  const remove = document.createElement('button');
-  remove.type = 'button';
-  remove.className = 'photo-remove';
-  remove.textContent = '×';
-  remove.onclick = () => {
-    managePayFile = null;
-    document.getElementById('m-payment').value = '';
-    document.getElementById('manage-pay-file-chosen').textContent = '';
-    list.innerHTML = '';
-  };
-
-  item.appendChild(img);
-  item.appendChild(name);
-  item.appendChild(remove);
-  list.appendChild(item);
-}
-
-function getManageSession_() {
-  if (manageSession && manageSession.orderNumber && manageSession.orderToken) return manageSession;
-
-  const orderNumber = sessionStorage.getItem('meow_manage_order_number');
-  const orderToken = sessionStorage.getItem('meow_manage_order_token');
-  if (orderNumber && orderToken) {
-    manageSession = { orderNumber, orderToken, order: {} };
-    return manageSession;
-  }
-
-  return null;
-}
-
-async function uploadManagePetPhotos() {
-  const session = getManageSession_();
-  if (!session) {
-    showMsg('msg-manage-upload', 'err', 'Please find your order first.');
-    return;
-  }
-
-  if (!managePetFiles.length) {
-    showMsg('msg-manage-upload', 'err', 'Please select at least one photo.');
-    return;
-  }
-
-  const btn = document.getElementById('m-photo-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Uploading…';
-  hideMsg('msg-manage-upload');
-
-  try {
-    for (let i = 0; i < managePetFiles.length; i++) {
-      const file = managePetFiles[i];
-      validateImageFile_(file, 'Photo');
-      const data = await fileToBase64(file);
-      const result = await postApi_({
-        type: 'pet_photo',
-        orderNumber: session.orderNumber,
-        orderToken: session.orderToken,
-        index: i + 1,
-        photo: {
-          data: data,
-          name: file.name
-        }
-      });
-
-      if (!result.success) throw new Error(result.error || 'PHOTO_UPLOAD_FAILED');
-    }
-
-    managePetFiles = [];
-    document.getElementById('m-photos').value = '';
-    document.getElementById('manage-pet-file-chosen').textContent = '';
-    document.getElementById('manage-pet-photo-list').innerHTML = '';
-    showMsg('msg-manage-upload', 'ok', 'Photo(s) uploaded successfully.');
-  } catch (error) {
-    console.error('MANAGE_PHOTO_UPLOAD_ERROR:', error);
-    showMsg('msg-manage-upload', 'err', 'Photo upload failed. Please try again or DM us on Instagram.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Upload photos';
-  }
-}
-
-async function submitManagePayment() {
-  const session = getManageSession_();
-  if (!session) {
-    showMsg('msg-manage-upload', 'err', 'Please find your order first.');
-    return;
-  }
-
-  if (!managePayFile) {
-    showMsg('msg-manage-upload', 'err', 'Please select your payment screenshot first.');
-    return;
-  }
-
-  const btn = document.getElementById('m-payment-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Uploading…';
-  hideMsg('msg-manage-upload');
-
-  try {
-    validateImageFile_(managePayFile, 'Payment screenshot');
-    const data = await fileToBase64(managePayFile);
-    const result = await postApi_({
-      type: 'payment',
-      orderNumber: session.orderNumber,
-      orderToken: session.orderToken,
-      screenshot: {
-        data: data,
-        name: managePayFile.name || 'payment-proof'
-      }
-    });
-
-    if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
-
-    managePayFile = null;
-    document.getElementById('m-payment').value = '';
-    document.getElementById('manage-pay-file-chosen').textContent = '';
-    document.getElementById('manage-payment-photo-list').innerHTML = '';
-    showMsg('msg-manage-upload', 'ok', 'Payment proof uploaded successfully. Please send us a DM with your order number.');
-  } catch (error) {
-    console.error('MANAGE_PAYMENT_UPLOAD_ERROR:', error);
-    showMsg('msg-manage-upload', 'err', 'Payment proof upload failed. Please try again or DM us on Instagram.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Upload payment proof';
-  }
-}
-
-async function postApi_(payload) {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  let result;
-  try {
-    result = await response.json();
-  } catch (err) {
-    throw new Error('INVALID_SERVER_RESPONSE');
+  if (!sheetId || !folderId || !apiSecret) {
+    throw new Error('MISSING_SCRIPT_PROPERTIES');
   }
 
   return {
-    ...result,
-    success: response.ok && result.success === true
+    sheetId: sheetId,
+    folderId: folderId,
+    apiSecret: apiSecret
   };
 }
 
-function createRequestId_() {
-  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-    return window.crypto.randomUUID().replace(/-/g, '');
-  }
-  const bytes = new Uint8Array(24);
-  window.crypto.getRandomValues(bytes);
-  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-}
+/***************
+ * PRODUCTS
+ ***************/
+function listProducts_() {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+  const products = getActiveProducts_(ss);
 
-function openTerms(event) {
-  event.preventDefault();
-  const dialog = document.getElementById('terms-dialog');
-  const inner = dialog.querySelector('.terms-inner');
-  if (inner) inner.scrollTop = 0;
-  dialog.showModal();
-  setTimeout(() => dialog.focus({ preventScroll: true }), 0);
-}
-
-function closeTerms() {
-  document.getElementById('terms-dialog').close();
-}
-
-function doReset() {
-  sel = null;
-  orderNum = null;
-  petFiles = [];
-  payFile = null;
-  appliedPromo = null;
-  selectedOutline = null;
-  orderReadyForPayment = false;
-
-  sessionStorage.removeItem('meow_order_number');
-  sessionStorage.removeItem('meow_order_token');
-  sessionStorage.removeItem('meow_order_request_id');
-
-  ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
+  return jsonResponse_({
+    success: true,
+    products: products
   });
-
-  document.getElementById('f-photos').value = '';
-  document.getElementById('f-payment').value = '';
-  document.getElementById('f-terms').checked = false;
-  document.getElementById('f-promo').value = '';
-
-  clearPromo_(false);
-
-  document.getElementById('pet-file-chosen').textContent = '';
-  document.getElementById('pet-photo-list').innerHTML = '';
-  document.getElementById('pet-file-chosen').style.color = 'var(--black)';
-  document.getElementById('pay-file-chosen').textContent = '';
-  document.getElementById('payment-photo-list').innerHTML = '';
-
-  document.querySelectorAll('.size-radio').forEach(r => { r.style.background = ''; r.style.borderColor = ''; });
-  document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
-  document.querySelectorAll('.outline-option').forEach(button => button.classList.remove('sel'));
-
-  document.getElementById('rb2-size').textContent = '';
-  document.getElementById('rb2-price').textContent = '';
-  document.getElementById('rb3-size').textContent = '';
-  document.getElementById('rb3-price').textContent = '';
-
-  document.getElementById('s3n').disabled = false;
-  document.getElementById('s3n').textContent = 'Confirm order';
-  document.getElementById('s4n').disabled = false;
-  document.getElementById('s4n').textContent = 'Submit payment proof';
-  document.getElementById('payment-back').style.display = '';
-  document.getElementById('s1n').disabled = true;
-
-  hideMsg('msg-s3');
-  hideMsg('msg-s4');
-  resetTurnstileWidget();
-  go(1);
 }
-</script>
 
-<div class="paw-cursor-container" id="paw-cursor-container"></div>
+function getActiveProducts_(ss) {
+  const sheet = requireSheet_(ss, PRODUCTS_SHEET);
+  const lastRow = sheet.getLastRow();
 
-<script>
-const PAW_SVG_BLACK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#222"/><circle cx="48.79" cy="22.86" r="3.66" fill="#222"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#222"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#222"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#222"/></g></svg>`;
-const PAW_SVG_GRAY = PAW_SVG_BLACK.replaceAll('#222', '#aaa');
+  if (lastRow < 2) return [];
 
-const container = document.getElementById('paw-cursor-container');
-const pawList = [];
-let lastSpawnTime = 0;
-let trailOffset = 0;
+  const rows = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
 
-if (container) {
-  const cursorPaw = document.createElement('div');
-  cursorPaw.className = 'paw';
-  cursorPaw.innerHTML = PAW_SVG_BLACK;
-  cursorPaw.style.opacity = '1';
-  container.appendChild(cursorPaw);
+  return rows
+    .map(function(row) {
+      return {
+        id: String(row[0] || '').trim(),
+        name: String(row[1] || '').trim(),
+        dims: String(row[2] || '').trim(),
+        price: Number(row[3] || 0),
+        capacity: String(row[4] || '').trim(),
+        active: row[5] === true || String(row[5]).toUpperCase() === 'TRUE',
+        displayOrder: Number(row[6] || 999)
+      };
+    })
+    .filter(function(product) {
+      return product.id && product.name && product.price > 0 && product.active;
+    })
+    .sort(function(a, b) {
+      return a.displayOrder - b.displayOrder;
+    });
+}
 
-  function createPaw(x, y, offset) {
-    const paw = document.createElement('div');
-    paw.className = 'paw';
-    const waveShift = Math.sin(offset * 0.05) * 15;
-    paw.style.left = (x + waveShift) + 'px';
-    paw.style.top = y + 'px';
-    paw.style.transform = 'translate(-50%, -50%)';
-    paw.innerHTML = PAW_SVG_GRAY;
-    paw.style.opacity = '0.7';
-    container.appendChild(paw);
-    return { element: paw, age: 0, maxAge: 1200 };
+function getProductById_(ss, productId) {
+  const products = getActiveProducts_(ss);
+  const target = String(productId || '').trim().toLowerCase();
+
+  for (let i = 0; i < products.length; i++) {
+    if (String(products[i].id).toLowerCase() === target) {
+      return products[i];
+    }
   }
 
-  document.addEventListener('mousemove', (e) => {
-    cursorPaw.style.left = e.clientX + 'px';
-    cursorPaw.style.top = e.clientY + 'px';
-    cursorPaw.style.transform = 'translate(-50%, -50%)';
+  return null;
+}
 
-    const now = Date.now();
-    if (now - lastSpawnTime > 150 && pawList.length < 20) {
-      pawList.push(createPaw(e.clientX, e.clientY, trailOffset));
-      trailOffset++;
-      lastSpawnTime = now;
+/***************
+ * TERMS
+ ***************/
+function listTerms_() {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+  const terms = getActiveTerms_(ss);
+
+  if (!terms || !terms.version || !terms.contentEn || !terms.contentZh) {
+    return jsonResponse_({
+      success: false,
+      error: 'TERMS_UNAVAILABLE'
+    });
+  }
+
+  return jsonResponse_({
+    success: true,
+    terms: terms
+  });
+}
+
+function getActiveTerms_(ss) {
+  const sheet = requireSheet_(ss, TERMS_SHEET);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) return null;
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+
+    const version = String(row[0] || '').trim();
+    const active = row[1] === true || String(row[1]).toUpperCase() === 'TRUE';
+
+    if (!version || !active) continue;
+
+    return {
+      version: version,
+      titleEn: String(row[2] || 'Terms & Conditions and Privacy Notice').trim(),
+      contentEn: String(row[3] || '').trim(),
+      titleZh: String(row[4] || '注意事項及私隱聲明').trim(),
+      contentZh: String(row[5] || '').trim(),
+      updatedAt: row[6] instanceof Date ? row[6].toISOString() : String(row[6] || '')
+    };
+  }
+
+  return null;
+}
+
+/***************
+ * PROMO
+ ***************/
+function validatePromo_(payload) {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+
+  const product = getProductById_(ss, payload.productId);
+  if (!product) {
+    return jsonResponse_({
+      success: false,
+      error: 'INVALID_PRODUCT'
+    });
+  }
+
+  const result = calculatePromo_(ss, product, payload.promoCode);
+  const discount = result.valid ? result.discount : 0;
+
+  return jsonResponse_({
+    success: true,
+    promo: {
+      valid: result.valid,
+      code: result.code,
+      originalPrice: product.price,
+      discount: discount,
+      finalPrice: product.price - discount,
+      price: product.price - discount,
+      message: result.message || ''
     }
   });
+}
 
-  function animate() {
-    for (let i = pawList.length - 1; i >= 0; i--) {
-      const p = pawList[i];
-      p.age += 16;
-      const life = Math.max(0, 1 - (p.age / p.maxAge));
-      p.element.style.opacity = life * 0.7;
-      if (life <= 0) {
-        p.element.remove();
-        pawList.splice(i, 1);
+function calculatePromo_(ss, product, promoCode) {
+  const code = String(promoCode || '').trim().toUpperCase();
+
+  if (!code) {
+    return {
+      valid: false,
+      code: '',
+      discount: 0,
+      message: ''
+    };
+  }
+
+  const sheet = requireSheet_(ss, PROMOTIONS_SHEET);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return {
+      valid: false,
+      code: code,
+      discount: 0,
+      message: 'Invalid promo code'
+    };
+  }
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+
+    const rowCode = String(row[0] || '').trim().toUpperCase();
+    if (rowCode !== code) continue;
+
+    const type = String(row[1] || '').trim().toUpperCase();
+    const value = Number(row[2] || 0);
+    const active = row[3] === true || String(row[3]).toUpperCase() === 'TRUE';
+    const startDate = row[4];
+    const endDate = row[5];
+    const applicableProducts = String(row[6] || 'ALL').trim();
+    const maxUses = Number(row[7] || 0);
+    const uses = Number(row[8] || 0);
+
+    if (!active) {
+      return { valid: false, code: code, discount: 0, message: 'Promo code inactive' };
+    }
+
+    const now = new Date();
+
+    if (startDate instanceof Date && now < startDate) {
+      return { valid: false, code: code, discount: 0, message: 'Promo code not started' };
+    }
+
+    if (endDate instanceof Date && now > endDate) {
+      return { valid: false, code: code, discount: 0, message: 'Promo code expired' };
+    }
+
+    if (maxUses > 0 && uses >= maxUses) {
+      return { valid: false, code: code, discount: 0, message: 'Promo code limit reached' };
+    }
+
+    if (!isPromoApplicable_(applicableProducts, product.id)) {
+      return { valid: false, code: code, discount: 0, message: 'Promo code not applicable to this product' };
+    }
+
+    let discount = 0;
+
+    if (type === 'PERCENT') {
+      discount = Math.round(product.price * value / 100);
+    } else if (type === 'FIXED') {
+      discount = Math.round(value);
+    } else {
+      return { valid: false, code: code, discount: 0, message: 'Invalid promo type' };
+    }
+
+    discount = Math.max(0, Math.min(discount, product.price));
+
+    return {
+      valid: true,
+      code: code,
+      discount: discount,
+      rowNumber: i + 2,
+      message: 'Promo applied'
+    };
+  }
+
+  return {
+    valid: false,
+    code: code,
+    discount: 0,
+    message: 'Invalid promo code'
+  };
+}
+
+function isPromoApplicable_(applicableProducts, productId) {
+  const value = String(applicableProducts || '').trim();
+
+  if (!value || value.toUpperCase() === 'ALL') return true;
+
+  const ids = value
+    .split(',')
+    .map(function(x) { return x.trim().toLowerCase(); })
+    .filter(Boolean);
+
+  return ids.indexOf(String(productId || '').toLowerCase()) !== -1;
+}
+
+function incrementPromoUse_(ss, promoResult) {
+  if (!promoResult || !promoResult.valid || !promoResult.rowNumber) return;
+
+  const sheet = requireSheet_(ss, PROMOTIONS_SHEET);
+  const current = Number(sheet.getRange(promoResult.rowNumber, 9).getValue() || 0);
+  sheet.getRange(promoResult.rowNumber, 9).setValue(current + 1);
+}
+
+/***************
+ * ORDER
+ ***************/
+function createOrder_(payload) {
+  const props = getRequiredProperties_();
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const ss = SpreadsheetApp.openById(props.sheetId);
+    const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
+    ensureOrderColumns_(ordersSheet);
+
+    const requestId = String(payload.requestId || '').trim();
+    if (!requestId) throw new Error('MISSING_REQUEST_ID');
+
+    const existing = findOrderByRequestId_(ordersSheet, requestId);
+    if (existing) {
+      return jsonResponse_({
+        success: true,
+        orderNumber: existing.orderNumber,
+        orderToken: deriveOrderToken_(requestId),
+        duplicate: true
+      });
+    }
+
+    const product = getProductById_(ss, payload.productId);
+    if (!product) throw new Error('INVALID_PRODUCT');
+
+    const terms = getActiveTerms_(ss);
+    if (!terms) throw new Error('TERMS_UNAVAILABLE');
+
+    const acceptedTermsVersion = String(payload.termsVersion || '').trim();
+    if (!acceptedTermsVersion || acceptedTermsVersion !== terms.version) {
+      throw new Error('TERMS_NOT_ACCEPTED');
+    }
+
+    const outline = normalizeOutline_(payload.outline);
+    const customer = normalizeCustomerPayload_(payload);
+
+    if (!payload.firstPhoto || !payload.firstPhoto.data) {
+      throw new Error('MISSING_FIRST_PHOTO');
+    }
+
+    const firstPhotoBlob = decodeAndValidateImage_(payload.firstPhoto.data, 'PET_01');
+
+    const promoResult = calculatePromo_(ss, product, payload.promoCode);
+    const discount = promoResult.valid ? promoResult.discount : 0;
+    const finalPrice = product.price - discount;
+
+    const orderNumber = generateSequentialOrderNumber_(ordersSheet);
+    const orderToken = deriveOrderToken_(requestId);
+    const orderTokenHash = sha256Hex_(orderToken);
+
+    const folder = DriveApp.getFolderById(props.folderId).createFolder(orderNumber);
+    folder.createFile(firstPhotoBlob);
+
+    const folderUrl = folder.getUrl();
+    const folderFormula = '=HYPERLINK("' + folderUrl + '","' + orderNumber + '")';
+
+    const rowValues = [
+      orderNumber,
+      new Date(),
+      safeText_(customer.instagram),
+      safeText_(customer.name),
+      safeText_(customer.phone),
+      safeText_(customer.address),
+      safeText_(product.name),
+      safeText_(product.dims),
+      finalPrice,
+      safeText_(payload.notes || ''),
+      '',
+      ORDER_STATUS_AWAITING_PROOF,
+      orderTokenHash,
+      requestId,
+      new Date(),
+      terms.version,
+      promoResult.valid ? promoResult.code : '',
+      product.price,
+      discount,
+      outline
+    ];
+
+    ordersSheet.appendRow(rowValues);
+
+    const lastRow = ordersSheet.getLastRow();
+    ordersSheet.getRange(lastRow, 11).setFormula(folderFormula);
+
+    if (promoResult.valid) {
+      incrementPromoUse_(ss, promoResult);
+    }
+
+    try {
+      syncOrderToFinanceSheet_({
+        orderNumber: orderNumber,
+        instagram: safeText_(customer.instagram),
+        name: safeText_(customer.name),
+        phone: safeText_(customer.phone),
+        address: safeText_(customer.address),
+        productName: product.name,
+        promoCode: promoResult.valid ? promoResult.code : '',
+        outline: outline
+      });
+    } catch (financeErr) {
+      logSecurity_('FINANCE_SYNC_FAILED', orderNumber, String(financeErr.message || financeErr));
+    }
+
+    logSecurity_('ORDER_CREATED', orderNumber, 'Order created');
+
+    return jsonResponse_({
+      success: true,
+      orderNumber: orderNumber,
+      orderToken: orderToken,
+      product: product,
+      price: finalPrice,
+      finalPrice: finalPrice,
+      total: finalPrice,
+      amount: finalPrice,
+      originalPrice: product.price,
+      discount: discount,
+      promoCode: promoResult.valid ? promoResult.code : '',
+      outline: outline,
+      termsVersion: terms.version
+    });
+
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function ensureOrderColumns_(sheet) {
+  const headers = [
+    'Order #',
+    'Date',
+    'Instagram',
+    'Name',
+    'Phone',
+    'Address',
+    'Size',
+    'Dims',
+    'Price',
+    'Notes',
+    'Folder',
+    'Payment Status',
+    'Payment Token Hash',
+    'Request ID',
+    'Terms Accepted At',
+    'Terms Version',
+    'Promo Code',
+    'Original Price',
+    'Discount',
+    'Outline'
+  ];
+
+  const existing = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+
+  for (let i = 0; i < headers.length; i++) {
+    if (!existing[i]) {
+      sheet.getRange(1, i + 1).setValue(headers[i]);
+    }
+  }
+}
+
+function findOrderByRequestId_(sheet, requestId) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
+
+  for (let i = 0; i < data.length; i++) {
+    if (String(data[i][13] || '').trim() === requestId) {
+      return {
+        row: i + 2,
+        orderNumber: String(data[i][0] || '')
+      };
+    }
+  }
+
+  return null;
+}
+
+function generateSequentialOrderNumber_(sheet) {
+  const year = Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy');
+  const prefix = 'MEOW-' + year + '-';
+
+  const lastRow = sheet.getLastRow();
+  let max = 0;
+
+  if (lastRow >= 2) {
+    const orderNumbers = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+
+    orderNumbers.forEach(function(row) {
+      const value = String(row[0] || '');
+
+      if (value.indexOf(prefix) === 0) {
+        const n = Number(value.replace(prefix, ''));
+        if (n > max) max = n;
       }
-    }
-    requestAnimationFrame(animate);
+    });
   }
 
-  animate();
+  const next = max + 1;
+  return prefix + String(next).padStart(4, '0');
 }
-</script>
-</body>
-</html>
+
+function normalizeOutline_(value) {
+  const v = String(value || '').trim().toLowerCase();
+
+  if (v === 'black' || v === 'black outline') return 'Black outline';
+  if (v === 'white' || v === 'white outline') return 'White outline';
+
+  throw new Error('INVALID_OUTLINE');
+}
+
+function normalizeCustomerPayload_(payload) {
+  return {
+    instagram: firstText_([
+      payload.instagram,
+      payload.ig,
+      payload.instagramHandle,
+      payload.customer && payload.customer.instagram
+    ]),
+    name: firstText_([
+      payload.name,
+      payload.fullName,
+      payload.customerName,
+      payload.customer && payload.customer.name,
+      payload.customer && payload.customer.fullName
+    ]),
+    phone: firstText_([
+      payload.phone,
+      payload.phoneNumber,
+      payload.mobile,
+      payload.customer && payload.customer.phone
+    ]),
+    address: firstText_([
+      payload.address,
+      payload.deliveryAddress,
+      payload.shippingAddress,
+      payload.fullAddress,
+      payload.sfAddress,
+      payload.sfLocationAddress,
+      payload.lockerAddress,
+      payload.delivery && payload.delivery.address,
+      payload.shipping && payload.shipping.address,
+      payload.customer && payload.customer.address
+    ])
+  };
+}
+
+function firstText_(values) {
+  for (let i = 0; i < values.length; i++) {
+    const value = String(values[i] || '').trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+function deriveOrderToken_(requestId) {
+  const props = getRequiredProperties_();
+  return sha256Hex_(props.apiSecret + '|' + String(requestId || ''));
+}
+
+/***************
+ * MANAGE ORDER
+ ***************/
+function manageOrderLookup_(payload) {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
+
+  const orderNumber = String(payload.orderNumber || '').trim();
+  const phone = String(payload.phone || '').trim();
+
+  if (!orderNumber) throw new Error('MISSING_ORDER_NUMBER');
+  if (!phone) throw new Error('MISSING_PHONE');
+
+  const order = findOrderByNumber_(ordersSheet, orderNumber);
+  if (!order) throw new Error('ORDER_NOT_FOUND');
+
+  if (normalizePhone_(order.phone) !== normalizePhone_(phone)) {
+    logSecurity_('MANAGE_LOOKUP_FAILED', orderNumber, 'Invalid phone verification');
+    throw new Error('INVALID_ORDER_DETAILS');
+  }
+
+  if (!order.requestId) {
+    throw new Error('ORDER_CANNOT_BE_MANAGED');
+  }
+
+  const orderToken = deriveOrderToken_(order.requestId);
+  verifyOrderToken_(order, orderToken);
+
+  logSecurity_('MANAGE_LOOKUP_SUCCESS', orderNumber, 'Customer verified order management access');
+
+  return jsonResponse_({
+    success: true,
+    orderNumber: order.orderNumber,
+    orderToken: orderToken,
+    order: {
+      orderNumber: order.orderNumber,
+      instagram: order.instagram,
+      name: order.name,
+      phone: maskPhone_(order.phone),
+      productName: order.productName,
+      dims: order.dims,
+      price: order.price,
+      paymentStatus: order.paymentStatus,
+      promoCode: order.promoCode,
+      outline: order.outline
+    }
+  });
+}
+
+function normalizePhone_(value) {
+  return String(value || '').replace(/[^0-9]/g, '');
+}
+
+function maskPhone_(value) {
+  const digits = normalizePhone_(value);
+  if (digits.length <= 4) return digits;
+  return '••••' + digits.slice(-4);
+}
+
+/***************
+ * PET PHOTO
+ ***************/
+function uploadPetPhoto_(payload) {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
+
+  const orderNumber = String(payload.orderNumber || '').trim();
+  const orderToken = String(payload.orderToken || '').trim();
+
+  const order = findOrderByNumber_(ordersSheet, orderNumber);
+  if (!order) throw new Error('ORDER_NOT_FOUND');
+
+  verifyOrderToken_(order, orderToken);
+
+  const photo = payload.photo;
+  const index = Number(payload.index || 1);
+
+  if (!photo || !photo.data) throw new Error('MISSING_PHOTO');
+  if (index < 1 || index > MAX_PET_PHOTOS) throw new Error('INVALID_PHOTO_INDEX');
+
+  const blob = decodeAndValidateImage_(photo.data, 'PET_' + String(index).padStart(2, '0'));
+
+  const folder = getOrderFolder_(props.folderId, orderNumber);
+  folder.createFile(blob);
+
+  logSecurity_('PET_PHOTO_UPLOADED', orderNumber, 'Photo uploaded');
+
+  return jsonResponse_({
+    success: true
+  });
+}
+
+/***************
+ * PAYMENT
+ ***************/
+function submitPayment_(payload) {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+
+  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
+  const paymentsSheet = requireSheet_(ss, PAYMENTS_SHEET);
+
+  const orderNumber = String(payload.orderNumber || '').trim();
+  const orderToken = String(payload.orderToken || '').trim();
+
+  const order = findOrderByNumber_(ordersSheet, orderNumber);
+  if (!order) throw new Error('ORDER_NOT_FOUND');
+
+  verifyOrderToken_(order, orderToken);
+
+  const screenshot = payload.screenshot;
+  if (!screenshot || !screenshot.data) throw new Error('MISSING_PAYMENT_SCREENSHOT');
+
+  const blob = decodeAndValidateImage_(screenshot.data, 'PAYMENT_PROOF_' + orderNumber);
+
+  const folder = getOrderFolder_(props.folderId, orderNumber);
+  folder.createFile(blob);
+
+  paymentsSheet.appendRow([
+    new Date(),
+    orderNumber,
+    'FPS',
+    PAYMENT_STATUS_PROOF_SUBMITTED,
+    'proof',
+    '',
+    safeText_(screenshot.name || 'payment-proof'),
+    'web'
+  ]);
+
+  ordersSheet.getRange(order.row, 12).setValue(PAYMENT_STATUS_PROOF_SUBMITTED);
+
+  logSecurity_('PAYMENT_PROOF_SUBMITTED', orderNumber, 'Payment proof submitted');
+
+  return jsonResponse_({
+    success: true,
+    message: 'Payment proof submitted'
+  });
+}
+
+/***************
+ * ORDER HELPERS
+ ***************/
+function findOrderByNumber_(sheet, orderNumber) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 20).getValues();
+
+  for (let i = 0; i < data.length; i++) {
+    if (String(data[i][0] || '').trim() === orderNumber) {
+      return {
+        row: i + 2,
+        orderNumber: String(data[i][0] || '').trim(),
+        date: data[i][1],
+        instagram: String(data[i][2] || '').trim(),
+        name: String(data[i][3] || '').trim(),
+        phone: String(data[i][4] || '').trim(),
+        address: String(data[i][5] || '').trim(),
+        productName: String(data[i][6] || '').trim(),
+        dims: String(data[i][7] || '').trim(),
+        price: Number(data[i][8] || 0),
+        paymentStatus: String(data[i][11] || '').trim(),
+        tokenHash: String(data[i][12] || '').trim(),
+        requestId: String(data[i][13] || '').trim(),
+        termsVersion: String(data[i][15] || '').trim(),
+        promoCode: String(data[i][16] || '').trim(),
+        originalPrice: Number(data[i][17] || 0),
+        discount: Number(data[i][18] || 0),
+        outline: String(data[i][19] || '').trim()
+      };
+    }
+  }
+
+  return null;
+}
+
+function verifyOrderToken_(order, token) {
+  if (!token || !order.tokenHash) {
+    throw new Error('INVALID_ORDER_TOKEN');
+  }
+
+  const hash = sha256Hex_(token);
+
+  if (hash !== order.tokenHash) {
+    throw new Error('INVALID_ORDER_TOKEN');
+  }
+}
+
+function getOrderFolder_(parentFolderId, orderNumber) {
+  const parent = DriveApp.getFolderById(parentFolderId);
+  const folders = parent.getFoldersByName(orderNumber);
+
+  if (!folders.hasNext()) {
+    return parent.createFolder(orderNumber);
+  }
+
+  return folders.next();
+}
+
+/***************
+ * IMAGE HANDLING
+ ***************/
+function decodeAndValidateImage_(data, fallbackName) {
+  const rawData = String(data || '');
+  const base64 = rawData.indexOf(',') >= 0 ? rawData.split(',')[1] : rawData;
+
+  if (!base64) {
+    throw new Error('MISSING_IMAGE_DATA');
+  }
+
+  const bytes = Utilities.base64Decode(base64);
+
+  if (bytes.length > MAX_IMAGE_BYTES) {
+    throw new Error('IMAGE_TOO_LARGE');
+  }
+
+  const imageInfo = detectImageType_(bytes);
+
+  if (!imageInfo) {
+    throw new Error('INVALID_IMAGE_TYPE');
+  }
+
+  return Utilities.newBlob(bytes, imageInfo.mimeType, fallbackName + imageInfo.extension);
+}
+
+function detectImageType_(bytes) {
+  if (!bytes || bytes.length < 8) return null;
+
+  const b0 = bytes[0] & 255;
+  const b1 = bytes[1] & 255;
+  const b2 = bytes[2] & 255;
+  const b3 = bytes[3] & 255;
+  const b4 = bytes[4] & 255;
+  const b5 = bytes[5] & 255;
+  const b6 = bytes[6] & 255;
+  const b7 = bytes[7] & 255;
+
+  const isJpg = b0 === 0xFF && b1 === 0xD8 && b2 === 0xFF;
+  if (isJpg) {
+    return {
+      mimeType: 'image/jpeg',
+      extension: '.jpg'
+    };
+  }
+
+  const isPng =
+    b0 === 0x89 &&
+    b1 === 0x50 &&
+    b2 === 0x4E &&
+    b3 === 0x47 &&
+    b4 === 0x0D &&
+    b5 === 0x0A &&
+    b6 === 0x1A &&
+    b7 === 0x0A;
+
+  if (isPng) {
+    return {
+      mimeType: 'image/png',
+      extension: '.png'
+    };
+  }
+
+  return null;
+}
+
+/***************
+ * FINANCE SYNC
+ ***************/
+function getFinanceSheet_() {
+  const ss = SpreadsheetApp.openById(FINANCE_SPREADSHEET_ID);
+
+  const selectedSheetName = getFinanceSetting_(ss, FINANCE_ACTIVE_SHEET_KEY);
+  const availableSheetNames = getAvailableFinanceSheetNames_(ss);
+
+  if (selectedSheetName) {
+    const matchedName = findSheetNameLoose_(availableSheetNames, selectedSheetName);
+
+    if (!matchedName) {
+      throw new Error(
+        'Selected finance sheet not found or not valid: ' +
+        selectedSheetName +
+        '. Please choose from Settings dropdown.'
+      );
+    }
+
+    const selectedSheet = ss.getSheetByName(matchedName);
+    if (selectedSheet) return selectedSheet;
+  }
+
+  const defaultMatchedName = findSheetNameLoose_(availableSheetNames, DEFAULT_SHEET_NAME);
+  if (defaultMatchedName) {
+    return ss.getSheetByName(defaultMatchedName);
+  }
+
+  if (availableSheetNames.length > 0) {
+    return ss.getSheetByName(availableSheetNames[0]);
+  }
+
+  throw new Error('No available finance sheet found. Please check finance sheet headers.');
+}
+
+function getFinanceSetting_(ss, key) {
+  const sheet = ss.getSheetByName(FINANCE_SETTINGS_SHEET);
+  if (!sheet) return '';
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return '';
+
+  // Use display values so date-formatted cells do not break reading.
+  const values = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
+  const target = String(key || '').trim();
+
+  for (let i = 0; i < values.length; i++) {
+    const rowKey = String(values[i][0] || '').trim();
+    const rowValue = String(values[i][1] || '').trim();
+
+    if (rowKey === target) {
+      return rowValue;
+    }
+  }
+
+  return '';
+}
+
+function setupFinanceSettingsSheet() {
+  const ss = SpreadsheetApp.openById(FINANCE_SPREADSHEET_ID);
+
+  let sheet = ss.getSheetByName(FINANCE_SETTINGS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(FINANCE_SETTINGS_SHEET);
+  }
+
+  sheet.clear();
+
+  sheet.getRange(1, 1, 1, 2).setValues([[
+    'Key',
+    'Value'
+  ]]);
+
+  sheet.getRange(2, 1).setValue(FINANCE_ACTIVE_SHEET_KEY);
+
+  // Force B2 to plain text, so values like Jun-2026 / Jun 2026 do not become dates.
+  sheet.getRange(2, 2).setNumberFormat('@');
+
+  const availableSheetNames = getAvailableFinanceSheetNames_(ss);
+
+  if (availableSheetNames.length === 0) {
+    throw new Error('No available finance sheets found. Check headers: For Delivery / Instagram / Full Name / Phone / Address and RUG MAKING COST.');
+  }
+
+  const defaultName =
+    availableSheetNames.indexOf(DEFAULT_SHEET_NAME) !== -1
+      ? DEFAULT_SHEET_NAME
+      : availableSheetNames[0];
+
+  sheet.getRange(2, 2).setValue(defaultName);
+  applyFinanceSheetDropdown_(sheet, availableSheetNames);
+
+  sheet.setFrozenRows(1);
+
+  sheet.getRange(1, 1, 1, 2)
+    .setFontWeight('bold')
+    .setBackground('#111111')
+    .setFontColor('#ffffff');
+
+  sheet.setColumnWidth(1, 240);
+  sheet.setColumnWidth(2, 260);
+
+  console.log('Finance Settings sheet ready. Selected: ' + defaultName);
+  console.log('Available finance sheets: ' + availableSheetNames.join(', '));
+}
+
+function refreshFinanceSettingsDropdown() {
+  const ss = SpreadsheetApp.openById(FINANCE_SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(FINANCE_SETTINGS_SHEET);
+
+  if (!sheet) {
+    setupFinanceSettingsSheet();
+    return;
+  }
+
+  const availableSheetNames = getAvailableFinanceSheetNames_(ss);
+
+  if (availableSheetNames.length === 0) {
+    throw new Error('No available finance sheets found.');
+  }
+
+  sheet.getRange(1, 1, 1, 2).setValues([[
+    'Key',
+    'Value'
+  ]]);
+
+  sheet.getRange(2, 1).setValue(FINANCE_ACTIVE_SHEET_KEY);
+  sheet.getRange(2, 2).setNumberFormat('@');
+
+  const currentValue = String(sheet.getRange(2, 2).getDisplayValue() || '').trim();
+  const matchedSheet = findSheetNameLoose_(availableSheetNames, currentValue);
+
+  const selectedName = matchedSheet ||
+    (availableSheetNames.indexOf(DEFAULT_SHEET_NAME) !== -1 ? DEFAULT_SHEET_NAME : availableSheetNames[0]);
+
+  sheet.getRange(2, 2).setValue(selectedName);
+  applyFinanceSheetDropdown_(sheet, availableSheetNames);
+
+  sheet.setFrozenRows(1);
+
+  sheet.getRange(1, 1, 1, 2)
+    .setFontWeight('bold')
+    .setBackground('#111111')
+    .setFontColor('#ffffff');
+
+  sheet.setColumnWidth(1, 240);
+  sheet.setColumnWidth(2, 260);
+
+  console.log('Finance Settings dropdown refreshed. Selected: ' + selectedName);
+  console.log('Available finance sheets: ' + availableSheetNames.join(', '));
+}
+
+function applyFinanceSheetDropdown_(settingsSheet, availableSheetNames) {
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(availableSheetNames, true)
+    .setAllowInvalid(false)
+    .build();
+
+  settingsSheet.getRange(2, 2).setDataValidation(rule);
+}
+
+function getAvailableFinanceSheetNames_(ss) {
+  const sheets = ss.getSheets();
+  const names = [];
+
+  for (let i = 0; i < sheets.length; i++) {
+    const sheet = sheets[i];
+    const name = sheet.getName();
+
+    if (name === FINANCE_SETTINGS_SHEET) continue;
+
+    if (isValidFinanceSheet_(sheet)) {
+      names.push(name);
+    }
+  }
+
+  return names;
+}
+
+function isValidFinanceSheet_(sheet) {
+  try {
+    getFinanceDeliveryColumns_(sheet);
+    findFinanceCostRow_(sheet);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function findSheetNameLoose_(availableSheetNames, inputName) {
+  const target = normalizeSheetName_(inputName);
+  if (!target) return '';
+
+  for (let i = 0; i < availableSheetNames.length; i++) {
+    if (normalizeSheetName_(availableSheetNames[i]) === target) {
+      return availableSheetNames[i];
+    }
+  }
+
+  return '';
+}
+
+function normalizeSheetName_(value) {
+  return String(value || '')
+    .replace(/\s+/g, '')
+    .replace(/-/g, '')
+    .trim()
+    .toUpperCase();
+}
+
+function syncOrderToFinanceSheet_(order) {
+  const sheet = getFinanceSheet_();
+
+  let row = findFinanceOrderRow_(sheet, order.orderNumber);
+
+  if (!row) {
+    const costRow = findFinanceCostRow_(sheet);
+    const insertRow = findFinanceInsertRow_(sheet, costRow);
+
+    if (insertRow >= costRow) {
+      sheet.insertRowBefore(costRow);
+      row = costRow;
+    } else {
+      row = insertRow;
+    }
+
+    const templateRow = Math.max(5, row - 1);
+    const lastCol = sheet.getLastColumn();
+
+    sheet
+      .getRange(templateRow, 1, 1, lastCol)
+      .copyTo(sheet.getRange(row, 1, 1, lastCol), { formatOnly: false });
+  }
+
+  writeFinanceOrderRow_(sheet, row, order);
+}
+
+function findFinanceOrderRow_(sheet, orderNumber) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 5) return null;
+
+  const target = String(orderNumber || '').trim();
+  if (!target) return null;
+
+  const values = sheet.getRange(5, 4, lastRow - 4, 1).getValues();
+
+  for (let i = 0; i < values.length; i++) {
+    if (String(values[i][0] || '').trim() === target) {
+      return i + 5;
+    }
+  }
+
+  return null;
+}
+
+function writeFinanceOrderRow_(sheet, row, order) {
+  const deliveryCols = getFinanceDeliveryColumns_(sheet);
+
+  // Main finance table. These columns are your fixed finance input columns.
+  sheet.getRange(row, 3).setValue(new Date());
+  sheet.getRange(row, 4).setValue(safeText_(order.orderNumber));
+  sheet.getRange(row, 5).setValue(safeText_(order.instagram));
+  sheet.getRange(row, 7).setValue(mapFinanceProductName_(order.productName, order.promoCode));
+  sheet.getRange(row, 8).setValue(mapFinanceOutline_(order.outline));
+  sheet.getRange(row, 9).setValue(1);
+  sheet.getRange(row, 10).setValue('FPS');
+
+  // Delivery table. These are found by header name, so columns can move.
+  sheet.getRange(row, deliveryCols.forDelivery).setValue(safeText_(order.orderNumber));
+  sheet.getRange(row, deliveryCols.instagram).setValue(safeText_(order.instagram));
+  sheet.getRange(row, deliveryCols.fullName).setValue(safeText_(order.name));
+  sheet.getRange(row, deliveryCols.phone).setValue(safeText_(order.phone));
+  sheet.getRange(row, deliveryCols.address).setValue(safeText_(order.address));
+}
+
+function getFinanceDeliveryColumns_(sheet) {
+  const lastCol = sheet.getLastColumn();
+  const maxHeaderRows = Math.min(10, sheet.getLastRow());
+  const values = sheet.getRange(1, 1, maxHeaderRows, lastCol).getDisplayValues();
+
+  for (let r = 0; r < values.length; r++) {
+    const row = values[r];
+
+    const forDelivery = findHeaderColInRow_(row, 'For Delivery');
+    const instagram = findHeaderColInRow_(row, 'Instagram');
+    const fullName = findHeaderColInRow_(row, 'Full Name');
+    const phone = findHeaderColInRow_(row, 'Phone');
+    const address = findHeaderColInRow_(row, 'Address');
+
+    if (forDelivery && instagram && fullName && phone && address) {
+      return {
+        forDelivery: forDelivery,
+        instagram: instagram,
+        fullName: fullName,
+        phone: phone,
+        address: address
+      };
+    }
+  }
+
+  throw new Error('Finance delivery headers not found: For Delivery / Instagram / Full Name / Phone / Address');
+}
+
+function findHeaderColInRow_(rowValues, headerName) {
+  const target = normalizeHeader_(headerName);
+
+  for (let i = 0; i < rowValues.length; i++) {
+    if (normalizeHeader_(rowValues[i]) === target) {
+      return i + 1;
+    }
+  }
+
+  return null;
+}
+
+function normalizeHeader_(value) {
+  return String(value || '')
+    .replace(/\s+/g, '')
+    .trim()
+    .toUpperCase();
+}
+
+function mapFinanceOutline_(outline) {
+  const v = String(outline || '').trim().toLowerCase();
+
+  if (v === 'black' || v === 'black outline') return 'Black';
+  if (v === 'white' || v === 'white outline') return 'White';
+
+  // Finance column H has data validation, so leave blank instead of writing an invalid value.
+  return '';
+}
+
+function financeOrderExists_(sheet, orderNumber) {
+  return !!findFinanceOrderRow_(sheet, orderNumber);
+}
+
+function findFinanceCostRow_(sheet) {
+  const values = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getDisplayValues();
+
+  for (let r = 0; r < values.length; r++) {
+    const joined = values[r].join(' ').replace(/\s+/g, '').toUpperCase();
+
+    if (joined.indexOf('RUGMAKINGCOST') >= 0) {
+      return r + 1;
+    }
+  }
+
+  throw new Error('找不到 RUG MAKING COST 行');
+}
+
+function findFinanceInsertRow_(sheet, costRow) {
+  for (let r = 5; r < costRow; r++) {
+    const orderNo = String(sheet.getRange(r, 4).getValue() || '').trim();
+    const product = String(sheet.getRange(r, 7).getValue() || '').trim();
+
+    if (!orderNo && !product) {
+      return r;
+    }
+  }
+
+  return costRow;
+}
+
+function mapFinanceProductName_(productName, promoCode) {
+  const name = String(productName || '').trim();
+  const has10 = String(promoCode || '').trim().toUpperCase() === 'MEOW10';
+
+  const baseMap = {
+    'S': 'S',
+    'M': 'M',
+    'L': 'L',
+    'S - Oval': 'Oval - S',
+    'M - Oval': 'Oval - M',
+    'L - Oval': 'Oval - L',
+    'Mini Rug': '20cm Mini Rug',
+    'Coaster': '15cm Coaster'
+  };
+
+  const mapped = baseMap[name] || name;
+
+  if (has10 && mapped === 'S') return 'S (10% off)';
+  if (has10 && mapped === 'M') return 'M (10% off)';
+  if (has10 && mapped === 'L') return 'L (10% off)';
+
+  return mapped;
+}
+
+function testFinanceSyncAccess() {
+  const sheet = getFinanceSheet_();
+
+  findFinanceCostRow_(sheet);
+  getFinanceDeliveryColumns_(sheet);
+
+  console.log('Finance sync access OK: ' + sheet.getName());
+}
+
+function debugFinanceSyncTarget() {
+  const sheet = getFinanceSheet_();
+
+  console.log('Selected finance sheet: ' + sheet.getName());
+  console.log('Last row: ' + sheet.getLastRow());
+  console.log('Last column: ' + sheet.getLastColumn());
+
+  const deliveryCols = getFinanceDeliveryColumns_(sheet);
+  console.log('Delivery columns: ' + JSON.stringify(deliveryCols));
+
+  const costRow = findFinanceCostRow_(sheet);
+  console.log('RUG MAKING COST row: ' + costRow);
+}
+
+function testWriteFinanceOneOrder() {
+  syncOrderToFinanceSheet_({
+    orderNumber: 'TEST-SYNC-001',
+    instagram: '@test',
+    name: 'Test Name',
+    phone: '12345678',
+    address: 'Test Address',
+    productName: 'S',
+    promoCode: '',
+    outline: 'Black outline'
+  });
+
+  console.log('Test order synced');
+}
+
+function resyncFinanceDeliveryFromOrders() {
+  const props = getRequiredProperties_();
+  const orderSS = SpreadsheetApp.openById(props.sheetId);
+  const ordersSheet = requireSheet_(orderSS, ORDERS_SHEET);
+
+  const lastRow = ordersSheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const rows = ordersSheet.getRange(2, 1, lastRow - 1, 20).getValues();
+
+  rows.forEach(function(row) {
+    const orderNumber = String(row[0] || '').trim();
+    if (!orderNumber) return;
+
+    syncOrderToFinanceSheet_({
+      orderNumber: orderNumber,
+      instagram: row[2],
+      name: row[3],
+      phone: row[4],
+      address: row[5],
+      productName: row[6],
+      promoCode: row[16],
+      outline: row[19]
+    });
+  });
+
+  console.log('Finance delivery columns resynced from Orders');
+}
+
+/***************
+ * SETUP SHEETS
+ ***************/
+function setupProductsSheet() {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+
+  let sheet = ss.getSheetByName(PRODUCTS_SHEET);
+  if (!sheet) sheet = ss.insertSheet(PRODUCTS_SHEET);
+
+  sheet.clear();
+
+  sheet.getRange(1, 1, 1, 7).setValues([[
+    'Product ID',
+    'Product Name',
+    'Dimensions',
+    'Price',
+    'Capacity',
+    'Active',
+    'Display Order'
+  ]]);
+
+  const products = [
+    ['s', 'S', '70 × 30-40 cm', 590, '1 person + 1 pet', true, 1],
+    ['m', 'M', '100 × 40-50 cm', 690, '2 people + 1-2 pets', true, 2],
+    ['l', 'L', '130 × 50-60 cm', 990, '2+ people + 3+ pets', true, 3],
+    ['s-oval', 'S - Oval', '70 × 30-40 cm', 590, 'up to 6 heads', true, 4],
+    ['m-oval', 'M - Oval', '100 × 40-50 cm', 690, 'up to 8 heads', true, 5],
+    ['l-oval', 'L - Oval', '130 × 50-60 cm', 990, 'up to 10 heads', true, 6],
+    ['mini', 'Mini Rug', '20 cm', 350, '1 pet', true, 7],
+    ['coaster', 'Coaster', '15 cm', 300, '1 pet', true, 8]
+  ];
+
+  sheet.getRange(2, 1, products.length, 7).setValues(products);
+
+  sheet.getRange('F2:F1000')
+    .setDataValidation(
+      SpreadsheetApp.newDataValidation()
+        .requireCheckbox()
+        .build()
+    );
+
+  console.log('Products sheet ready');
+}
+
+function setupPromotionsSheet() {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+
+  let sheet = ss.getSheetByName(PROMOTIONS_SHEET);
+  if (!sheet) sheet = ss.insertSheet(PROMOTIONS_SHEET);
+
+  sheet.clear();
+
+  sheet.getRange(1, 1, 1, 10).setValues([[
+    'Code',
+    'Discount Type',
+    'Discount Value',
+    'Active',
+    'Start Date',
+    'End Date',
+    'Applicable Products',
+    'Max Uses',
+    'Uses',
+    'Notes'
+  ]]);
+
+  sheet.appendRow([
+    'MEOW10',
+    'PERCENT',
+    10,
+    true,
+    '',
+    '',
+    'ALL',
+    '',
+    0,
+    '10% off'
+  ]);
+
+  sheet.getRange('D2:D1000')
+    .setDataValidation(
+      SpreadsheetApp.newDataValidation()
+        .requireCheckbox()
+        .build()
+    );
+
+  console.log('Promotions sheet ready');
+}
+
+function setupTermsSheet() {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+
+  let sheet = ss.getSheetByName(TERMS_SHEET);
+  if (!sheet) sheet = ss.insertSheet(TERMS_SHEET);
+
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, 7).setValues([[
+      'Version',
+      'Active',
+      'Title EN',
+      'Content EN',
+      'Title ZH',
+      'Content ZH',
+      'Updated At'
+    ]]);
+  }
+
+  sheet.setFrozenRows(1);
+
+  sheet.getRange(1, 1, 1, 7)
+    .setFontWeight('bold')
+    .setBackground('#111111')
+    .setFontColor('#ffffff');
+
+  sheet.getRange('B2:B1000')
+    .setDataValidation(
+      SpreadsheetApp.newDataValidation()
+        .requireCheckbox()
+        .build()
+    );
+
+  sheet.setColumnWidth(1, 150);
+  sheet.setColumnWidth(2, 80);
+  sheet.setColumnWidth(3, 260);
+  sheet.setColumnWidth(4, 600);
+  sheet.setColumnWidth(5, 220);
+  sheet.setColumnWidth(6, 600);
+  sheet.setColumnWidth(7, 160);
+
+  sheet.getRange('D:D').setWrap(true);
+  sheet.getRange('F:F').setWrap(true);
+
+  if (sheet.getLastRow() < 2) {
+    sheet.appendRow([
+      '2026-06-24-v1',
+      true,
+      'Terms & Conditions and Privacy Notice',
+      'Please paste the English terms here.',
+      '注意事項及私隱聲明',
+      '請在此貼上中文條款。',
+      new Date()
+    ]);
+  }
+
+  console.log('Terms sheet ready');
+}
+
+/***************
+ * TESTS
+ ***************/
+function testConfiguration() {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+
+  [
+    ORDERS_SHEET,
+    PAYMENTS_SHEET,
+    SECURITY_LOGS_SHEET,
+    PROMOTIONS_SHEET,
+    PRODUCTS_SHEET,
+    TERMS_SHEET
+  ].forEach(function(name) {
+    requireSheet_(ss, name);
+  });
+
+  DriveApp.getFolderById(props.folderId);
+
+  const terms = getActiveTerms_(ss);
+  if (!terms || !terms.version || !terms.contentEn || !terms.contentZh) {
+    throw new Error('Terms sheet has no active complete version');
+  }
+
+  console.log('Secure backend configuration OK');
+}
+
+/***************
+ * UTILITIES
+ ***************/
+function requireSheet_(ss, name) {
+  const sheet = ss.getSheetByName(name);
+
+  if (!sheet) {
+    throw new Error('Missing sheet: ' + name);
+  }
+
+  return sheet;
+}
+
+function jsonResponse_(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function safeText_(value) {
+  let text = String(value || '').trim();
+
+  if (/^[=+\-@]/.test(text)) {
+    text = "'" + text;
+  }
+
+  return text;
+}
+
+function sha256Hex_(value) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(value),
+    Utilities.Charset.UTF_8
+  );
+
+  return bytes.map(function(byte) {
+    const v = (byte + 256) % 256;
+    return ('0' + v.toString(16)).slice(-2);
+  }).join('');
+}
+
+function logSecurity_(eventType, orderNumber, message) {
+  const props = getRequiredProperties_();
+  const ss = SpreadsheetApp.openById(props.sheetId);
+  const sheet = requireSheet_(ss, SECURITY_LOGS_SHEET);
+
+  sheet.appendRow([
+    new Date(),
+    eventType,
+    '',
+    orderNumber || '',
+    message || ''
+  ]);
+}
