@@ -101,8 +101,8 @@ main{padding-top:50px}
 .section{padding:clamp(3.5rem,7vw,6rem) clamp(1.5rem,5vw,3.5rem)}
 .section-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:3rem}
 .process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
-.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto auto 2rem;align-items:center;gap:1.2rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
-.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}.qty-control{display:inline-flex;align-items:center;gap:.45rem;justify-self:end}.qty-btn{width:24px;height:24px;border:1px solid var(--light);background:var(--white);color:var(--mid);font:inherit;font-size:.9rem;line-height:1;cursor:pointer}.qty-btn:hover{border-color:var(--black);color:var(--black)}.qty-count{min-width:1.4rem;text-align:center;font-size:.78rem;color:var(--black)}
+.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 1.2rem auto;align-items:center;gap:1rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
+.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:14px;height:14px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:center}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}.qty-control{display:inline-flex;align-items:center;gap:.3rem;justify-self:start}.qty-btn{width:18px;height:18px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:.72rem;line-height:1;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}.qty-btn:hover{border-color:var(--black);color:var(--black)}.qty-count{min-width:1rem;text-align:center;font-size:.72rem;color:var(--black)}
 .order-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:start}
 .prog{display:flex;gap:1.5rem;margin-bottom:3rem}.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}.prog-item.on{color:var(--black);border-color:var(--black)}.prog-item.done{opacity:.35}
 .panel{display:none}.panel.on{display:block;animation:fadeUp .22s ease}@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
@@ -126,8 +126,7 @@ main{padding-top:50px}
 .status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}.status-msg.show{display:block}.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}.status-msg a{color:inherit;font-weight:500;text-decoration:underline}.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}@keyframes spin{to{transform:rotate(360deg)}}
 body{cursor:none}.paw-cursor-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}.paw{position:absolute;pointer-events:none;width:24px;height:28px}
 footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.footer-brand{font-size:.78rem;font-weight:400}.footer-links{display:flex;gap:1.5rem}.footer-links a{font-size:.72rem;color:var(--mid);text-decoration:none;transition:color .15s}.footer-links a:hover{color:var(--black)}
-@media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;grid-template-areas:"letter details price radio" "letter capacity price radio";column-gap:1rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}}
-@media(max-width:780px){.qty-control{grid-area:qty}.size-row{grid-template-columns:4rem minmax(0,1fr) auto auto 1.5rem;grid-template-areas:"letter details price qty radio" "letter capacity price qty radio"}.size-row>div.qty-control{grid-area:qty}}
+@media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1rem auto;grid-template-areas:"letter details price radio qty" "letter capacity price radio qty";column-gap:.8rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price):not(.qty-control){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}.qty-control{grid-area:qty}}
 @media(max-width:480px){.process{grid-template-columns:1fr}}
 @media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
 </style>
@@ -157,10 +156,10 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
   <section class="section">
     <p class="section-label">How to order</p>
     <div class="process">
-      <div><div class="step-n">01</div><div class="step-title">Choose product(s)</div><p class="step-desc">Pick one or more rug sizes / add-ons based on what you need.</p></div>
+      <div><div class="step-n">01</div><div class="step-title">Choose product(s)</div><p class="step-desc">S, M, or L <br>based on the number of pets you want included.</p></div>
       <div><div class="step-n">02</div><div class="step-title">Send your photos</div><p class="step-desc">Upload clear, front-facing photos of your pets.</p></div>
       <div><div class="step-n">03</div><div class="step-title">Approve the draft</div><p class="step-desc">We send a draft around 7 days.</p></div>
-      <div><div class="step-n">04</div><div class="step-title">We make your rug</div><p class="step-desc">Production begins after draft approval. At least 6 weeks.</p></div>
+      <div><div class="step-n">04</div><div class="step-title">We make your rug</div><p class="step-desc">Production begins after draft approval. <br>At least 6 weeks.</p></div>
     </div>
   </section>
 
@@ -177,7 +176,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
         <div class="panel on" id="p1">
           <div class="panel-title">Choose product(s)</div>
-          <p class="panel-sub">Select one or more products. Use + / − if you need more than one of the same item.</p>
+          <p class="panel-sub">Select the rug that fits you and your pets.</p>
           <div id="p1-rows"></div>
 
           <div class="outline-box">
@@ -467,12 +466,12 @@ function renderProducts_() {
         <div><div class="size-dims">${dims}</div></div>
         <div class="size-cap">${capacity}</div>
         <div class="size-price">HK$${price}</div>
+        <span class="size-radio" id="pr-${p.safeId}"></span>
         <div class="qty-control" onclick="event.stopPropagation()">
           <button type="button" class="qty-btn" aria-label="Decrease ${name}" onclick="changeProductQty('${p.safeId}', -1)">−</button>
           <span class="qty-count" id="qty-${p.safeId}">0</span>
           <button type="button" class="qty-btn" aria-label="Increase ${name}" onclick="changeProductQty('${p.safeId}', 1)">+</button>
         </div>
-        <span class="size-radio" id="pr-${p.safeId}"></span>
       </div>`);
   });
 }
