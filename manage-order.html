@@ -244,6 +244,18 @@ async function verifyManageOrder() {
   }
 }
 
+function formatManageItems_(order) {
+  if (Array.isArray(order.items) && order.items.length) {
+    return order.items.map(item => {
+      const name = item.name || item.productName || item.productId || 'Product';
+      const dims = item.dims ? ' ' + item.dims : '';
+      const qty = Number(item.quantity || 1);
+      return name + dims + ' × ' + qty;
+    }).join(' + ');
+  }
+  return [order.productName, order.dims].filter(Boolean).join(' ') || '—';
+}
+
 function renderManageSummary_(order) {
   const summary = document.getElementById('manage-summary');
   summary.innerHTML = '';
@@ -252,7 +264,8 @@ function renderManageSummary_(order) {
     { label: 'Order', value: manageSession.orderNumber },
     { label: 'Name', value: order.name || '—' },
     { label: 'Phone', value: order.phone || '—' },
-    { label: 'Size', value: [order.productName, order.dims].filter(Boolean).join(' ') || '—' },
+    { label: 'Products', value: formatManageItems_(order) },
+    { label: 'Digital copy', value: order.digitalCopy ? 'Yes — JPG for personal / non-commercial use' : 'No' },
     { label: 'Payment status', value: order.paymentStatus || '—' }
   ];
 

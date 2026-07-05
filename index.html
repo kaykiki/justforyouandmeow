@@ -101,8 +101,8 @@ main{padding-top:50px}
 .section{padding:clamp(3.5rem,7vw,6rem) clamp(1.5rem,5vw,3.5rem)}
 .section-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:3rem}
 .process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
-.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 2rem;align-items:center;gap:1.5rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
-.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}
+.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto auto 2rem;align-items:center;gap:1.2rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
+.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}.qty-control{display:inline-flex;align-items:center;gap:.45rem;justify-self:end}.qty-btn{width:24px;height:24px;border:1px solid var(--light);background:var(--white);color:var(--mid);font:inherit;font-size:.9rem;line-height:1;cursor:pointer}.qty-btn:hover{border-color:var(--black);color:var(--black)}.qty-count{min-width:1.4rem;text-align:center;font-size:.78rem;color:var(--black)}
 .order-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:start}
 .prog{display:flex;gap:1.5rem;margin-bottom:3rem}.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}.prog-item.on{color:var(--black);border-color:var(--black)}.prog-item.done{opacity:.35}
 .panel{display:none}.panel.on{display:block;animation:fadeUp .22s ease}@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
@@ -115,6 +115,7 @@ main{padding-top:50px}
 .photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
 .promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.promo-row{display:flex;align-items:flex-end;gap:.8rem}.promo-row .field{flex:1;margin:0}.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.promo-apply:disabled{opacity:.35;cursor:not-allowed}.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}.promo-result.ok{color:#1a6b3c}.promo-result.err{color:var(--err)}
 .outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}
+.addon-box{margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--light)}.addon-option{width:100%;display:flex;justify-content:space-between;align-items:center;gap:1rem;border:1px solid var(--light);background:transparent;padding:.9rem 1rem;font-family:'Inter',sans-serif;color:var(--mid);cursor:pointer;text-align:left}.addon-option:hover,.addon-option.sel{border-color:var(--black);color:var(--black)}.addon-title{display:block;font-size:.78rem;color:var(--black);letter-spacing:.02em}.addon-desc{display:block;font-size:.72rem;color:var(--mid);line-height:1.55;margin-top:.25rem}.addon-price{font-size:.78rem;white-space:nowrap;color:var(--black)}
 .terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
 .terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}.terms-dialog:focus{outline:none}.terms-dialog::backdrop{background:rgba(0,0,0,.42)}.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.terms-head h2{font-size:1rem;font-weight:500}.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}.terms-section{padding-top:1.5rem}.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
 .btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}.btn-submit:hover{opacity:.65}.btn-submit:disabled{opacity:.25;cursor:not-allowed}.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}.btn-back:hover{color:var(--black)}
@@ -126,6 +127,7 @@ main{padding-top:50px}
 body{cursor:none}.paw-cursor-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}.paw{position:absolute;pointer-events:none;width:24px;height:28px}
 footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.footer-brand{font-size:.78rem;font-weight:400}.footer-links{display:flex;gap:1.5rem}.footer-links a{font-size:.72rem;color:var(--mid);text-decoration:none;transition:color .15s}.footer-links a:hover{color:var(--black)}
 @media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;grid-template-areas:"letter details price radio" "letter capacity price radio";column-gap:1rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}}
+@media(max-width:780px){.qty-control{grid-area:qty}.size-row{grid-template-columns:4rem minmax(0,1fr) auto auto 1.5rem;grid-template-areas:"letter details price qty radio" "letter capacity price qty radio"}.size-row>div.qty-control{grid-area:qty}}
 @media(max-width:480px){.process{grid-template-columns:1fr}}
 @media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
 </style>
@@ -155,7 +157,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
   <section class="section">
     <p class="section-label">How to order</p>
     <div class="process">
-      <div><div class="step-n">01</div><div class="step-title">Choose a size</div><p class="step-desc">S, M, or L <br>based on the number of pets you want included.</p></div>
+      <div><div class="step-n">01</div><div class="step-title">Choose product(s)</div><p class="step-desc">Pick one or more rug sizes / add-ons based on what you need.</p></div>
       <div><div class="step-n">02</div><div class="step-title">Send your photos</div><p class="step-desc">Upload clear, front-facing photos of your pets.</p></div>
       <div><div class="step-n">03</div><div class="step-title">Approve the draft</div><p class="step-desc">We send a draft around 7 days.</p></div>
       <div><div class="step-n">04</div><div class="step-title">We make your rug</div><p class="step-desc">Production begins after draft approval. At least 6 weeks.</p></div>
@@ -167,15 +169,15 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
     <div class="order-grid">
       <div class="order-left">
         <div class="prog">
-          <span class="prog-item on" data-s="1">Size</span>
+          <span class="prog-item on" data-s="1">Products</span>
           <span class="prog-item" data-s="2">Details</span>
           <span class="prog-item" data-s="3">Photos</span>
           <span class="prog-item" data-s="4">Pay</span>
         </div>
 
         <div class="panel on" id="p1">
-          <div class="panel-title">Choose a size</div>
-          <p class="panel-sub">Select the rug that fits you and your pets.</p>
+          <div class="panel-title">Choose product(s)</div>
+          <p class="panel-sub">Select one or more products. Use + / − if you need more than one of the same item.</p>
           <div id="p1-rows"></div>
 
           <div class="outline-box">
@@ -184,6 +186,17 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
               <button type="button" class="outline-option" data-outline="Black" onclick="pickOutline('Black')"><span class="outline-swatch black"></span>Black outline</button>
               <button type="button" class="outline-option" data-outline="White" onclick="pickOutline('White')"><span class="outline-swatch white"></span>White outline</button>
             </div>
+          </div>
+
+          <div class="addon-box">
+            <div class="outline-label">Digital copy</div>
+            <button type="button" class="addon-option" id="digital-copy-option" onclick="toggleDigitalCopy()">
+              <span>
+                <span class="addon-title">Add JPG digital copy</span>
+                <span class="addon-desc">For personal / non-commercial use only.</span>
+              </span>
+              <span class="addon-price">+HK$100</span>
+            </button>
           </div>
 
           <div class="promo-box">
@@ -299,11 +312,14 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
 <script>
 let sel = null;
+let selectedItems = [];
 let orderNum = null;
 let petFiles = [];
 let payFile = null;
 let appliedPromo = null;
 let selectedOutline = null;
+let selectedDigitalCopy = false;
+const DIGITAL_COPY_PRICE = 100;
 let orderReadyForPayment = false;
 let manageSession = null;
 let managePetFiles = [];
@@ -446,11 +462,16 @@ function renderProducts_() {
     const capacity = escapeHtml_(p.capacity);
     const price = Number(p.price).toLocaleString();
     orderRows.insertAdjacentHTML('beforeend', `
-      <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
+      <div class="size-row" id="wr-${p.safeId}" onclick="toggleProduct('${p.safeId}')">
         <span class="size-letter">${name}</span>
         <div><div class="size-dims">${dims}</div></div>
         <div class="size-cap">${capacity}</div>
         <div class="size-price">HK$${price}</div>
+        <div class="qty-control" onclick="event.stopPropagation()">
+          <button type="button" class="qty-btn" aria-label="Decrease ${name}" onclick="changeProductQty('${p.safeId}', -1)">−</button>
+          <span class="qty-count" id="qty-${p.safeId}">0</span>
+          <button type="button" class="qty-btn" aria-label="Increase ${name}" onclick="changeProductQty('${p.safeId}', 1)">+</button>
+        </div>
         <span class="size-radio" id="pr-${p.safeId}"></span>
       </div>`);
   });
@@ -460,17 +481,86 @@ function escapeHtml_(value) {
   return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+function getSelectedItem_(safeId) {
+  return selectedItems.find(item => item.safeId === safeId) || null;
+}
+
+function hasSelectedProducts_() {
+  return selectedItems.some(item => Number(item.quantity || 0) > 0);
+}
+
+function syncPrimarySelection_() {
+  selectedItems = selectedItems.filter(item => Number(item.quantity || 0) > 0);
+  sel = selectedItems.length ? selectedItems[0] : null;
+}
+
+function getSelectedItemsForPayload_() {
+  return selectedItems
+    .filter(item => Number(item.quantity || 0) > 0)
+    .map(item => ({
+      productId: item.safeId || item.id,
+      quantity: Number(item.quantity || 1)
+    }));
+}
+
+function toggleProduct(safeId) {
+  const existing = getSelectedItem_(safeId);
+  if (existing) {
+    setProductQuantity_(safeId, 0, true);
+  } else {
+    setProductQuantity_(safeId, 1, true);
+  }
+}
+
 function pick(safeId) {
-  sel = CONFIG.products.find(p => p.safeId === safeId);
-  if (!sel) return;
-  clearPromo_(true);
-  document.querySelectorAll('.size-radio').forEach(r => { r.style.background = ''; r.style.borderColor = ''; });
-  document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
-  const radio = document.getElementById('pr-' + safeId);
-  if (radio) { radio.style.background = 'var(--black)'; radio.style.borderColor = 'var(--black)'; }
-  const wr = document.getElementById('wr-' + safeId);
-  if (wr) wr.classList.add('sel');
+  toggleProduct(safeId);
+}
+
+function changeProductQty(safeId, delta) {
+  const existing = getSelectedItem_(safeId);
+  const currentQty = existing ? Number(existing.quantity || 0) : 0;
+  const nextQty = Math.max(0, Math.min(20, currentQty + Number(delta || 0)));
+  setProductQuantity_(safeId, nextQty, true);
+}
+
+function setProductQuantity_(safeId, quantity, shouldClearPromo) {
+  const product = CONFIG.products.find(p => p.safeId === safeId);
+  if (!product) return;
+
+  const qty = Math.max(0, Math.min(20, Number(quantity || 0)));
+  const existingIndex = selectedItems.findIndex(item => item.safeId === safeId);
+
+  if (qty <= 0) {
+    if (existingIndex >= 0) selectedItems.splice(existingIndex, 1);
+  } else if (existingIndex >= 0) {
+    selectedItems[existingIndex].quantity = qty;
+  } else {
+    selectedItems.push({
+      ...product,
+      quantity: qty
+    });
+  }
+
+  syncPrimarySelection_();
+  updateProductRow_(safeId);
+  if (shouldClearPromo) clearPromo_(true);
   updateSizeContinue_();
+  updateRecaps();
+}
+
+function updateProductRow_(safeId) {
+  const item = getSelectedItem_(safeId);
+  const qty = item ? Number(item.quantity || 0) : 0;
+  const row = document.getElementById('wr-' + safeId);
+  const radio = document.getElementById('pr-' + safeId);
+  const qtyEl = document.getElementById('qty-' + safeId);
+
+  if (row) row.classList.toggle('sel', qty > 0);
+  if (radio) {
+    radio.style.background = qty > 0 ? 'var(--black)' : '';
+    radio.style.borderColor = qty > 0 ? 'var(--black)' : '';
+  }
+  if (qtyEl) qtyEl.textContent = String(qty);
 }
 
 function pickOutline(colour) {
@@ -482,16 +572,59 @@ function pickOutline(colour) {
   updateSizeContinue_();
 }
 
+function toggleDigitalCopy() {
+  selectedDigitalCopy = !selectedDigitalCopy;
+  const option = document.getElementById('digital-copy-option');
+  if (option) option.classList.toggle('sel', selectedDigitalCopy);
+  updateRecaps();
+}
+
+function getProductsSubtotal_() {
+  return selectedItems.reduce((sum, item) => {
+    return sum + Number(item.price || 0) * Number(item.quantity || 0);
+  }, 0);
+}
+
+function getCurrentProductPrice_() {
+  return Number(appliedPromo ? appliedPromo.price : getProductsSubtotal_());
+}
+
+function getOrderTotal_() {
+  return getCurrentProductPrice_() + (selectedDigitalCopy ? DIGITAL_COPY_PRICE : 0);
+}
+
+function getDigitalCopyText_() {
+  return selectedDigitalCopy ? 'JPG digital copy +HK$100' : 'No digital copy';
+}
+
+function getProductsSummary_() {
+  if (!selectedItems.length) return '';
+  return selectedItems
+    .map(item => (item.name || item.id) + ' × ' + Number(item.quantity || 1))
+    .join(' + ');
+}
+
+function formatItemsForReceipt_(items) {
+  const source = Array.isArray(items) && items.length ? items : selectedItems;
+  return source.map(item => {
+    const name = item.name || item.productName || item.id || item.productId || 'Product';
+    const dims = item.dims ? ' ' + item.dims : '';
+    const qty = Number(item.quantity || 1);
+    return name + dims + ' × ' + qty;
+  }).join(' + ');
+}
+
 function updateSizeContinue_() {
-  document.getElementById('s1n').disabled = !(sel && selectedOutline);
+  document.getElementById('s1n').disabled = !(hasSelectedProducts_() && selectedOutline);
 }
 
 function updateRecaps() {
-  if (!sel) return;
-  const currentPrice = appliedPromo ? appliedPromo.price : sel.price;
+  if (!hasSelectedProducts_()) return;
+  const parts = [(selectedOutline || '') + ' outline'];
+  if (selectedDigitalCopy) parts.push('JPG digital copy +HK$100');
   ['2','3'].forEach(n => {
-    document.getElementById('rb' + n + '-size').textContent = sel.name || sel.id;
-    document.getElementById('rb' + n + '-price').textContent = sel.dims + ' — ' + (selectedOutline || '') + ' outline — HK$' + currentPrice;
+    document.getElementById('rb' + n + '-size').textContent = getProductsSummary_();
+    document.getElementById('rb' + n + '-price').textContent = parts.join(' — ') + ' — HK$' + getOrderTotal_().toLocaleString();
   });
 }
 
@@ -501,9 +634,9 @@ async function applyPromo() {
   const button = document.getElementById('promo-apply');
   const promoCode = input.value.trim().toUpperCase();
 
-  if (!sel) {
+  if (!hasSelectedProducts_()) {
     resultEl.className = 'promo-result err';
-    resultEl.textContent = 'Please choose a product first.';
+    resultEl.textContent = 'Please choose at least one product first.';
     return;
   }
   if (!promoCode) {
@@ -519,7 +652,12 @@ async function applyPromo() {
   resultEl.textContent = '';
 
   try {
-    const result = await postApi_({ type: 'promo', productId: sel.safeId, promoCode });
+    const result = await postApi_({
+      type: 'promo',
+      productId: sel ? sel.safeId : '',
+      items: getSelectedItemsForPayload_(),
+      promoCode
+    });
     const promo = result.promo || result;
     if (!result.success || !promo.valid) throw new Error(result.error || 'INVALID_PROMO_CODE');
 
@@ -532,7 +670,8 @@ async function applyPromo() {
 
     input.value = promo.code;
     resultEl.className = 'promo-result ok';
-    resultEl.textContent = promo.code + ' applied: HK$' + promo.originalPrice + ' → HK$' + promo.finalPrice;
+    const totalText = selectedDigitalCopy ? ' · Total with digital copy: HK$' + getOrderTotal_().toLocaleString() : '';
+    resultEl.textContent = promo.code + ' applied: HK$' + Number(promo.originalPrice).toLocaleString() + ' → HK$' + Number(promo.finalPrice).toLocaleString() + totalText;
     updateRecaps();
   } catch (error) {
     appliedPromo = null;
@@ -554,7 +693,7 @@ function clearPromo_(clearInput) {
 }
 
 function go(n) {
-  if (n > 1 && !sel) return;
+  if (n > 1 && !hasSelectedProducts_()) return;
 
   if (n === 3 && orderReadyForPayment) {
     const submitButton = document.getElementById('s3n');
@@ -812,8 +951,10 @@ async function doSubmit() {
       termsAccepted: true,
       termsVersion: CONFIG.terms.version,
       promoCode: appliedPromo ? appliedPromo.code : '',
-      productId: sel.safeId,
+      productId: sel ? sel.safeId : '',
+      items: getSelectedItemsForPayload_(),
       outline: selectedOutline,
+      digitalCopy: selectedDigitalCopy,
       firstPhoto: {
         data: firstPhotoData
       },
@@ -821,7 +962,7 @@ async function doSubmit() {
       name: nm,
       phone: ph,
       address: ad,
-      size: sel.id,
+      size: getProductsSummary_(),
       notes: document.getElementById('f-notes').value.trim()
     });
 
@@ -836,21 +977,22 @@ async function doSubmit() {
     sessionStorage.setItem('meow_order_number', orderNum);
     sessionStorage.setItem('meow_order_token', orderToken);
 
-    const product = result.product || sel;
-    sel = {
-      ...sel,
-      id: product.id || sel.id,
-      safeId: product.id || sel.safeId,
-      name: product.name || sel.name,
-      dims: product.dims || sel.dims,
-      price: Number(result.price || product.price || sel.price)
-    };
+    const returnedItems = Array.isArray(result.items) && result.items.length ? result.items : selectedItems;
+    selectedItems = returnedItems.map(item => ({
+      id: item.productId || item.id,
+      safeId: String(item.productId || item.id || '').trim().toLowerCase(),
+      name: item.name || item.productName || item.id || item.productId,
+      dims: item.dims || '',
+      price: Number(item.price || 0),
+      quantity: Number(item.quantity || 1)
+    }));
+    syncPrimarySelection_();
 
     appliedPromo = result.promoCode ? {
       code: result.promoCode,
       originalPrice: result.originalPrice,
       discount: result.discount,
-      price: result.price
+      price: Number(result.productFinalPrice || (Number(result.originalPrice || getProductsSubtotal_()) - Number(result.discount || 0)))
     } : null;
 
     /*
@@ -866,6 +1008,8 @@ async function doSubmit() {
     receipt.innerHTML = '';
 
     const outlineText = result.outline || (selectedOutline ? selectedOutline + ' outline' : '');
+    const digitalCopySelected = result.digitalCopy === true || String(result.digitalCopy || '').toLowerCase() === 'true' || selectedDigitalCopy;
+    const digitalCopyPrice = Number(result.digitalCopyPrice || (digitalCopySelected ? DIGITAL_COPY_PRICE : 0));
 
     const rows = [
       { label: 'Order', value: orderNum },
@@ -873,8 +1017,9 @@ async function doSubmit() {
       { label: 'Name', value: nm },
       { label: 'Phone', value: ph },
       { label: 'Address', value: ad },
-      { label: 'Size', value: (sel.name || sel.id || '') + ' ' + (sel.dims || '') },
-      { label: 'Outline', value: outlineText }
+      { label: 'Products', value: formatItemsForReceipt_(result.items || selectedItems) },
+      { label: 'Outline', value: outlineText },
+      { label: 'Digital copy', value: digitalCopySelected ? 'Yes — JPG for personal / non-commercial use' : 'No' }
     ];
 
     if (result.promoCode) {
@@ -883,7 +1028,11 @@ async function doSubmit() {
       rows.push({ label: 'Discount', value: '-HK$' + result.discount });
     }
 
-    rows.push({ label: 'Total', value: 'HK$' + result.price });
+    if (digitalCopySelected && digitalCopyPrice) {
+      rows.push({ label: 'Digital copy add-on', value: '+HK$' + digitalCopyPrice });
+    }
+
+    rows.push({ label: 'Total', value: 'HK$' + Number(result.price).toLocaleString() });
 
     rows.forEach(row => {
       const div = document.createElement('div');
@@ -1366,11 +1515,13 @@ function closeTerms() {
 
 function doReset() {
   sel = null;
+  selectedItems = [];
   orderNum = null;
   petFiles = [];
   payFile = null;
   appliedPromo = null;
   selectedOutline = null;
+  selectedDigitalCopy = false;
   orderReadyForPayment = false;
 
   sessionStorage.removeItem('meow_order_number');
@@ -1397,7 +1548,10 @@ function doReset() {
 
   document.querySelectorAll('.size-radio').forEach(r => { r.style.background = ''; r.style.borderColor = ''; });
   document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
+  document.querySelectorAll('.qty-count').forEach(q => { q.textContent = '0'; });
   document.querySelectorAll('.outline-option').forEach(button => button.classList.remove('sel'));
+  const digitalCopyOption = document.getElementById('digital-copy-option');
+  if (digitalCopyOption) digitalCopyOption.classList.remove('sel');
 
   document.getElementById('rb2-size').textContent = '';
   document.getElementById('rb2-price').textContent = '';
