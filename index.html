@@ -593,6 +593,46 @@ function getOrderTotal_() {
   return getCurrentProductPrice_() + (selectedDigitalCopy ? DIGITAL_COPY_PRICE : 0);
 }
 
+function hasOwn_(object, key) {
+  return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
+function normalizeBooleanValue_(value) {
+  if (value === true) return true;
+  const text = String(value || '').trim().toLowerCase();
+  return text === 'true' || text === 'yes' || text === 'y' || text === '1';
+}
+
+function firstFiniteNumber_(values) {
+  for (const value of values) {
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return NaN;
+}
+
+function getReceiptTotal_(result, digitalCopySelected, digitalCopyPrice) {
+  // New Apps Script v8/v9/v10 returns productFinalPrice, so rebuild the grand total safely.
+  const productFinalPrice = firstFiniteNumber_([result && result.productFinalPrice]);
+  if (Number.isFinite(productFinalPrice)) {
+    return productFinalPrice + (digitalCopySelected ? Number(digitalCopyPrice || 0) : 0);
+  }
+
+  // New Apps Script also returns digitalCopyPrice; if present, server total should already include it.
+  if (hasOwn_(result, 'digitalCopyPrice')) {
+    const serverTotal = firstFiniteNumber_([
+      result && result.price,
+      result && result.finalPrice,
+      result && result.total,
+      result && result.amount
+    ]);
+    if (Number.isFinite(serverTotal)) return serverTotal;
+  }
+
+  // Backward fallback: old Apps Script did not know digital copy, so use frontend cart total.
+  return getOrderTotal_();
+}
+
 function getDigitalCopyText_() {
   return selectedDigitalCopy ? 'JPG digital copy +HK$100' : 'No digital copy';
 }
@@ -1008,8 +1048,13 @@ async function doSubmit() {
     receipt.innerHTML = '';
 
     const outlineText = result.outline || (selectedOutline ? selectedOutline + ' outline' : '');
-    const digitalCopySelected = result.digitalCopy === true || String(result.digitalCopy || '').toLowerCase() === 'true' || selectedDigitalCopy;
-    const digitalCopyPrice = Number(result.digitalCopyPrice || (digitalCopySelected ? DIGITAL_COPY_PRICE : 0));
+    const digitalCopySelected = hasOwn_(result, 'digitalCopy')
+      ? normalizeBooleanValue_(result.digitalCopy)
+      : selectedDigitalCopy;
+    const digitalCopyPrice = hasOwn_(result, 'digitalCopyPrice')
+      ? Number(result.digitalCopyPrice || 0)
+      : (digitalCopySelected ? DIGITAL_COPY_PRICE : 0);
+    const receiptTotal = getReceiptTotal_(result, digitalCopySelected, digitalCopyPrice);
 
     const rows = [
       { label: 'Order', value: orderNum },
@@ -1032,7 +1077,7 @@ async function doSubmit() {
       rows.push({ label: 'Digital copy add-on', value: '+HK$' + digitalCopyPrice });
     }
 
-    rows.push({ label: 'Total', value: 'HK$' + Number(result.price).toLocaleString() });
+    rows.push({ label: 'Total', value: 'HK$' + Number(receiptTotal).toLocaleString() });
 
     rows.forEach(row => {
       const div = document.createElement('div');
@@ -1047,7 +1092,7 @@ async function doSubmit() {
       receipt.appendChild(div);
     });
 
-    document.getElementById('famt').textContent = 'HK$ ' + Number(result.price).toLocaleString();
+    document.getElementById('famt').textContent = 'HK$ ' + Number(receiptTotal).toLocaleString();
     go(4);
 
   } catch (err) {
