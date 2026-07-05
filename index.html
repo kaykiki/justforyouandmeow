@@ -74,233 +74,59 @@ if (IS_DEPLOYED_SITE) {
 const CONFIG = {
   fps: {
     fpsCode: '102056686',
-    payee:   'Glory On International Limited',
-    qrImage: 'images/fps-qr.png',
+    payee: 'Glory On International Limited',
+    qrImage: 'images/fps-qr.png'
   },
   products: [],
-  terms: null,
+  terms: null
 };
 </script>
 
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --black:#111111;--mid:#555555;--light:#EBEBEB;--bg:#FAFAF8;--white:#FFFFFF;--err:#cc3333;
-}
+:root{--black:#111111;--mid:#555555;--light:#EBEBEB;--bg:#FAFAF8;--white:#FFFFFF;--err:#cc3333}
 html{font-size:14px;scroll-behavior:smooth}
 body{font-family:'Inter',sans-serif;font-weight:300;color:var(--black);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
-
-/* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,3.5rem);height:50px;border-bottom:1px solid var(--light)}
 .nav-brand{font-size:.8rem;font-weight:400;letter-spacing:.01em;text-decoration:none;color:var(--black)}
-.nav-right{display:flex;gap:2rem}
-.nav-right a{font-size:.75rem;color:var(--mid);text-decoration:none;letter-spacing:.03em;transition:color .15s}
-.nav-right a:hover,.nav-right a.active{color:var(--black)}
+.nav-right{display:flex;gap:2rem}.nav-right a{font-size:.75rem;color:var(--mid);text-decoration:none;letter-spacing:.03em;transition:color .15s}.nav-right a:hover,.nav-right a.active{color:var(--black)}
 main{padding-top:50px}
-
-/* HERO */
 .hero{padding:clamp(2rem,4vw,3.5rem) clamp(1.5rem,5vw,3.5rem);display:flex;flex-direction:row;align-items:center;gap:clamp(1.5rem,3vw,2.5rem);flex-wrap:wrap}
-.hero-left{flex:0 1 auto;display:flex;align-items:center}
-.hero-logo{width:100%;max-width:650px;height:auto;display:block;mix-blend-mode:multiply}
+.hero-left{flex:0 1 auto;display:flex;align-items:center}.hero-logo{width:100%;max-width:650px;height:auto;display:block;mix-blend-mode:multiply}
 .hero-right{flex:0 1 auto;display:flex;flex-direction:column;align-items:flex-start;gap:1rem;max-width:500px}
 .hero-tagline{font-size:clamp(.82rem,1.1vw,.9rem);font-weight:300;line-height:1.75;color:var(--black)}
-.link-arrow{font-size:.78rem;font-weight:400;letter-spacing:.04em;color:var(--black);text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--black);padding-bottom:1px;transition:opacity .15s;white-space:nowrap}
-.link-arrow:hover{opacity:.45}
-@media(max-width:760px){
-  .hero{flex-direction:column;align-items:flex-start}
-  .hero-logo{max-width:500px}
-  .hero-right{max-width:100%}
-}
-
-/* COMMON */
+.link-arrow{font-size:.78rem;font-weight:400;letter-spacing:.04em;color:var(--black);text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--black);padding-bottom:1px;transition:opacity .15s;white-space:nowrap}.link-arrow:hover{opacity:.45}
+@media(max-width:760px){.hero{flex-direction:column;align-items:flex-start}.hero-logo{max-width:500px}.hero-right{max-width:100%}}
 .rule{border:none;border-top:1px solid var(--light)}
 .section{padding:clamp(3.5rem,7vw,6rem) clamp(1.5rem,5vw,3.5rem)}
 .section-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:3rem}
-
-/* PROCESS */
-.process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}
-.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}
-.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}
-.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
-
-/* SIZES */
-.size-list{border-top:1px solid var(--light)}
-.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 2rem;align-items:center;gap:1.5rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}
-.size-row:hover{background:rgba(0,0,0,.02)}
-.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}
-.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}
-.size-cap{font-size:.78rem}
-.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}
-.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}
-.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}
-
-/* ORDER GRID */
+.process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
+.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 2rem;align-items:center;gap:1.5rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
+.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}
 .order-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:start}
-.prog{display:flex;gap:1.5rem;margin-bottom:3rem}
-.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}
-.prog-item.on{color:var(--black);border-color:var(--black)}
-.prog-item.done{opacity:.35}
-.panel{display:none}
-.panel.on{display:block;animation:fadeUp .22s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.panel-title{font-size:1rem;font-weight:400;margin-bottom:.4rem}
-.panel-sub{font-size:.8rem;color:var(--mid);margin-bottom:2rem;line-height:1.75}
-
-/* RECAP */
-.recap{display:none;justify-content:space-between;align-items:center;border:1px solid var(--light);padding:.8rem 1rem;margin-bottom:2rem;font-size:.78rem}
-.recap.show{display:flex}
-.r-size{font-weight:500}
-.r-price{color:var(--mid)}
-.r-change{color:var(--mid);text-decoration:underline;cursor:pointer;font-size:.72rem}
-.r-change:hover{color:var(--black)}
-
-/* FIELDS */
-.field{margin-bottom:1.6rem}
-.field label{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.6rem}
-.field label small{text-transform:none;letter-spacing:0;font-weight:300;opacity:.7}
-.field input,.field textarea{width:100%;border:none;border-bottom:1px solid var(--light);background:transparent;padding:.55em 0;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:300;color:var(--black);outline:none;transition:border-color .15s}
-.field input::placeholder,.field textarea::placeholder{color:#bbb}
-.field input:focus,.field textarea:focus{border-color:var(--black)}
-.field textarea{resize:none;min-height:68px}
-.upfield{border:1px solid var(--light);padding:1.6rem;position:relative;text-align:center;cursor:pointer;transition:border-color .15s}
-.upfield:hover{border-color:var(--black)}
-.upfield input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.upfield-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:500;display:block;margin-bottom:.3rem}
-.upfield-hint{font-size:.75rem;color:var(--mid)}
-.file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
-.photo-list{border-top:1px solid var(--light);margin-top:.8rem}
-.photo-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:.8rem;padding:.65rem 2.2rem .65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}
-.photo-thumb{width:52px;height:52px;border:1px solid var(--light);object-fit:cover;cursor:zoom-in;background:var(--white)}
-.photo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.photo-remove{position:absolute;right:0;top:50%;transform:translateY(-50%);width:28px;height:28px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:1.05rem;line-height:1;cursor:pointer}
-.photo-remove:hover{color:var(--black);border-color:var(--black)}
-.photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}
-.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}
-.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}
-.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}
-.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
-.promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}
-.promo-row{display:flex;align-items:flex-end;gap:.8rem}
-.promo-row .field{flex:1;margin:0}
-.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-.promo-apply:disabled{opacity:.35;cursor:not-allowed}
-.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}
-.promo-result.ok{color:#1a6b3c}
-.promo-result.err{color:var(--err)}
-.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}
-.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}
-.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}
-.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}
-.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}
-.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}
-.outline-swatch.black{background:#111}
-.outline-swatch.white{background:#fff}
-.terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}
-.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}
-.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
-.terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}
-.terms-dialog:focus{outline:none}
-.terms-dialog::backdrop{background:rgba(0,0,0,.42)}
-.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}
-.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}
-.terms-head h2{font-size:1rem;font-weight:500}
-.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}
-.terms-section{padding-top:1.5rem}
-.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}
-.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
-
-/* BUTTONS */
-.btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}
-.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}
-.btn-submit:hover{opacity:.65}
-.btn-submit:disabled{opacity:.25;cursor:not-allowed}
-.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}
-.btn-back:hover{color:var(--black)}
-
-/* ASIDE */
-.aside-block{border-top:1px solid var(--light);padding-top:1.4rem;margin-bottom:2rem}
-.aside-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}
-.aside-body{font-size:.78rem;color:var(--mid);line-height:1.85}
-
-/* STEP 4 */
-.order-num-box{background:var(--black);color:var(--white);padding:1.2rem 1.5rem;margin-bottom:2rem}
-.order-num-label{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:.3rem}
-.order-num-value{font-size:1.1rem;font-weight:500;letter-spacing:.04em}
-.receipt{border-top:1px solid var(--light);margin-bottom:2.5rem}
-.r-row{display:flex;justify-content:space-between;font-size:.8rem;padding:.65rem 0;border-bottom:1px solid var(--light)}
-.r-row:last-child{font-weight:500;border-color:var(--black)}
-.r-label{color:var(--mid)}
-.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}
-.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}
-.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}
-.fps-qr img{width:100%;height:100%;object-fit:contain}
-.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}
-.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}
-.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}
-.fps-instructions ol{padding-left:1.1em}
-.fps-instructions li{margin-bottom:.4rem}
-
-/* STATUS */
-.status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}
-.status-msg.show{display:block}
-.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}
-.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}
-.status-msg a{color:inherit;font-weight:500;text-decoration:underline}
-
-/* SPINNER */
-.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* PAW CURSOR */
-body { cursor: none; }
-.paw-cursor-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 9999;
-}
-.paw {
-  position: absolute;
-  pointer-events: none;
-  width: 24px;
-  height: 28px;
-}
-
-@media(max-width:768px){
-  .paw-cursor-container { display: none; }
-  body { cursor: auto; }
-}
-
-/* FOOTER */
-footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
-.footer-brand{font-size:.78rem;font-weight:400}
-.footer-links{display:flex;gap:1.5rem}
-.footer-links a{font-size:.72rem;color:var(--mid);text-decoration:none;transition:color .15s}
-.footer-links a:hover{color:var(--black)}
-
-/* RESPONSIVE */
-@media(max-width:780px){
-  .process{grid-template-columns:1fr 1fr}
-  .order-grid{grid-template-columns:1fr}
-  .order-aside{display:none}
-  .size-row{
-    grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;
-    grid-template-areas:
-      "letter details price radio"
-      "letter capacity price radio";
-    column-gap:1rem;
-    row-gap:.15rem
-  }
-  .size-letter{grid-area:letter}
-  .size-row>div:not(.size-cap):not(.size-price){grid-area:details}
-  .size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}
-  .size-price{grid-area:price}
-  .size-radio{grid-area:radio}
-}
+.prog{display:flex;gap:1.5rem;margin-bottom:3rem}.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}.prog-item.on{color:var(--black);border-color:var(--black)}.prog-item.done{opacity:.35}
+.panel{display:none}.panel.on{display:block;animation:fadeUp .22s ease}@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.panel-title{font-size:1rem;font-weight:400;margin-bottom:.4rem}.panel-sub{font-size:.8rem;color:var(--mid);margin-bottom:2rem;line-height:1.75}
+.recap{display:none;justify-content:space-between;align-items:center;border:1px solid var(--light);padding:.8rem 1rem;margin-bottom:2rem;font-size:.78rem}.recap.show{display:flex}.r-size{font-weight:500}.r-price{color:var(--mid)}.r-change{color:var(--mid);text-decoration:underline;cursor:pointer;font-size:.72rem}.r-change:hover{color:var(--black)}
+.field{margin-bottom:1.6rem}.field label{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.6rem}.field label small{text-transform:none;letter-spacing:0;font-weight:300;opacity:.7}
+.field input,.field textarea{width:100%;border:none;border-bottom:1px solid var(--light);background:transparent;padding:.55em 0;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:300;color:var(--black);outline:none;transition:border-color .15s}.field input::placeholder,.field textarea::placeholder{color:#bbb}.field input:focus,.field textarea:focus{border-color:var(--black)}.field textarea{resize:none;min-height:68px}
+.upfield{border:1px solid var(--light);padding:1.6rem;position:relative;text-align:center;cursor:pointer;transition:border-color .15s}.upfield:hover{border-color:var(--black)}.upfield input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}.upfield-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:500;display:block;margin-bottom:.3rem}.upfield-hint{font-size:.75rem;color:var(--mid)}.file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
+.photo-list{border-top:1px solid var(--light);margin-top:.8rem}.photo-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:.8rem;padding:.65rem 2.2rem .65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}.photo-thumb{width:52px;height:52px;border:1px solid var(--light);object-fit:cover;cursor:zoom-in;background:var(--white)}.photo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.photo-remove{position:absolute;right:0;top:50%;transform:translateY(-50%);width:28px;height:28px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:1.05rem;line-height:1;cursor:pointer}.photo-remove:hover{color:var(--black);border-color:var(--black)}
+.photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
+.promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.promo-row{display:flex;align-items:flex-end;gap:.8rem}.promo-row .field{flex:1;margin:0}.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.promo-apply:disabled{opacity:.35;cursor:not-allowed}.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}.promo-result.ok{color:#1a6b3c}.promo-result.err{color:var(--err)}
+.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}
+.terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
+.terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}.terms-dialog:focus{outline:none}.terms-dialog::backdrop{background:rgba(0,0,0,.42)}.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.terms-head h2{font-size:1rem;font-weight:500}.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}.terms-section{padding-top:1.5rem}.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
+.btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}.btn-submit:hover{opacity:.65}.btn-submit:disabled{opacity:.25;cursor:not-allowed}.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}.btn-back:hover{color:var(--black)}
+.aside-block{border-top:1px solid var(--light);padding-top:1.4rem;margin-bottom:2rem}.aside-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.aside-body{font-size:.78rem;color:var(--mid);line-height:1.85}
+.order-num-box{background:var(--black);color:var(--white);padding:1.2rem 1.5rem;margin-bottom:2rem}.order-num-label{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:.3rem}.order-num-value{font-size:1.1rem;font-weight:500;letter-spacing:.04em}.receipt{border-top:1px solid var(--light);margin-bottom:2.5rem}.r-row{display:flex;justify-content:space-between;font-size:.8rem;padding:.65rem 0;border-bottom:1px solid var(--light)}.r-row:last-child{font-weight:500;border-color:var(--black)}.r-label{color:var(--mid)}
+.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}.fps-qr img{width:100%;height:100%;object-fit:contain}.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}.fps-instructions ol{padding-left:1.1em}.fps-instructions li{margin-bottom:.4rem}
+.status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}.status-msg.show{display:block}.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}.status-msg a{color:inherit;font-weight:500;text-decoration:underline}.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}@keyframes spin{to{transform:rotate(360deg)}}
+body{cursor:none}.paw-cursor-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}.paw{position:absolute;pointer-events:none;width:24px;height:28px}
+footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.footer-brand{font-size:.78rem;font-weight:400}.footer-links{display:flex;gap:1.5rem}.footer-links a{font-size:.72rem;color:var(--mid);text-decoration:none;transition:color .15s}.footer-links a:hover{color:var(--black)}
+@media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;grid-template-areas:"letter details price radio" "letter capacity price radio";column-gap:1rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}}
 @media(max-width:480px){.process{grid-template-columns:1fr}}
+@media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
 </style>
 </head>
 <body>
@@ -314,13 +140,11 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 </nav>
 
 <main>
-
   <section class="hero">
-    <div class="hero-left">
-      <img src="images/logo.png" alt="just for you and meow" class="hero-logo">
-    </div>
+    <div class="hero-left"><img src="images/logo.png" alt="just for you and meow" class="hero-logo"></div>
     <div class="hero-right">
-<p class="hero-tagline">Customised tufted rugs of your favourite poses of your pets<br>— made as fluffy as your meows and woofs.</p>      <a href="#order" class="link-arrow">Order yours &nbsp;&rarr;</a>
+      <p class="hero-tagline">Customised tufted rugs of your favourite poses of your pets<br>— made as fluffy as your meows and woofs.</p>
+      <a href="#order" class="link-arrow">Order yours &nbsp;&rarr;</a>
     </div>
   </section>
 
@@ -340,30 +164,26 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
     <p class="section-label">Place order</p>
     <div class="order-grid">
       <div class="order-left">
-
         <div class="prog">
           <span class="prog-item on" data-s="1">Size</span>
-          <span class="prog-item"    data-s="2">Details</span>
-          <span class="prog-item"    data-s="3">Photos</span>
-          <span class="prog-item"    data-s="4">Pay</span>
+          <span class="prog-item" data-s="2">Details</span>
+          <span class="prog-item" data-s="3">Photos</span>
+          <span class="prog-item" data-s="4">Pay</span>
         </div>
 
-        <!-- Step 1 -->
         <div class="panel on" id="p1">
           <div class="panel-title">Choose a size</div>
           <p class="panel-sub">Select the rug that fits you and your pets.</p>
           <div id="p1-rows"></div>
+
           <div class="outline-box">
             <div class="outline-label">Outline colour</div>
             <div class="outline-options">
-              <button type="button" class="outline-option" data-outline="Black" onclick="pickOutline('Black')">
-                <span class="outline-swatch black"></span>Black outline
-              </button>
-              <button type="button" class="outline-option" data-outline="White" onclick="pickOutline('White')">
-                <span class="outline-swatch white"></span>White outline
-              </button>
+              <button type="button" class="outline-option" data-outline="Black" onclick="pickOutline('Black')"><span class="outline-swatch black"></span>Black outline</button>
+              <button type="button" class="outline-option" data-outline="White" onclick="pickOutline('White')"><span class="outline-swatch white"></span>White outline</button>
             </div>
           </div>
+
           <div class="promo-box">
             <div class="promo-row">
               <div class="field">
@@ -375,35 +195,23 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             </div>
             <div class="promo-result" id="promo-result"></div>
           </div>
-          <div class="btn-row">
-            <button class="btn-submit" id="s1n" disabled onclick="go(2)">Continue</button>
-          </div>
+
+          <div class="btn-row"><button class="btn-submit" id="s1n" disabled onclick="go(2)">Continue</button></div>
         </div>
 
-        <!-- Step 2 -->
         <div class="panel" id="p2">
-          <div class="recap show" id="rb2">
-            <span><span class="r-size" id="rb2-size"></span>&ensp;<span class="r-price" id="rb2-price"></span></span>
-            <span class="r-change" onclick="go(1)">Change</span>
-          </div>
+          <div class="recap show" id="rb2"><span><span class="r-size" id="rb2-size"></span>&ensp;<span class="r-price" id="rb2-price"></span></span><span class="r-change" onclick="go(1)">Change</span></div>
           <div class="panel-title">Your details</div>
           <p class="panel-sub">Contact and delivery information.</p>
           <div class="field"><label>Instagram</label><input type="text" id="f-instagram" placeholder="@accountname"></div>
           <div class="field"><label>Full name</label><input type="text" id="f-name" placeholder="Your full name"></div>
           <div class="field"><label>Phone number</label><input type="tel" id="f-phone" placeholder="Your phone number"></div>
           <div class="field"><label>Delivery address</label><input type="text" id="f-addr" placeholder="Full address"></div>
-          <div class="btn-row">
-            <button class="btn-submit" onclick="v2()">Continue</button>
-            <button class="btn-back" onclick="go(1)">Back</button>
-          </div>
+          <div class="btn-row"><button class="btn-submit" onclick="v2()">Continue</button><button class="btn-back" onclick="go(1)">Back</button></div>
         </div>
 
-        <!-- Step 3 -->
         <div class="panel" id="p3">
-          <div class="recap show" id="rb3">
-            <span><span class="r-size" id="rb3-size"></span>&ensp;<span class="r-price" id="rb3-price"></span></span>
-            <span class="r-change" onclick="go(1)">Change</span>
-          </div>
+          <div class="recap show" id="rb3"><span><span class="r-size" id="rb3-size"></span>&ensp;<span class="r-price" id="rb3-price"></span></span><span class="r-change" onclick="go(1)">Change</span></div>
           <div class="panel-title">Upload photos</div>
           <p class="panel-sub">Upload at least one photo of your pets — can be separate photos. Clear, front-facing photos work best.</p>
           <div class="field">
@@ -416,52 +224,28 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="file-chosen" id="pet-file-chosen"></div>
             <div class="photo-list" id="pet-photo-list"></div>
           </div>
-          <div class="field">
-            <label>Notes <small>(optional)</small></label>
-            <textarea id="f-notes" placeholder="Background colour, pose, accessories, anything you have in mind..."></textarea>
-          </div>
-          <div class="field">
-            <div id="turnstile-widget"></div>
-          </div>
+          <div class="field"><label>Notes <small>(optional)</small></label><textarea id="f-notes" placeholder="Background colour, pose, accessories, anything you have in mind..."></textarea></div>
+          <div class="field"><div id="turnstile-widget"></div></div>
           <label class="terms-check">
             <input type="checkbox" id="f-terms">
-            <span>I have read and agree to the
-              <a href="#" onclick="openTerms(event)">Terms &amp; Conditions and Privacy Notice</a>.
-              / 我已閱讀並同意條款及私隱聲明。
-            </span>
+            <span>I have read and agree to the <a href="#" onclick="openTerms(event)">Terms &amp; Conditions and Privacy Notice</a>. / 我已閱讀並同意條款及私隱聲明。</span>
           </label>
           <div id="msg-s3" class="status-msg"></div>
-          <div class="btn-row">
-            <button class="btn-submit" id="s3n" onclick="doSubmit()">Confirm order</button>
-            <button class="btn-back" onclick="go(2)">Back</button>
-          </div>
+          <div class="btn-row"><button class="btn-submit" id="s3n" onclick="doSubmit()">Confirm order</button><button class="btn-back" onclick="go(2)">Back</button></div>
         </div>
 
-        <!-- Step 4 -->
         <div class="panel" id="p4">
           <div class="panel-title">Order received</div>
           <p class="panel-sub">Complete payment via FPS within 24 hours, then upload your screenshot below.</p>
-
-          <div class="order-num-box">
-            <div class="order-num-label">Your order number</div>
-            <div class="order-num-value" id="order-num-display">—</div>
-          </div>
-
+          <div class="order-num-box"><div class="order-num-label">Your order number</div><div class="order-num-value" id="order-num-display">—</div></div>
           <div class="receipt" id="receipt"></div>
-
           <div class="fps-block">
             <div class="fps-eyebrow">FPS &nbsp;/&nbsp; Faster Payment System</div>
-            <div class="fps-qr">
-              <img src="images/fps-qr.png" alt="FPS QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>fps-qr.png</span>')">
-            </div>
+            <div class="fps-qr"><img src="images/fps-qr.png" alt="FPS QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>fps-qr.png</span>')"></div>
             <div class="fps-meta">識別代碼 &nbsp;102056686</div>
             <div class="fps-meta" style="margin-bottom:0">支付至 &nbsp;Glory On International Limited</div>
             <div class="fps-amount" id="famt">HK$—</div>
-            <div class="fps-instructions"><ol>
-              <li>Open your banking app and select FPS.</li>
-              <li>Add your name and order number as the reference, then take a screenshot.</li>
-              <li>Please upload your screenshot below and send us a direct message (DM).</li>
-            </ol></div>
+            <div class="fps-instructions"><ol><li>Open your banking app and select FPS.</li><li>Add your name and order number as the reference, then take a screenshot.</li><li>Please upload your screenshot below and send us a direct message (DM).</li></ol></div>
           </div>
 
           <div class="field" style="margin-top:2rem">
@@ -476,17 +260,10 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
           </div>
 
           <div id="msg-s4" class="status-msg"></div>
-          <div class="btn-row">
-            <button class="btn-submit" id="s4n" onclick="submitPayment()">Submit payment proof</button>
-            <button class="btn-back" id="payment-back" onclick="go(3)">Back</button>
-          </div>
-
-          <div style="margin-top:3rem;border-top:1px solid var(--light);padding-top:2rem">
-            <button class="btn-back" onclick="doReset()">Place another order</button>
-          </div>
+          <div class="btn-row"><button class="btn-submit" id="s4n" onclick="submitPayment()">Submit payment proof</button><button class="btn-back" id="payment-back" onclick="go(3)">Back</button></div>
+          <div style="margin-top:3rem;border-top:1px solid var(--light);padding-top:2rem"><button class="btn-back" onclick="doReset()">Place another order</button></div>
         </div>
-
-      </div><!-- order-left -->
+      </div>
 
       <div class="order-aside">
         <div class="aside-block"><div class="aside-label">Draft</div><div class="aside-body">Sent around 7 days after your order.</div></div>
@@ -497,96 +274,32 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
       </div>
     </div>
   </section>
-
 </main>
 
 <dialog class="photo-preview-dialog" id="photo-preview-dialog">
   <div class="photo-preview-inner">
     <button class="photo-preview-close" type="button" onclick="closePhotoPreview()" aria-label="Close">&times;</button>
-    <img class="photo-preview-image" id="photo-preview-image" alt="Selected pet photo preview">
+    <img class="photo-preview-image" id="photo-preview-image" alt="Selected photo preview">
   </div>
 </dialog>
 
 <dialog class="terms-dialog" id="terms-dialog" tabindex="-1">
   <div class="terms-inner">
-    <div class="terms-head">
-      <h2>Terms &amp; Conditions / 注意事項</h2>
-      <button class="terms-close" type="button" onclick="closeTerms()" aria-label="Close">&times;</button>
-    </div>
-
-    <div class="terms-section">
-      <h3>1. Custom orders and artwork / 訂製產品及圖稿</h3>
-      <p>Each product is made to order using the photos and instructions supplied by the customer. Please ensure that all submitted photos and information are clear, accurate and suitable for use.</p>
-      <p>所有產品均按照客人提供的相片及要求訂製。請確保提交的相片及資料清晰、準確並適合使用。</p>
-      <p>Please check names, subjects, layout, colours and all other artwork details carefully before approval. Production will begin only after the customer approves the final artwork. Once approved, changes may no longer be possible.</p>
-      <p>確認前請仔細檢查名稱、主體、構圖、顏色及所有圖稿細節。客人確認最終圖稿後，我們才會開始製作；圖稿一經確認，可能無法再作修改。</p>
-    </div>
-
-    <div class="terms-section">
-      <h3>2. Draft and production time / 起稿及製作時間</h3>
-      <p>The first draft is normally provided around 7 days after a complete order is received. Production takes at least 6 weeks from final artwork approval. These are estimates rather than guaranteed completion or delivery dates. Complex designs, revisions, material availability, public holidays, delivery arrangements or circumstances outside our reasonable control may require additional time.</p>
-      <p>我們一般會在收到完整訂單後約7日提供初稿。最終圖稿確認後，製作時間至少為6星期。以上時間只屬預計，並非保證完成或送達日期；複雜設計、修改、物料供應、公眾假期、運送安排或其他合理控制範圍以外的情況，均可能令所需時間延長。</p>
-    </div>
-
-    <div class="terms-section">
-      <h3>3. Revisions / 圖稿修改</h3>
-      <p>Reasonable revision requests may be made before the final artwork is approved. Revision requests must remain consistent with the original order and supplied references. Major changes to the subject, composition, size or original instructions may require an additional charge or a revised production schedule, which will be confirmed before further work proceeds.</p>
-      <p>客人可在確認最終圖稿前提出合理修改。修改內容須與原有訂單及參考資料一致。如更換主體、構圖、尺寸或大幅更改原有要求，我們可能需要收取額外費用或調整製作時間，並會在繼續處理前與客人確認。</p>
-    </div>
-
-    <div class="terms-section">
-      <h3>4. Colour, materials and handmade variations / 顏色、物料及手工差異</h3>
-      <p>Product colours should be referenced against our photos taken in natural daylight. Colours may appear slightly different between the approved digital artwork and the finished product because screens display colours differently. We will make every reasonable effort to match the physical product colours when preparing the artwork.</p>
-      <p>產品顏色請參考我們在自然日光下拍攝的實物照片。由於不同螢幕的顯色效果有所不同，最終實物與已確認的電子圖稿可能會有輕微色差。我們起稿時會盡量配合實物顏色。</p>
-      <p>Handmade rugs may have small variations in shape, dimensions, yarn direction, texture, line thickness and colour. Coasters are made from diatomaceous earth, so their printed lines, colours and surface texture may also differ slightly from the approved digital artwork. A handmade or printed product cannot be completely identical to an on-screen image. Minor differences caused by the material or normal production process are not considered defects.</p>
-      <p>手工地氈在形狀、尺寸、毛線方向、質感、線條粗幼及顏色方面可能有輕微差異。杯墊以硅藻土製成，其印刷線條、顏色及表面質感亦可能與已確認的電子圖稿略有不同。手工或印刷產品無法與螢幕上的圖像完全一致；由物料或正常製作過程造成的輕微差異並不屬於瑕疵。</p>
-    </div>
-
-    <div class="terms-section">
-      <h3>5. Payment, cancellation, refunds and remakes / 付款、取消、退款及重做</h3>
-      <p>Payment proof is subject to manual verification and an uploaded screenshot does not by itself confirm payment. As each item is personalised, the order becomes non-refundable once the first draft has been sent. After final artwork approval, cancellation, refund or remake is not available for customer-supplied errors, a change of mind, or the normal colour, material and handmade variations described above.</p>
-      <p>付款證明須經人工核實，上載付款截圖本身並不代表付款已獲確認。由於每件產品均屬個人訂製，初稿發出後訂單將不可退款。最終圖稿確認後，如因客人提供的資料有誤、改變主意，或上述正常色差、物料及手工差異而要求取消、退款或重做，恕未能受理。</p>
-      <p>If we make an error during production or the product arrives with a material defect, please contact us promptly with the order number and clear photographs. We will assess the issue and, where appropriate, arrange a reasonable remedy such as repair, remake or refund.</p>
-      <p>如錯誤由我們在製作過程中造成，或產品收到時存在實質瑕疵，請盡快提供訂單編號及清晰相片與我們聯絡。我們會核實情況，並在適當情況下安排合理處理，例如維修、重做或退款。</p>
-    </div>
-
-    <div class="terms-section">
-      <h3>6. Delivery / 送貨</h3>
-      <p>Hong Kong orders are normally sent by SF Express with delivery charges paid by the recipient, unless otherwise agreed. The customer is responsible for providing complete and accurate contact and delivery information. Any additional delivery cost caused by incorrect information, an unsuccessful delivery or a requested redirection may be charged to the customer.</p>
-      <p>除另有協議外，香港訂單一般以順豐速運到付方式寄出。客人須提供完整及正確的聯絡和送貨資料；如因資料錯誤、派送不成功或客人要求轉寄而產生額外運費，有關費用可能由客人承擔。</p>
-      <p>Estimated delivery times are provided by the carrier and are not guaranteed by us. Please contact us promptly if the parcel appears damaged on arrival and retain the packaging and photographs for assessment.</p>
-      <p>送貨時間由承運商提供，我們無法保證實際送達日期。如包裹送達時疑似受損，請保留包裝及拍攝相片，並盡快與我們聯絡以便跟進。</p>
-    </div>
-
-    <div class="terms-section">
-      <h3>7. Personal data and privacy / 個人資料及私隱</h3>
-      <p>We collect the information needed to process and fulfil an order, including the customer's name, Instagram account, phone number, delivery address, order notes, pet photographs and payment proof. Required contact and delivery information must be supplied for us to accept and fulfil the order.</p>
-      <p>我們會收集處理及完成訂單所需的資料，包括客人姓名、Instagram帳戶、電話號碼、送貨地址、訂單備註、寵物相片及付款證明。客人必須提供所需的聯絡及送貨資料，否則我們可能無法接受或完成訂單。</p>
-      <p>The data will be used only for order administration, artwork and production, payment verification, customer communication, delivery, dispute handling, record keeping and website security. We do not use the submitted information for direct marketing unless separate consent is obtained.</p>
-      <p>有關資料只會用於訂單管理、起稿及製作、付款核實、客戶聯絡、送貨、爭議處理、紀錄保存及網站安全。除非另行取得同意，我們不會把所提交的資料用於直接促銷。</p>
-      <p>Where necessary, relevant data may be processed by service providers supporting website hosting and security, cloud storage, payment administration, production or delivery, including the delivery carrier. We limit access to what is reasonably necessary for those purposes and do not sell customers' personal data.</p>
-      <p>在有需要時，相關資料可能由支援網站寄存及安全、雲端儲存、付款管理、製作或送貨的服務供應商處理，包括承運商。我們只會按上述用途提供合理所需的資料，並不會出售客人的個人資料。</p>
-      <p>Personal data will be protected by reasonable security measures and retained only for as long as reasonably necessary to fulfil the above purposes or applicable legal, accounting and dispute-handling requirements. Data that is no longer required will be deleted or anonymised where reasonably practicable.</p>
-      <p>我們會採取合理保安措施保障個人資料，並只會在完成上述用途或符合適用法律、會計及爭議處理需要的期間內保存。資料不再需要時，會在合理可行情況下刪除或匿名化。</p>
-      <p>Customers may contact us through our official Instagram account to request access to or correction of their order-related personal data, or to ask a privacy-related question. We may need to verify the requester's identity before processing the request.</p>
-      <p>客人可透過我們的官方Instagram帳戶，要求查閱或更正與訂單相關的個人資料，或提出私隱查詢。處理要求前，我們可能需要核實申請人的身份。</p>
-    </div>
+    <div class="terms-head"><h2>Terms &amp; Conditions / 注意事項</h2><button class="terms-close" type="button" onclick="closeTerms()" aria-label="Close">&times;</button></div>
+    <div class="terms-section"><p>Terms are loading from the secure backend. Please reload if they do not appear.</p></div>
   </div>
 </dialog>
 
 <footer>
   <span class="footer-brand">just for you and meow</span>
-  <div class="footer-links">
-    <a href="https://www.instagram.com/justforyouandmeow/" target="_blank">Instagram</a>
-    <span style="color:var(--mid);font-size:.72rem" id="yr"></span>
-  </div>
+  <div class="footer-links"><a href="https://www.instagram.com/justforyouandmeow/" target="_blank">Instagram</a><span style="color:var(--mid);font-size:.72rem" id="yr"></span></div>
 </footer>
 
 <script>
-let sel      = null;
+let sel = null;
 let orderNum = null;
 let petFiles = [];
-let payFile  = null;
+let payFile = null;
 let appliedPromo = null;
 let selectedOutline = null;
 let orderReadyForPayment = false;
@@ -596,7 +309,7 @@ document.getElementById('yr').textContent = new Date().getFullYear();
 function fileToBase64(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
-    r.onload  = () => res(r.result.split(',')[1]);
+    r.onload = () => res(String(r.result).split(',')[1]);
     r.onerror = () => rej(new Error('Cannot read ' + file.name));
     r.readAsDataURL(file);
   });
@@ -616,19 +329,21 @@ function showMsg(id, type, text) {
   el.className = 'status-msg ' + type + ' show';
   el.textContent = text;
 }
-function hideMsg(id) { document.getElementById(id).className = 'status-msg'; }
+
+function hideMsg(id) {
+  const el = document.getElementById(id);
+  if (el) el.className = 'status-msg';
+}
 
 function showPaymentSuccess_() {
   const el = document.getElementById('msg-s4');
   el.className = 'status-msg ok show';
   el.textContent = 'Payment proof submitted. Please send us a direct message on ';
-
   const link = document.createElement('a');
   link.href = 'https://www.instagram.com/justforyouandmeow/';
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   link.textContent = 'Instagram';
-
   el.appendChild(link);
   el.appendChild(document.createTextNode(' with your order number. Thank you.'));
 }
@@ -636,13 +351,10 @@ function showPaymentSuccess_() {
 loadProducts();
 loadTerms();
 
-
 async function loadTerms() {
   try {
     const result = await postApi_({ type: 'terms' });
-    if (!result.success || !result.terms || !result.terms.version) {
-      throw new Error('TERMS_UNAVAILABLE');
-    }
+    if (!result.success || !result.terms || !result.terms.version) throw new Error('TERMS_UNAVAILABLE');
     CONFIG.terms = result.terms;
     renderTerms_();
   } catch (error) {
@@ -653,26 +365,20 @@ async function loadTerms() {
 function renderTerms_() {
   const terms = CONFIG.terms;
   if (!terms) return;
-
   const inner = document.querySelector('#terms-dialog .terms-inner');
   if (!inner) return;
-
   inner.innerHTML = '';
 
   const head = document.createElement('div');
   head.className = 'terms-head';
-
   const title = document.createElement('h2');
-  title.textContent = (terms.titleEn || 'Terms & Conditions') + ' / ' +
-    (terms.titleZh || '注意事項及私隱聲明');
-
+  title.textContent = (terms.titleEn || 'Terms & Conditions') + ' / ' + (terms.titleZh || '注意事項及私隱聲明');
   const close = document.createElement('button');
   close.className = 'terms-close';
   close.type = 'button';
   close.setAttribute('aria-label', 'Close');
   close.textContent = '×';
   close.addEventListener('click', closeTerms);
-
   head.appendChild(title);
   head.appendChild(close);
   inner.appendChild(head);
@@ -718,13 +424,8 @@ async function loadProducts() {
 
   try {
     const result = await postApi_({ type: 'products' });
-    if (!result.success || !Array.isArray(result.products) || !result.products.length) {
-      throw new Error('NO_PRODUCTS');
-    }
-    CONFIG.products = result.products.map(p => ({
-      ...p,
-      safeId: String(p.id || '').trim().toLowerCase()
-    }));
+    if (!result.success || !Array.isArray(result.products) || !result.products.length) throw new Error('NO_PRODUCTS');
+    CONFIG.products = result.products.map(p => ({ ...p, safeId: String(p.id || '').trim().toLowerCase() }));
     renderProducts_();
   } catch (error) {
     orderRows.textContent = 'Products are temporarily unavailable.';
@@ -734,42 +435,34 @@ async function loadProducts() {
 function renderProducts_() {
   const orderRows = document.getElementById('p1-rows');
   orderRows.innerHTML = '';
-
   CONFIG.products.forEach(p => {
     const name = escapeHtml_(p.name);
     const dims = escapeHtml_(p.dims);
     const capacity = escapeHtml_(p.capacity);
     const price = Number(p.price).toLocaleString();
-
-    const wrow = `
+    orderRows.insertAdjacentHTML('beforeend', `
       <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
         <span class="size-letter">${name}</span>
         <div><div class="size-dims">${dims}</div></div>
         <div class="size-cap">${capacity}</div>
         <div class="size-price">HK$${price}</div>
         <span class="size-radio" id="pr-${p.safeId}"></span>
-      </div>`;
-    orderRows.insertAdjacentHTML('beforeend', wrow);
+      </div>`);
   });
 }
 
 function escapeHtml_(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 function pick(safeId) {
   sel = CONFIG.products.find(p => p.safeId === safeId);
   if (!sel) return;
   clearPromo_(true);
-  document.querySelectorAll('.size-radio').forEach(r => { r.style.background=''; r.style.borderColor=''; });
+  document.querySelectorAll('.size-radio').forEach(r => { r.style.background = ''; r.style.borderColor = ''; });
   document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
   const radio = document.getElementById('pr-' + safeId);
-  if (radio) { radio.style.background='var(--black)'; radio.style.borderColor='var(--black)'; }
+  if (radio) { radio.style.background = 'var(--black)'; radio.style.borderColor = 'var(--black)'; }
   const wr = document.getElementById('wr-' + safeId);
   if (wr) wr.classList.add('sel');
   updateSizeContinue_();
@@ -792,9 +485,8 @@ function updateRecaps() {
   if (!sel) return;
   const currentPrice = appliedPromo ? appliedPromo.price : sel.price;
   ['2','3'].forEach(n => {
-    document.getElementById('rb'+n+'-size').textContent  = sel.id;
-    document.getElementById('rb'+n+'-price').textContent =
-      sel.dims + ' — ' + (selectedOutline || '') + ' outline — HK$' + currentPrice;
+    document.getElementById('rb' + n + '-size').textContent = sel.name || sel.id;
+    document.getElementById('rb' + n + '-price').textContent = sel.dims + ' — ' + (selectedOutline || '') + ' outline — HK$' + currentPrice;
   });
 }
 
@@ -822,23 +514,20 @@ async function applyPromo() {
   resultEl.textContent = '';
 
   try {
-    const result = await postApi_({
-      type: 'promo',
-      productId: sel.safeId,
-      promoCode
-    });
-    if (!result.success) throw new Error(result.error || 'INVALID_PROMO_CODE');
+    const result = await postApi_({ type: 'promo', productId: sel.safeId, promoCode });
+    const promo = result.promo || result;
+    if (!result.success || !promo.valid) throw new Error(result.error || 'INVALID_PROMO_CODE');
 
     appliedPromo = {
-      code: result.promoCode,
-      originalPrice: result.originalPrice,
-      discount: result.discount,
-      price: result.price
+      code: promo.code,
+      originalPrice: promo.originalPrice,
+      discount: promo.discount,
+      price: promo.finalPrice
     };
-    input.value = result.promoCode;
+
+    input.value = promo.code;
     resultEl.className = 'promo-result ok';
-    resultEl.textContent = result.promoCode + ' applied: HK$' +
-      result.originalPrice + ' → HK$' + result.price;
+    resultEl.textContent = promo.code + ' applied: HK$' + promo.originalPrice + ' → HK$' + promo.finalPrice;
     updateRecaps();
   } catch (error) {
     appliedPromo = null;
@@ -869,15 +558,15 @@ function go(n) {
   }
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
-  document.getElementById('p'+n).classList.add('on');
+  document.getElementById('p' + n).classList.add('on');
   document.querySelectorAll('.prog-item').forEach(w => {
     const s = +w.dataset.s;
-    w.classList.remove('on','done');
-    if (s===n) w.classList.add('on');
-    else if (s<n) w.classList.add('done');
+    w.classList.remove('on', 'done');
+    if (s === n) w.classList.add('on');
+    else if (s < n) w.classList.add('done');
   });
   updateRecaps();
-  window.scrollTo({ top: document.getElementById('order').offsetTop - 58, behavior:'smooth' });
+  window.scrollTo({ top: document.getElementById('order').offsetTop - 58, behavior: 'smooth' });
 }
 
 function v2() {
@@ -893,12 +582,8 @@ function v2() {
 
 function onPetFiles(input) {
   const newFiles = Array.from(input.files);
-  const el    = document.getElementById('pet-file-chosen');
-
-  const invalid = newFiles.filter(f =>
-    f.size > 2.5 * 1000 * 1000 ||
-    !['image/png', 'image/jpeg', 'image/jpg'].includes(f.type)
-  );
+  const el = document.getElementById('pet-file-chosen');
+  const invalid = newFiles.filter(f => f.size > 2.5 * 1000 * 1000 || !['image/png', 'image/jpeg', 'image/jpg'].includes(f.type));
   if (invalid.length) {
     el.textContent = 'Photos must be JPG or PNG and no larger than 2.5 MB each.';
     el.style.color = 'var(--err)';
@@ -906,14 +591,7 @@ function onPetFiles(input) {
     return;
   }
 
-  const uniqueFiles = newFiles.filter(file =>
-    !petFiles.some(existing =>
-      existing.name === file.name &&
-      existing.size === file.size &&
-      existing.lastModified === file.lastModified
-    )
-  );
-
+  const uniqueFiles = newFiles.filter(file => !petFiles.some(existing => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified));
   if (petFiles.length + uniqueFiles.length > 6) {
     el.textContent = 'Please select no more than 6 photos in total.';
     el.style.color = 'var(--err)';
@@ -935,11 +613,8 @@ async function renderPetFiles_() {
   const summary = document.getElementById('pet-file-chosen');
   const list = document.getElementById('pet-photo-list');
   list.innerHTML = '';
-
   summary.style.color = 'var(--black)';
-  summary.textContent = petFiles.length
-    ? petFiles.length + (petFiles.length === 1 ? ' photo selected' : ' photos selected')
-    : '';
+  summary.textContent = petFiles.length ? petFiles.length + (petFiles.length === 1 ? ' photo selected' : ' photos selected') : '';
 
   petFiles.forEach((file, index) => {
     const item = document.createElement('div');
@@ -948,9 +623,7 @@ async function renderPetFiles_() {
     const thumbnail = document.createElement('img');
     thumbnail.className = 'photo-thumb';
     thumbnail.alt = 'Preview ' + file.name;
-    fileToDataUrl_(file)
-      .then(url => { thumbnail.src = url; })
-      .catch(() => { thumbnail.alt = 'Preview unavailable'; });
+    fileToDataUrl_(file).then(url => { thumbnail.src = url; }).catch(() => { thumbnail.alt = 'Preview unavailable'; });
     thumbnail.addEventListener('click', () => openPhotoPreview(index));
 
     const name = document.createElement('span');
@@ -1009,7 +682,6 @@ function renderPayFile_() {
   const list = document.getElementById('payment-photo-list');
   list.innerHTML = '';
   summary.textContent = payFile ? '1 screenshot selected' : '';
-
   if (!payFile) return;
 
   const currentFile = payFile;
@@ -1019,11 +691,7 @@ function renderPayFile_() {
   const thumbnail = document.createElement('img');
   thumbnail.className = 'photo-thumb';
   thumbnail.alt = 'Preview ' + currentFile.name;
-  fileToDataUrl_(currentFile)
-    .then(url => {
-      if (payFile === currentFile) thumbnail.src = url;
-    })
-    .catch(() => { thumbnail.alt = 'Preview unavailable'; });
+  fileToDataUrl_(currentFile).then(url => { if (payFile === currentFile) thumbnail.src = url; }).catch(() => { thumbnail.alt = 'Preview unavailable'; });
   thumbnail.addEventListener('click', openPaymentPreview);
 
   const name = document.createElement('span');
@@ -1066,40 +734,55 @@ async function doSubmit() {
   const nm = document.getElementById('f-name').value.trim();
   const ph = document.getElementById('f-phone').value.trim();
   const ad = document.getElementById('f-addr').value.trim();
-  
-  if (!ig||!nm||!ph||!ad) { showMsg('msg-s3','err','Please go back and complete all your details.'); go(2); return; }
-  if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
-    showMsg('msg-s3','err','Some fields are too long.'); go(2); return;
-  }
-  if (!CONFIG.terms || !CONFIG.terms.version) {
-    showMsg('msg-s3','err','Terms & Conditions are temporarily unavailable. Please reload and try again.');
+
+  if (!ig || !nm || !ph || !ad) {
+    showMsg('msg-s3', 'err', 'Please go back and complete all your details.');
+    go(2);
     return;
   }
+
+  if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
+    showMsg('msg-s3', 'err', 'Some fields are too long.');
+    go(2);
+    return;
+  }
+
+  if (!CONFIG.terms || !CONFIG.terms.version) {
+    showMsg('msg-s3', 'err', 'Terms & Conditions are temporarily unavailable. Please reload and try again.');
+    return;
+  }
+
   if (!document.getElementById('f-terms').checked) {
-    showMsg('msg-s3','err','Please read and agree to the Terms & Conditions before confirming your order.');
+    showMsg('msg-s3', 'err', 'Please read and agree to the Terms & Conditions before confirming your order.');
     return;
   }
 
   if (IS_DEPLOYED_SITE && !turnstileToken) {
-    showMsg('msg-s3','err','Please complete the security check.');
+    showMsg('msg-s3', 'err', 'Please complete the security check.');
     return;
   }
 
   const MAX_FILE_SIZE = 2.5 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+
   if (petFiles.length < 1) {
-    showMsg('msg-s3','err','Please upload at least one pet photo.');
+    showMsg('msg-s3', 'err', 'Please upload at least one pet photo.');
     return;
   }
+
   if (petFiles.length > 6) {
-    showMsg('msg-s3','err','Please upload no more than 6 pet photos.'); return;
+    showMsg('msg-s3', 'err', 'Please upload no more than 6 pet photos.');
+    return;
   }
+
   for (let f of petFiles) {
     if (f.size > MAX_FILE_SIZE) {
-      showMsg('msg-s3','err','Pet photo too large (max 2.5MB).'); return;
+      showMsg('msg-s3', 'err', 'Pet photo too large (max 2.5MB).');
+      return;
     }
     if (!ALLOWED_TYPES.includes(f.type)) {
-      showMsg('msg-s3','err','Pet photos must be PNG or JPEG only.'); return;
+      showMsg('msg-s3', 'err', 'Pet photos must be PNG or JPEG only.');
+      return;
     }
   }
 
@@ -1116,98 +799,87 @@ async function doSubmit() {
     }
 
     const firstPhotoData = await fileToBase64(petFiles[0]);
-    const payload = {
+
+    const result = await postApi_({
       type: 'order',
-      requestId,
-      turnstileToken,
+      requestId: requestId,
+      turnstileToken: turnstileToken,
       termsAccepted: true,
       termsVersion: CONFIG.terms.version,
       promoCode: appliedPromo ? appliedPromo.code : '',
       productId: sel.safeId,
       outline: selectedOutline,
       firstPhoto: {
-  data: firstPhotoData,
-  type: petFiles[0].type,
-  name: petFiles[0].name
-},
-      instagram: ig, name: nm, phone: ph, address: ad,
+        data: firstPhotoData
+      },
+      instagram: ig,
+      name: nm,
+      phone: ph,
+      address: ad,
       size: sel.id,
       notes: document.getElementById('f-notes').value.trim()
-    };
-
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
     });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
+
+    if (!result.success) {
       throw new Error(result.error || 'ORDER_FAILED');
     }
 
     orderNum = result.orderNumber;
     const orderToken = result.orderToken;
+
     sessionStorage.removeItem('meow_order_request_id');
+    sessionStorage.setItem('meow_order_number', orderNum);
+    sessionStorage.setItem('meow_order_token', orderToken);
+
+    const product = result.product || sel;
     sel = {
       ...sel,
-      id: result.size,
-      safeId: result.productId || sel.safeId,
-      dims: result.dims,
-      price: result.price
+      id: product.id || sel.id,
+      safeId: product.id || sel.safeId,
+      name: product.name || sel.name,
+      dims: product.dims || sel.dims,
+      price: Number(result.price || product.price || sel.price)
     };
+
     appliedPromo = result.promoCode ? {
       code: result.promoCode,
       originalPrice: result.originalPrice,
       discount: result.discount,
       price: result.price
     } : null;
-    sessionStorage.setItem('meow_order_number', orderNum);
-    sessionStorage.setItem('meow_order_token', orderToken);
 
-    for (let i = 1; i < petFiles.length; i++) {
-  btn.innerHTML = '<span class="spinner"></span>Uploading photo ' +
-    (i + 1) + '/' + petFiles.length + '...';
-
-  const photoResult = await postApi_({
-    type: 'pet_photo',
-    orderNumber: orderNum,
-    orderToken,
-    index: i + 1,
-    photo: {
-      data: await fileToBase64(petFiles[i]),
-      type: petFiles[i].type,
-      name: petFiles[i].name
-    }
-  });
-
-  if (!photoResult.success) {
-    throw new Error(photoResult.error || 'PHOTO_UPLOAD_FAILED');
-  }
-}
+    /*
+      DO NOT upload pet_photo again here.
+      The first pet photo is already uploaded together with the order in Code.gs.
+      This prevents the false "Order was created, but a photo failed to upload" error.
+    */
 
     orderReadyForPayment = true;
     document.getElementById('order-num-display').textContent = orderNum;
-    
-    // Safe: Build receipt with textContent (防 XSS)
+
     const receipt = document.getElementById('receipt');
     receipt.innerHTML = '';
-    
+
+    const outlineText = result.outline || (selectedOutline ? selectedOutline + ' outline' : '');
+
     const rows = [
       { label: 'Order', value: orderNum },
       { label: 'Instagram', value: ig },
       { label: 'Name', value: nm },
       { label: 'Phone', value: ph },
       { label: 'Address', value: ad },
-      { label: 'Size', value: sel.id + ' ' + sel.dims }
+      { label: 'Size', value: (sel.name || sel.id || '') + ' ' + (sel.dims || '') },
+      { label: 'Outline', value: outlineText }
     ];
-    rows.push({ label: 'Outline', value: result.outline + ' outline' });
+
     if (result.promoCode) {
       rows.push({ label: 'Original price', value: 'HK$' + result.originalPrice });
       rows.push({ label: 'Promo code', value: result.promoCode });
       rows.push({ label: 'Discount', value: '-HK$' + result.discount });
     }
+
     rows.push({ label: 'Total', value: 'HK$' + result.price });
-    
+
     rows.forEach(row => {
       const div = document.createElement('div');
       div.className = 'r-row';
@@ -1220,55 +892,62 @@ async function doSubmit() {
       div.appendChild(val);
       receipt.appendChild(div);
     });
-    
-    document.getElementById('famt').textContent = 'HK$ ' + sel.price.toLocaleString();
+
+    document.getElementById('famt').textContent = 'HK$ ' + Number(result.price).toLocaleString();
     go(4);
 
-  } catch(err) {
-    const created = !!orderNum;
+  } catch (err) {
+    console.error('ORDER_SUBMIT_ERROR:', err);
+
     showMsg(
       'msg-s3',
       'err',
-      created
-        ? 'Order ' + orderNum + ' was created, but a photo failed to upload. Please contact us on Instagram before trying again.'
+      orderNum
+        ? 'Order ' + orderNum + ' was created. Please continue to payment or contact us on Instagram with your order number.'
         : 'Order was not submitted. Please retry the security check and try again.'
     );
-    if (!created) resetTurnstileWidget();
-    btn.disabled = created;
-    btn.textContent = created ? 'Contact us with your order number' : 'Confirm order';
+
+    if (!orderNum) {
+      resetTurnstileWidget();
+      btn.disabled = false;
+      btn.textContent = 'Confirm order';
+    } else {
+      orderReadyForPayment = true;
+      btn.disabled = false;
+      btn.textContent = 'Continue to payment';
+    }
   }
 }
 
 async function submitPayment() {
   if (!payFile) {
     const fileInput = document.getElementById('f-payment');
-    if (fileInput && fileInput.files.length > 0) {
-      payFile = fileInput.files[0];
-    }
+    if (fileInput && fileInput.files.length > 0) payFile = fileInput.files[0];
   }
 
-  if (!payFile) { 
-    showMsg('msg-s4','err','Please select your payment screenshot first.'); 
-    return; 
+  if (!payFile) {
+    showMsg('msg-s4', 'err', 'Please select your payment screenshot first.');
+    return;
   }
 
   const MAX_SIZE = 2.5 * 1000 * 1000;
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 
   if (payFile.size > MAX_SIZE) {
-    showMsg('msg-s4','err','Screenshot too large (max 2.5MB).'); 
+    showMsg('msg-s4', 'err', 'Screenshot too large (max 2.5MB).');
     return;
   }
 
   if (!ALLOWED_TYPES.includes(payFile.type)) {
-    showMsg('msg-s4','err','Payment screenshot must be PNG or JPEG only.'); 
+    showMsg('msg-s4', 'err', 'Payment screenshot must be PNG or JPEG only.');
     return;
   }
 
   const savedOrderNumber = orderNum || sessionStorage.getItem('meow_order_number');
   const orderToken = sessionStorage.getItem('meow_order_token');
+
   if (!savedOrderNumber || !orderToken) {
-    showMsg('msg-s4','err','Order session expired. Please contact us on Instagram.');
+    showMsg('msg-s4', 'err', 'Order session expired. Please contact us on Instagram.');
     return;
   }
 
@@ -1279,33 +958,61 @@ async function submitPayment() {
 
   try {
     const data = await fileToBase64(payFile);
-
     const result = await postApi_({
       type: 'payment',
       orderNumber: savedOrderNumber,
-      orderToken,
-      screenshot: { data }
+      orderToken: orderToken,
+      screenshot: {
+        data: data
+      }
     });
 
     if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
+
     btn.textContent = 'Submitted';
     document.getElementById('payment-back').style.display = 'none';
     showPaymentSuccess_();
-  } catch(err) {
-    showMsg('msg-s4','err','Upload failed. Please try again or contact us on Instagram.');
+  } catch (err) {
+    console.error('PAYMENT_UPLOAD_ERROR:', err);
+    showMsg('msg-s4', 'err', 'Upload failed. Please try again or contact us on Instagram.');
     btn.disabled = false;
     btn.textContent = 'Submit payment proof';
   }
 }
 
 async function postApi_(payload) {
+  /*
+    Safety guard:
+    Old frontend code may still call type: pet_photo.
+    We skip it because the first pet photo is already uploaded with the order.
+  */
+  if (payload && payload.type === 'pet_photo') {
+    console.log('Skipped duplicate pet_photo upload.');
+    return {
+      success: true,
+      skipped: true
+    };
+  }
+
   const response = await fetch(API_URL, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify(payload)
   });
-  const result = await response.json();
-  return { ...result, success: response.ok && result.success === true };
+
+  let result;
+  try {
+    result = await response.json();
+  } catch (err) {
+    throw new Error('INVALID_SERVER_RESPONSE');
+  }
+
+  return {
+    ...result,
+    success: response.ok && result.success === true
+  };
 }
 
 function createRequestId_() {
@@ -1331,114 +1038,119 @@ function closeTerms() {
 }
 
 function doReset() {
-  sel=null; orderNum=null; petFiles=[]; payFile=null; appliedPromo=null; selectedOutline=null;
-  orderReadyForPayment=false;
+  sel = null;
+  orderNum = null;
+  petFiles = [];
+  payFile = null;
+  appliedPromo = null;
+  selectedOutline = null;
+  orderReadyForPayment = false;
+
   sessionStorage.removeItem('meow_order_number');
   sessionStorage.removeItem('meow_order_token');
   sessionStorage.removeItem('meow_order_request_id');
-  ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('f-photos').value='';
-  document.getElementById('f-payment').value='';
-  document.getElementById('f-terms').checked=false;
-  document.getElementById('f-promo').value='';
+
+  ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  document.getElementById('f-photos').value = '';
+  document.getElementById('f-payment').value = '';
+  document.getElementById('f-terms').checked = false;
+  document.getElementById('f-promo').value = '';
+
   clearPromo_(false);
-  document.getElementById('pet-file-chosen').textContent='';
-  document.getElementById('pet-photo-list').innerHTML='';
-  document.getElementById('pet-file-chosen').style.color='var(--black)';
-  document.getElementById('pay-file-chosen').textContent='';
-  document.getElementById('payment-photo-list').innerHTML='';
-  document.querySelectorAll('.size-radio').forEach(r=>{r.style.background='';r.style.borderColor='';});
-  document.querySelectorAll('.size-row').forEach(r=>r.classList.remove('sel'));
-  document.querySelectorAll('.outline-option').forEach(button=>button.classList.remove('sel'));
-  document.getElementById('rb2-size').textContent='';
-  document.getElementById('rb2-price').textContent='';
-  document.getElementById('rb3-size').textContent='';
-  document.getElementById('rb3-price').textContent='';
-  document.getElementById('s3n').disabled=false;
-  document.getElementById('s3n').textContent='Confirm order';
-  document.getElementById('s4n').disabled=false;
-  document.getElementById('s4n').textContent='Submit payment proof';
-  document.getElementById('payment-back').style.display='';
-  document.getElementById('s1n').disabled=true;
-  hideMsg('msg-s3'); hideMsg('msg-s4');
+
+  document.getElementById('pet-file-chosen').textContent = '';
+  document.getElementById('pet-photo-list').innerHTML = '';
+  document.getElementById('pet-file-chosen').style.color = 'var(--black)';
+  document.getElementById('pay-file-chosen').textContent = '';
+  document.getElementById('payment-photo-list').innerHTML = '';
+
+  document.querySelectorAll('.size-radio').forEach(r => { r.style.background = ''; r.style.borderColor = ''; });
+  document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
+  document.querySelectorAll('.outline-option').forEach(button => button.classList.remove('sel'));
+
+  document.getElementById('rb2-size').textContent = '';
+  document.getElementById('rb2-price').textContent = '';
+  document.getElementById('rb3-size').textContent = '';
+  document.getElementById('rb3-price').textContent = '';
+
+  document.getElementById('s3n').disabled = false;
+  document.getElementById('s3n').textContent = 'Confirm order';
+  document.getElementById('s4n').disabled = false;
+  document.getElementById('s4n').textContent = 'Submit payment proof';
+  document.getElementById('payment-back').style.display = '';
+  document.getElementById('s1n').disabled = true;
+
+  hideMsg('msg-s3');
+  hideMsg('msg-s4');
   resetTurnstileWidget();
   go(1);
 }
 </script>
+
 <div class="paw-cursor-container" id="paw-cursor-container"></div>
 
 <script>
-// ═══════════════════════════════════════════════════
-//  PAW CURSOR EFFECT
-// ═══════════════════════════════════════════════════
-
-const PAW_SVG_BLACK = `<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#222"/><circle cx="48.79" cy="22.86" r="3.66" fill="#222"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#222"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#222"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#222"/></g></svg>`;
-
-const PAW_SVG_GRAY = `<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#aaa"/><circle cx="48.79" cy="22.86" r="3.66" fill="#aaa"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#aaa"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#aaa"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#aaa"/></g></svg>`;
+const PAW_SVG_BLACK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#222"/><circle cx="48.79" cy="22.86" r="3.66" fill="#222"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#222"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#222"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#222"/></g></svg>`;
+const PAW_SVG_GRAY = PAW_SVG_BLACK.replaceAll('#222', '#aaa');
 
 const container = document.getElementById('paw-cursor-container');
 const pawList = [];
 let lastSpawnTime = 0;
 let trailOffset = 0;
 
-// 創建游標貓爪
-const cursorPaw = document.createElement('div');
-cursorPaw.className = 'paw';
-cursorPaw.innerHTML = PAW_SVG_BLACK;
-cursorPaw.style.opacity = '1';
-container.appendChild(cursorPaw);
+if (container) {
+  const cursorPaw = document.createElement('div');
+  cursorPaw.className = 'paw';
+  cursorPaw.innerHTML = PAW_SVG_BLACK;
+  cursorPaw.style.opacity = '1';
+  container.appendChild(cursorPaw);
 
-function createPaw(x, y, offset) {
-  const paw = document.createElement('div');
-  paw.className = 'paw';
-  const waveShift = Math.sin(offset * 0.05) * 15;
-  paw.style.left = (x + waveShift) + 'px';
-  paw.style.top = y + 'px';
-  paw.style.transform = 'translate(-50%, -50%)';
-  paw.innerHTML = PAW_SVG_GRAY;
-  paw.style.opacity = '0.7';
-  container.appendChild(paw);
-  
-  return {
-    element: paw,
-    x: x,
-    y: y,
-    waveOffset: offset,
-    life: 1,
-    age: 0,
-    maxAge: 1200
-  };
-}
+  function createPaw(x, y, offset) {
+    const paw = document.createElement('div');
+    paw.className = 'paw';
+    const waveShift = Math.sin(offset * 0.05) * 15;
+    paw.style.left = (x + waveShift) + 'px';
+    paw.style.top = y + 'px';
+    paw.style.transform = 'translate(-50%, -50%)';
+    paw.innerHTML = PAW_SVG_GRAY;
+    paw.style.opacity = '0.7';
+    container.appendChild(paw);
+    return { element: paw, age: 0, maxAge: 1200 };
+  }
 
-document.addEventListener('mousemove', (e) => {
-  cursorPaw.style.left = e.clientX + 'px';
-  cursorPaw.style.top = e.clientY + 'px';
-  cursorPaw.style.transform = 'translate(-50%, -50%)';
-  
-  const now = Date.now();
-  if (now - lastSpawnTime > 150) {
-    if (pawList.length < 20) {
+  document.addEventListener('mousemove', (e) => {
+    cursorPaw.style.left = e.clientX + 'px';
+    cursorPaw.style.top = e.clientY + 'px';
+    cursorPaw.style.transform = 'translate(-50%, -50%)';
+
+    const now = Date.now();
+    if (now - lastSpawnTime > 150 && pawList.length < 20) {
       pawList.push(createPaw(e.clientX, e.clientY, trailOffset));
       trailOffset++;
       lastSpawnTime = now;
     }
-  }
-});
+  });
 
-function animate() {
-  for (let i = pawList.length - 1; i >= 0; i--) {
-    const p = pawList[i];
-    p.age += 16;
-    p.life = Math.max(0, 1 - (p.age / p.maxAge));
-    p.element.style.opacity = p.life * 0.7;
-    
-    if (p.life <= 0) {
-      p.element.remove();
-      pawList.splice(i, 1);
+  function animate() {
+    for (let i = pawList.length - 1; i >= 0; i--) {
+      const p = pawList[i];
+      p.age += 16;
+      const life = Math.max(0, 1 - (p.age / p.maxAge));
+      p.element.style.opacity = life * 0.7;
+      if (life <= 0) {
+        p.element.remove();
+        pawList.splice(i, 1);
+      }
     }
+    requestAnimationFrame(animate);
   }
-  requestAnimationFrame(animate);
-}
 
-animate();
+  animate();
+}
 </script>
+</body>
+</html>
