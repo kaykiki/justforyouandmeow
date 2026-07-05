@@ -1,4 +1,4 @@
-const MAX_BODY_BYTES = 3_600_000;
+const MAX_BODY_BYTES = 5_000_000;
 const ALLOWED_TYPES = new Set([
   'products',
   'terms',
@@ -76,7 +76,12 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.config = {
-  maxDuration: 60
+  maxDuration: 60,
+  api: {
+    bodyParser: {
+      sizeLimit: '5mb'
+    }
+  }
 };
 
 async function callAppsScriptWithRetry(payload) {
