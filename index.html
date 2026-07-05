@@ -306,8 +306,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
 <footer>
   <div class="footer-meta">
-    <span class="footer-brand">just for you and meow</span>
-    <span id="yr"></span>
+    <span class="footer-brand">© just for you and meow</span>
   </div>
 </footer>
 
@@ -326,7 +325,6 @@ let manageSession = null;
 let managePetFiles = [];
 let managePayFile = null;
 
-document.getElementById('yr').textContent = new Date().getFullYear();
 
 function fileToBase64(file) {
   return new Promise((res, rej) => {
