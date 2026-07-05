@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage order — just for you and meow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#111111;--mid:#555555;--light:#EBEBEB;--bg:#FAFAF8;--white:#FFFFFF;--err:#cc3333}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;font-weight:300;color:var(--black);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,3.5rem);height:50px;border-bottom:1px solid var(--light)}
+.nav-brand{font-size:.8rem;font-weight:400;letter-spacing:.01em;text-decoration:none;color:var(--black)}
+.nav-right{display:flex;gap:2rem}.nav-right a{font-size:.75rem;color:var(--mid);text-decoration:none;letter-spacing:.03em;transition:color .15s}.nav-right a:hover,.nav-right a.active{color:var(--black)}
+main{padding-top:50px}
+.hero{padding:clamp(2rem,4vw,3.5rem) clamp(1.5rem,5vw,3.5rem);display:flex;flex-direction:row;align-items:center;gap:clamp(1.5rem,3vw,2.5rem);flex-wrap:wrap}
+.hero-left{flex:0 1 auto;display:flex;align-items:center}.hero-logo{width:100%;max-width:650px;height:auto;display:block;mix-blend-mode:multiply}
+.hero-right{flex:0 1 auto;display:flex;flex-direction:column;align-items:flex-start;gap:1rem;max-width:500px}
+.hero-tagline{font-size:clamp(.82rem,1.1vw,.9rem);font-weight:300;line-height:1.75;color:var(--black)}
+.link-arrow{font-size:.78rem;font-weight:400;letter-spacing:.04em;color:var(--black);text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--black);padding-bottom:1px;transition:opacity .15s;white-space:nowrap}.link-arrow:hover{opacity:.45}
+@media(max-width:760px){.hero{flex-direction:column;align-items:flex-start}.hero-logo{max-width:500px}.hero-right{max-width:100%}}
+.rule{border:none;border-top:1px solid var(--light)}
+.section{padding:clamp(3.5rem,7vw,6rem) clamp(1.5rem,5vw,3.5rem)}
+.section-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:3rem}
+.process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
+.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 2rem;align-items:center;gap:1.5rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
+.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}
+.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:start}
+.prog{display:flex;gap:1.5rem;margin-bottom:3rem}.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}.prog-item.on{color:var(--black);border-color:var(--black)}.prog-item.done{opacity:.35}
+.panel{display:none}.panel.on{display:block;animation:fadeUp .22s ease}@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.panel-title{font-size:1rem;font-weight:400;margin-bottom:.4rem}.panel-sub{font-size:.8rem;color:var(--mid);margin-bottom:2rem;line-height:1.75}
+.recap{display:none;justify-content:space-between;align-items:center;border:1px solid var(--light);padding:.8rem 1rem;margin-bottom:2rem;font-size:.78rem}.recap.show{display:flex}.r-size{font-weight:500}.r-price{color:var(--mid)}.r-change{color:var(--mid);text-decoration:underline;cursor:pointer;font-size:.72rem}.r-change:hover{color:var(--black)}
+.field{margin-bottom:1.6rem}.field label{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.6rem}.field label small{text-transform:none;letter-spacing:0;font-weight:300;opacity:.7}
+.field input,.field textarea{width:100%;border:none;border-bottom:1px solid var(--light);background:transparent;padding:.55em 0;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:300;color:var(--black);outline:none;transition:border-color .15s}.field input::placeholder,.field textarea::placeholder{color:#bbb}.field input:focus,.field textarea:focus{border-color:var(--black)}.field textarea{resize:none;min-height:68px}
+.upfield{border:1px solid var(--light);padding:1.6rem;position:relative;text-align:center;cursor:pointer;transition:border-color .15s}.upfield:hover{border-color:var(--black)}.upfield input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}.upfield-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:500;display:block;margin-bottom:.3rem}.upfield-hint{font-size:.75rem;color:var(--mid)}.file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
+.photo-list{border-top:1px solid var(--light);margin-top:.8rem}.photo-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:.8rem;padding:.65rem 2.2rem .65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}.photo-thumb{width:52px;height:52px;border:1px solid var(--light);object-fit:cover;cursor:zoom-in;background:var(--white)}.photo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.photo-remove{position:absolute;right:0;top:50%;transform:translateY(-50%);width:28px;height:28px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:1.05rem;line-height:1;cursor:pointer}.photo-remove:hover{color:var(--black);border-color:var(--black)}
+.photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
+.promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.promo-row{display:flex;align-items:flex-end;gap:.8rem}.promo-row .field{flex:1;margin:0}.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.promo-apply:disabled{opacity:.35;cursor:not-allowed}.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}.promo-result.ok{color:#1a6b3c}.promo-result.err{color:var(--err)}
+.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}
+.terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
+.terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}.terms-dialog:focus{outline:none}.terms-dialog::backdrop{background:rgba(0,0,0,.42)}.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.terms-head h2{font-size:1rem;font-weight:500}.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}.terms-section{padding-top:1.5rem}.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
+.btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}.btn-submit:hover{opacity:.65}.btn-submit:disabled{opacity:.25;cursor:not-allowed}.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}.btn-back:hover{color:var(--black)}
+.aside-block{border-top:1px solid var(--light);padding-top:1.4rem;margin-bottom:2rem}.aside-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.aside-body{font-size:.78rem;color:var(--mid);line-height:1.85}
+.order-num-box{background:var(--black);color:var(--white);padding:1.2rem 1.5rem;margin-bottom:2rem}.order-num-label{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:.3rem}.order-num-value{font-size:1.1rem;font-weight:500;letter-spacing:.04em}.receipt{border-top:1px solid var(--light);margin-bottom:2.5rem}.r-row{display:flex;justify-content:space-between;font-size:.8rem;padding:.65rem 0;border-bottom:1px solid var(--light)}.r-row:last-child{font-weight:500;border-color:var(--black)}.r-label{color:var(--mid)}
+.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}.fps-qr img{width:100%;height:100%;object-fit:contain}.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}.fps-instructions ol{padding-left:1.1em}.fps-instructions li{margin-bottom:.4rem}
+.manage-wrap{max-width:760px}.manage-summary{border-top:1px solid var(--light);border-bottom:1px solid var(--light);margin:1.5rem 0 2rem}.manage-summary .r-row:last-child{font-weight:300;border-color:var(--light)}.manage-upload-panel{display:none}.manage-upload-panel.show{display:block}.manage-note{font-size:.75rem;color:var(--mid);line-height:1.8;margin-top:.8rem}.manage-actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem}
+.status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}.status-msg.show{display:block}.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}.status-msg a{color:inherit;font-weight:500;text-decoration:underline}.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}@keyframes spin{to{transform:rotate(360deg)}}
+body{cursor:none}.paw-cursor-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}.paw{position:absolute;pointer-events:none;width:24px;height:28px}
+footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}.footer-brand{font-size:.78rem;font-weight:400}.footer-links{display:flex;gap:1.5rem}.footer-links a{font-size:.72rem;color:var(--mid);text-decoration:none;transition:color .15s}.footer-links a:hover{color:var(--black)}
+@media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;grid-template-areas:"letter details price radio" "letter capacity price radio";column-gap:1rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}}
+@media(max-width:480px){.process{grid-template-columns:1fr}}
+@media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="nav-brand">just for you and meow</a>
+  <div class="nav-right">
+    <a href="manage-order.html" class="active">Manage order</a>
+    <a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a>
+    <a href="index.html#order">Order</a>
+  </div>
+</nav>
+
+<main>
+  <section class="section" id="manage">
+    <p class="section-label">Manage order</p>
+    <div class="manage-wrap">
+      <div class="panel on">
+        <div class="panel-title">Upload more photos or payment proof</div>
+        <p class="panel-sub">Enter your order number and phone number to manage your order.</p>
+
+        <div class="field"><label>Order number</label><input type="text" id="m-order" placeholder="MEOW-2026-0001" autocomplete="off"></div>
+        <div class="field"><label>Phone number</label><input type="tel" id="m-phone" placeholder="Phone number used for the order" autocomplete="tel"></div>
+        <div id="msg-manage-login" class="status-msg"></div>
+        <div class="btn-row"><button class="btn-submit" id="m-login-btn" onclick="verifyManageOrder()">Find order</button></div>
+
+        <div class="manage-upload-panel" id="manage-upload-panel">
+          <div class="manage-summary" id="manage-summary"></div>
+
+          <div class="field">
+            <label>More pet photos <small>optional</small></label>
+            <div class="upfield">
+              <input type="file" id="m-photos" accept="image/*" multiple onchange="onManagePetFiles(this)">
+              <span class="upfield-label">Select files</span>
+              <span class="upfield-hint">JPG or PNG · up to 6 files · 2.5 MB each</span>
+            </div>
+            <div class="file-chosen" id="manage-pet-file-chosen"></div>
+            <div class="photo-list" id="manage-pet-photo-list"></div>
+            <div class="manage-actions"><button class="btn-submit" id="m-photo-btn" onclick="uploadManagePetPhotos()">Upload photos</button></div>
+          </div>
+
+          <div class="field" style="margin-top:2rem">
+            <label>Payment screenshot <small>optional</small></label>
+            <div class="upfield">
+              <input type="file" id="m-payment" accept="image/*" onchange="onManagePayFile(this)">
+              <span class="upfield-label">Select file</span>
+              <span class="upfield-hint">Upload your FPS payment screenshot</span>
+            </div>
+            <div class="file-chosen" id="manage-pay-file-chosen"></div>
+            <div class="photo-list" id="manage-payment-photo-list"></div>
+            <div class="manage-actions"><button class="btn-submit" id="m-payment-btn" onclick="submitManagePayment()">Upload payment proof</button></div>
+          </div>
+
+          <div id="msg-manage-upload" class="status-msg"></div>
+          <p class="manage-note">For privacy, please do not share your order number publicly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog class="photo-preview-dialog" id="photo-preview-dialog">
+  <div class="photo-preview-inner">
+    <button class="photo-preview-close" type="button" onclick="closePhotoPreview()" aria-label="Close">&times;</button>
+    <img class="photo-preview-image" id="photo-preview-image" alt="Selected photo preview">
+  </div>
+</dialog>
+
+<footer>
+  <span class="footer-brand">just for you and meow</span>
+  <div class="footer-links"><a href="manage-order.html">Manage order</a><a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a><span style="color:var(--mid);font-size:.72rem" id="yr"></span></div>
+</footer>
+
+<script>
+const API_URL = '/api/order';
+let manageSession = null;
+let managePetFiles = [];
+let managePayFile = null;
+
+const yearEl = document.getElementById('yr');
+if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('Cannot read ' + file.name));
+    reader.readAsDataURL(file);
+  });
+}
+
+function fileToDataUrl_(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Cannot preview ' + file.name));
+    reader.readAsDataURL(file);
+  });
+}
+
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-msg ' + type + ' show';
+  el.textContent = text;
+}
+
+function hideMsg(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-msg';
+  el.textContent = '';
+}
+
+function validateImageFile_(file, label) {
+  const MAX_SIZE = 2.5 * 1000 * 1000;
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+  if (!file) throw new Error(label + ' is missing.');
+  if (file.size > MAX_SIZE) throw new Error(label + ' is too large (max 2.5MB).');
+  if (!ALLOWED_TYPES.includes(file.type)) throw new Error(label + ' must be PNG or JPEG only.');
+}
+
+async function postApi_(payload) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  let result;
+  try {
+    result = await response.json();
+  } catch (_) {
+    throw new Error('INVALID_SERVER_RESPONSE');
+  }
+
+  return {
+    ...result,
+    success: response.ok && result.success === true
+  };
+}
+
+async function verifyManageOrder() {
+  const orderNumber = document.getElementById('m-order').value.trim();
+  const phone = document.getElementById('m-phone').value.trim();
+
+  if (!orderNumber || !phone) {
+    showMsg('msg-manage-login', 'err', 'Please enter your order number and phone number.');
+    return;
+  }
+
+  const btn = document.getElementById('m-login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Checking…';
+  hideMsg('msg-manage-login');
+  hideMsg('msg-manage-upload');
+
+  try {
+    const result = await postApi_({
+      type: 'manage_lookup',
+      orderNumber: orderNumber,
+      phone: phone
+    });
+
+    if (!result.success || !result.orderToken) {
+      throw new Error(result.error || 'ORDER_LOOKUP_FAILED');
+    }
+
+    manageSession = {
+      orderNumber: result.orderNumber,
+      orderToken: result.orderToken,
+      order: result.order || {}
+    };
+
+    sessionStorage.setItem('meow_manage_order_number', manageSession.orderNumber);
+    sessionStorage.setItem('meow_manage_order_token', manageSession.orderToken);
+
+    renderManageSummary_(manageSession.order);
+    document.getElementById('manage-upload-panel').classList.add('show');
+    showMsg('msg-manage-login', 'ok', 'Order found. You can upload more photos or payment proof below.');
+  } catch (error) {
+    console.error('MANAGE_LOOKUP_ERROR:', error);
+    manageSession = null;
+    sessionStorage.removeItem('meow_manage_order_number');
+    sessionStorage.removeItem('meow_manage_order_token');
+    document.getElementById('manage-upload-panel').classList.remove('show');
+    showMsg('msg-manage-login', 'err', 'Order not found. Please check the order number and phone number.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Find order';
+  }
+}
+
+function renderManageSummary_(order) {
+  const summary = document.getElementById('manage-summary');
+  summary.innerHTML = '';
+
+  const rows = [
+    { label: 'Order', value: manageSession.orderNumber },
+    { label: 'Name', value: order.name || '—' },
+    { label: 'Phone', value: order.phone || '—' },
+    { label: 'Size', value: [order.productName, order.dims].filter(Boolean).join(' ') || '—' },
+    { label: 'Payment status', value: order.paymentStatus || '—' }
+  ];
+
+  if (order.price) rows.push({ label: 'Total', value: 'HK$' + Number(order.price).toLocaleString() });
+
+  rows.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'r-row';
+    const label = document.createElement('span');
+    label.className = 'r-label';
+    label.textContent = row.label;
+    const value = document.createElement('span');
+    value.textContent = row.value;
+    div.appendChild(label);
+    div.appendChild(value);
+    summary.appendChild(div);
+  });
+}
+
+function onManagePetFiles(input) {
+  const newFiles = Array.from(input.files || []);
+  const chosen = document.getElementById('manage-pet-file-chosen');
+
+  try {
+    newFiles.forEach(file => validateImageFile_(file, 'Photo'));
+  } catch (error) {
+    chosen.textContent = error.message;
+    chosen.style.color = 'var(--err)';
+    input.value = '';
+    return;
+  }
+
+  const uniqueFiles = newFiles.filter(file => !managePetFiles.some(existing =>
+    existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
+  ));
+
+  const totalAfterAdd = managePetFiles.length + uniqueFiles.length;
+  managePetFiles = managePetFiles.concat(uniqueFiles).slice(0, 6);
+
+  if (totalAfterAdd > 6) {
+    chosen.textContent = 'Maximum 6 photos per upload. Only the first 6 files are kept.';
+    chosen.style.color = 'var(--err)';
+  } else {
+    chosen.textContent = managePetFiles.length ? managePetFiles.length + ' photo(s) selected' : '';
+    chosen.style.color = 'var(--black)';
+  }
+
+  input.value = '';
+  renderManagePetFiles_();
+}
+
+function removeManagePetFile(index) {
+  managePetFiles.splice(index, 1);
+  document.getElementById('manage-pet-file-chosen').textContent = managePetFiles.length ? managePetFiles.length + ' photo(s) selected' : '';
+  renderManagePetFiles_();
+}
+
+async function renderManagePetFiles_() {
+  const list = document.getElementById('manage-pet-photo-list');
+  list.innerHTML = '';
+
+  for (let i = 0; i < managePetFiles.length; i++) {
+    const file = managePetFiles[i];
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+
+    const img = document.createElement('img');
+    img.className = 'photo-thumb';
+    img.alt = file.name;
+    img.src = await fileToDataUrl_(file);
+    img.onclick = () => openManagePhotoPreview_(file);
+
+    const name = document.createElement('div');
+    name.className = 'photo-name';
+    name.textContent = file.name;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'photo-remove';
+    remove.textContent = '×';
+    remove.onclick = () => removeManagePetFile(i);
+
+    item.appendChild(img);
+    item.appendChild(name);
+    item.appendChild(remove);
+    list.appendChild(item);
+  }
+}
+
+async function openManagePhotoPreview_(file) {
+  const image = document.getElementById('photo-preview-image');
+  const dialog = document.getElementById('photo-preview-dialog');
+  image.src = await fileToDataUrl_(file);
+  dialog.showModal();
+}
+
+function closePhotoPreview() {
+  const image = document.getElementById('photo-preview-image');
+  const dialog = document.getElementById('photo-preview-dialog');
+  image.removeAttribute('src');
+  dialog.close();
+}
+
+function onManagePayFile(input) {
+  managePayFile = input.files[0] || null;
+  const chosen = document.getElementById('manage-pay-file-chosen');
+  const list = document.getElementById('manage-payment-photo-list');
+  list.innerHTML = '';
+
+  if (!managePayFile) {
+    chosen.textContent = '';
+    return;
+  }
+
+  try {
+    validateImageFile_(managePayFile, 'Payment screenshot');
+  } catch (error) {
+    chosen.textContent = error.message;
+    chosen.style.color = 'var(--err)';
+    managePayFile = null;
+    input.value = '';
+    return;
+  }
+
+  chosen.textContent = managePayFile.name;
+  chosen.style.color = 'var(--black)';
+  renderManagePayFile_();
+}
+
+async function renderManagePayFile_() {
+  const list = document.getElementById('manage-payment-photo-list');
+  list.innerHTML = '';
+  if (!managePayFile) return;
+
+  const item = document.createElement('div');
+  item.className = 'photo-item';
+
+  const img = document.createElement('img');
+  img.className = 'photo-thumb';
+  img.alt = managePayFile.name;
+  img.src = await fileToDataUrl_(managePayFile);
+  img.onclick = () => openManagePhotoPreview_(managePayFile);
+
+  const name = document.createElement('div');
+  name.className = 'photo-name';
+  name.textContent = managePayFile.name;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'photo-remove';
+  remove.textContent = '×';
+  remove.onclick = () => {
+    managePayFile = null;
+    document.getElementById('m-payment').value = '';
+    document.getElementById('manage-pay-file-chosen').textContent = '';
+    list.innerHTML = '';
+  };
+
+  item.appendChild(img);
+  item.appendChild(name);
+  item.appendChild(remove);
+  list.appendChild(item);
+}
+
+function getManageSession_() {
+  if (manageSession && manageSession.orderNumber && manageSession.orderToken) return manageSession;
+
+  const orderNumber = sessionStorage.getItem('meow_manage_order_number');
+  const orderToken = sessionStorage.getItem('meow_manage_order_token');
+  if (orderNumber && orderToken) {
+    manageSession = { orderNumber, orderToken, order: {} };
+    return manageSession;
+  }
+
+  return null;
+}
+
+async function uploadManagePetPhotos() {
+  const session = getManageSession_();
+  if (!session) {
+    showMsg('msg-manage-upload', 'err', 'Please find your order first.');
+    return;
+  }
+
+  if (!managePetFiles.length) {
+    showMsg('msg-manage-upload', 'err', 'Please select at least one photo.');
+    return;
+  }
+
+  const btn = document.getElementById('m-photo-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
+  hideMsg('msg-manage-upload');
+
+  try {
+    for (let i = 0; i < managePetFiles.length; i++) {
+      const file = managePetFiles[i];
+      validateImageFile_(file, 'Photo');
+      const data = await fileToBase64(file);
+      const result = await postApi_({
+        type: 'pet_photo',
+        orderNumber: session.orderNumber,
+        orderToken: session.orderToken,
+        index: i + 1,
+        photo: { data: data, name: file.name }
+      });
+
+      if (!result.success) throw new Error(result.error || 'PHOTO_UPLOAD_FAILED');
+    }
+
+    managePetFiles = [];
+    document.getElementById('m-photos').value = '';
+    document.getElementById('manage-pet-file-chosen').textContent = '';
+    document.getElementById('manage-pet-photo-list').innerHTML = '';
+    showMsg('msg-manage-upload', 'ok', 'Photo(s) uploaded successfully.');
+  } catch (error) {
+    console.error('MANAGE_PHOTO_UPLOAD_ERROR:', error);
+    showMsg('msg-manage-upload', 'err', 'Photo upload failed. Please try again or DM us on Instagram.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload photos';
+  }
+}
+
+async function submitManagePayment() {
+  const session = getManageSession_();
+  if (!session) {
+    showMsg('msg-manage-upload', 'err', 'Please find your order first.');
+    return;
+  }
+
+  if (!managePayFile) {
+    showMsg('msg-manage-upload', 'err', 'Please select your payment screenshot first.');
+    return;
+  }
+
+  const btn = document.getElementById('m-payment-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
+  hideMsg('msg-manage-upload');
+
+  try {
+    validateImageFile_(managePayFile, 'Payment screenshot');
+    const data = await fileToBase64(managePayFile);
+    const result = await postApi_({
+      type: 'payment',
+      orderNumber: session.orderNumber,
+      orderToken: session.orderToken,
+      screenshot: { data: data, name: managePayFile.name || 'payment-proof' }
+    });
+
+    if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
+
+    managePayFile = null;
+    document.getElementById('m-payment').value = '';
+    document.getElementById('manage-pay-file-chosen').textContent = '';
+    document.getElementById('manage-payment-photo-list').innerHTML = '';
+    showMsg('msg-manage-upload', 'ok', 'Payment proof uploaded successfully. Please send us a DM with your order number.');
+  } catch (error) {
+    console.error('MANAGE_PAYMENT_UPLOAD_ERROR:', error);
+    showMsg('msg-manage-upload', 'err', 'Payment proof upload failed. Please try again or DM us on Instagram.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload payment proof';
+  }
+}
+</script>
+<div class="paw-cursor-container" id="paw-cursor-container"></div>
+<script>
+const PAW_SVG_BLACK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#222"/><circle cx="48.79" cy="22.86" r="3.66" fill="#222"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#222"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#222"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#222"/></g></svg>`;
+const PAW_SVG_GRAY = PAW_SVG_BLACK.replaceAll('#222', '#aaa');
+const container = document.getElementById('paw-cursor-container');
+const pawList = [];
+let lastSpawnTime = 0;
+let trailOffset = 0;
+if (container) {
+  const cursorPaw = document.createElement('div');
+  cursorPaw.className = 'paw';
+  cursorPaw.innerHTML = PAW_SVG_BLACK;
+  cursorPaw.style.opacity = '1';
+  container.appendChild(cursorPaw);
+  function createPaw(x, y, offset) {
+    const paw = document.createElement('div');
+    paw.className = 'paw';
+    const waveShift = Math.sin(offset * 0.05) * 15;
+    paw.style.left = (x + waveShift) + 'px';
+    paw.style.top = y + 'px';
+    paw.style.transform = 'translate(-50%, -50%)';
+    paw.innerHTML = PAW_SVG_GRAY;
+    paw.style.opacity = '0.7';
+    container.appendChild(paw);
+    return { element: paw, age: 0, maxAge: 1200 };
+  }
+  document.addEventListener('mousemove', (e) => {
+    cursorPaw.style.left = e.clientX + 'px';
+    cursorPaw.style.top = e.clientY + 'px';
+    cursorPaw.style.transform = 'translate(-50%, -50%)';
+    const now = Date.now();
+    if (now - lastSpawnTime > 150 && pawList.length < 20) {
+      pawList.push(createPaw(e.clientX, e.clientY, trailOffset));
+      trailOffset++;
+      lastSpawnTime = now;
+    }
+  });
+  function animate() {
+    for (let i = pawList.length - 1; i >= 0; i--) {
+      const p = pawList[i];
+      p.age += 16;
+      const life = Math.max(0, 1 - (p.age / p.maxAge));
+      p.element.style.opacity = life * 0.7;
+      if (life <= 0) {
+        p.element.remove();
+        pawList.splice(i, 1);
+      }
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+</script>
+</body>
+</html>
