@@ -72,7 +72,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
         <div class="panel-title">Upload more photos or payment proof</div>
         <p class="panel-sub">Enter the phone number used for your order.</p>
 
-        <div class="field"><label>Phone number</label><input type="tel" id="m-phone" placeholder="Phone number used for the order" autocomplete="tel"></div>
+        <div class="field"><label>Phone number</label><input type="tel" id="m-phone" placeholder="e.g. 91234567" autocomplete="tel"></div>
         <div id="msg-manage-login" class="status-msg"></div>
         <div class="btn-row"><button class="btn-submit" id="m-login-btn" onclick="verifyManageOrder()">Find order</button></div>
 
@@ -119,10 +119,10 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 </dialog>
 
 <footer>
-  <span class="footer-brand">just for you and meow</span>
-<div class="footer-links">
-  <span id="yr"></span>
-</div>
+  <div class="footer-meta">
+    <span class="footer-brand">just for you and meow</span>
+    <span id="yr"></span>
+  </div>
 </footer>
 
 <script>
@@ -194,6 +194,22 @@ async function postApi_(payload) {
   };
 }
 
+
+function normalizePhoneForLookup_(value) {
+  return String(value || '').replace(/[^0-9]/g, '');
+}
+
+function phoneLookupPayload_(phone) {
+  const phoneDigits = normalizePhoneForLookup_(phone);
+  return {
+    type: 'manage_lookup',
+    phone: phone,
+    phoneRaw: phone,
+    phoneDigits: phoneDigits,
+    phoneLast8: phoneDigits.slice(-8)
+  };
+}
+
 async function verifyManageOrder() {
   const phone = document.getElementById('m-phone').value.trim();
 
@@ -209,10 +225,7 @@ async function verifyManageOrder() {
   hideMsg('msg-manage-upload');
 
   try {
-    const result = await postApi_({
-      type: 'manage_lookup',
-      phone: phone
-    });
+    const result = await postApi_(phoneLookupPayload_(phone));
 
     const foundOrder = result.order || {};
     const foundOrderNumber = result.orderNumber || foundOrder.orderNumber || foundOrder.orderNo || foundOrder.no || '';
@@ -250,12 +263,11 @@ function formatManageItems_(order) {
   if (Array.isArray(order.items) && order.items.length) {
     return order.items.map(item => {
       const name = item.name || item.productName || item.productId || 'Product';
-      const dims = item.dims ? ' ' + item.dims : '';
       const qty = Number(item.quantity || 1);
-      return name + dims + ' × ' + qty;
+      return name + ' × ' + qty;
     }).join(' + ');
   }
-  return [order.productName, order.dims].filter(Boolean).join(' ') || '—';
+  return order.productName || order.size || '—';
 }
 
 function renderManageSummary_(order) {
