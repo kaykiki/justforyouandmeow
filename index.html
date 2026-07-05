@@ -439,7 +439,7 @@ function renderProducts_() {
     const name = escapeHtml_(p.name);
     const dims = escapeHtml_(p.dims);
     const capacity = escapeHtml_(p.capacity);
-    const price = Number(p.price).toLocaleString();
+    const price = formatMoney_(p.price);
     orderRows.insertAdjacentHTML('beforeend', `
       <div class="size-row" id="wr-${p.safeId}" onclick="pick('${p.safeId}')">
         <span class="size-letter">${name}</span>
@@ -453,6 +453,29 @@ function renderProducts_() {
 
 function escapeHtml_(value) {
   return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function moneyValue_(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') continue;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+    const cleaned = String(value)
+      .replace(/,/g, '')
+      .replace(/HK\$|hkd|HKD/gi, '')
+      .replace(/[^0-9.-]/g, '')
+      .trim();
+
+    if (!cleaned) continue;
+    const number = Number(cleaned);
+    if (Number.isFinite(number)) return number;
+  }
+  return null;
+}
+
+function formatMoney_(...values) {
+  const amount = moneyValue_(...values);
+  return amount === null ? '—' : amount.toLocaleString('en-HK');
 }
 
 function pick(safeId) {
@@ -486,7 +509,7 @@ function updateRecaps() {
   const currentPrice = appliedPromo ? appliedPromo.price : sel.price;
   ['2','3'].forEach(n => {
     document.getElementById('rb' + n + '-size').textContent = sel.name || sel.id;
-    document.getElementById('rb' + n + '-price').textContent = sel.dims + ' — ' + (selectedOutline || '') + ' outline — HK$' + currentPrice;
+    document.getElementById('rb' + n + '-price').textContent = sel.dims + ' — ' + (selectedOutline || '') + ' outline — HK$' + formatMoney_(currentPrice);
   });
 }
 
@@ -519,15 +542,15 @@ async function applyPromo() {
     if (!result.success || !promo.valid) throw new Error(result.error || 'INVALID_PROMO_CODE');
 
     appliedPromo = {
-      code: promo.code,
-      originalPrice: promo.originalPrice,
-      discount: promo.discount,
-      price: promo.finalPrice
+      code: promo.code || promoCode,
+      originalPrice: moneyValue_(promo.originalPrice, sel.price),
+      discount: moneyValue_(promo.discount, 0),
+      price: moneyValue_(promo.finalPrice, promo.price, promo.total, promo.amount, sel.price)
     };
 
-    input.value = promo.code;
+    input.value = appliedPromo.code;
     resultEl.className = 'promo-result ok';
-    resultEl.textContent = promo.code + ' applied: HK$' + promo.originalPrice + ' → HK$' + promo.finalPrice;
+    resultEl.textContent = appliedPromo.code + ' applied: HK$' + formatMoney_(appliedPromo.originalPrice) + ' → HK$' + formatMoney_(appliedPromo.price);
     updateRecaps();
   } catch (error) {
     appliedPromo = null;
@@ -799,6 +822,7 @@ async function doSubmit() {
     }
 
     const firstPhotoData = await fileToBase64(petFiles[0]);
+    const promoBeforeSubmit = appliedPromo ? { ...appliedPromo } : null;
 
     const result = await postApi_({
       type: 'order',
@@ -832,20 +856,35 @@ async function doSubmit() {
     sessionStorage.setItem('meow_order_token', orderToken);
 
     const product = result.product || sel;
+    const finalPrice = moneyValue_(
+      result.price,
+      result.finalPrice,
+      result.total,
+      result.totalPrice,
+      result.amount,
+      result.payAmount,
+      promoBeforeSubmit && promoBeforeSubmit.price,
+      product && product.price,
+      sel && sel.price
+    );
+    const originalPrice = moneyValue_(result.originalPrice, promoBeforeSubmit && promoBeforeSubmit.originalPrice, product && product.price, sel && sel.price);
+    const discount = moneyValue_(result.discount, promoBeforeSubmit && promoBeforeSubmit.discount, 0);
+
     sel = {
       ...sel,
       id: product.id || sel.id,
-      safeId: product.id || sel.safeId,
+      safeId: String(product.id || sel.safeId || '').trim().toLowerCase(),
       name: product.name || sel.name,
       dims: product.dims || sel.dims,
-      price: Number(result.price || product.price || sel.price)
+      price: finalPrice === null ? moneyValue_(product.price, sel.price) : finalPrice
     };
 
-    appliedPromo = result.promoCode ? {
-      code: result.promoCode,
-      originalPrice: result.originalPrice,
-      discount: result.discount,
-      price: result.price
+    const promoCodeUsed = result.promoCode || (promoBeforeSubmit && promoBeforeSubmit.code) || '';
+    appliedPromo = promoCodeUsed ? {
+      code: promoCodeUsed,
+      originalPrice: originalPrice,
+      discount: discount,
+      price: finalPrice === null ? sel.price : finalPrice
     } : null;
 
     /*
@@ -872,13 +911,13 @@ async function doSubmit() {
       { label: 'Outline', value: outlineText }
     ];
 
-    if (result.promoCode) {
-      rows.push({ label: 'Original price', value: 'HK$' + result.originalPrice });
-      rows.push({ label: 'Promo code', value: result.promoCode });
-      rows.push({ label: 'Discount', value: '-HK$' + result.discount });
+    if (appliedPromo && appliedPromo.code) {
+      rows.push({ label: 'Original price', value: 'HK$' + formatMoney_(appliedPromo.originalPrice) });
+      rows.push({ label: 'Promo code', value: appliedPromo.code });
+      rows.push({ label: 'Discount', value: '-HK$' + formatMoney_(appliedPromo.discount) });
     }
 
-    rows.push({ label: 'Total', value: 'HK$' + result.price });
+    rows.push({ label: 'Total', value: 'HK$' + formatMoney_(finalPrice, sel.price) });
 
     rows.forEach(row => {
       const div = document.createElement('div');
@@ -893,7 +932,7 @@ async function doSubmit() {
       receipt.appendChild(div);
     });
 
-    document.getElementById('famt').textContent = 'HK$ ' + Number(result.price).toLocaleString();
+    document.getElementById('famt').textContent = 'HK$ ' + formatMoney_(finalPrice, sel.price);
     go(4);
 
   } catch (err) {
