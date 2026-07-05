@@ -1,5 +1,5 @@
 const MAX_BODY_BYTES = 3_600_000;
-const ALLOWED_TYPES = new Set(['products', 'terms', 'promo', 'order', 'pet_photo', 'payment']);
+const ALLOWED_TYPES = new Set(['products', 'terms', 'promo', 'order', 'manage_lookup', 'pet_photo', 'payment']);
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
