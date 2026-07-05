@@ -136,9 +136,9 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 <nav>
   <a href="index.html" class="nav-brand">just for you and meow</a>
   <div class="nav-right">
+    <a href="#order" class="active">Order</a>
     <a href="manage-order.html">Manage order</a>
     <a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a>
-    <a href="#order" class="active">Order</a>
   </div>
 </nav>
 
@@ -306,7 +306,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
 <footer>
   <span class="footer-brand">just for you and meow</span>
-  <div class="footer-links"><a href="https://www.instagram.com/justforyouandmeow/" target="_blank">Instagram</a><span style="color:var(--mid);font-size:.72rem" id="yr"></span></div>
+  <div class="footer-links"><a href="#order">Order</a><a href="manage-order.html">Manage order</a><a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a><span style="color:var(--mid);font-size:.72rem" id="yr"></span></div>
 </footer>
 
 <script>
@@ -647,9 +647,8 @@ function formatItemsForReceipt_(items) {
   const source = Array.isArray(items) && items.length ? items : selectedItems;
   return source.map(item => {
     const name = item.name || item.productName || item.id || item.productId || 'Product';
-    const dims = item.dims ? ' ' + item.dims : '';
     const qty = Number(item.quantity || 1);
-    return name + dims + ' × ' + qty;
+    return name + ' × ' + qty;
   }).join(' + ');
 }
 
@@ -1190,11 +1189,10 @@ function validateImageFile_(file, label) {
 }
 
 async function verifyManageOrder() {
-  const orderNumber = document.getElementById('m-order').value.trim();
   const phone = document.getElementById('m-phone').value.trim();
 
-  if (!orderNumber || !phone) {
-    showMsg('msg-manage-login', 'err', 'Please enter your order number and phone number.');
+  if (!phone) {
+    showMsg('msg-manage-login', 'err', 'Please enter the phone number used for your order.');
     return;
   }
 
@@ -1207,18 +1205,20 @@ async function verifyManageOrder() {
   try {
     const result = await postApi_({
       type: 'manage_lookup',
-      orderNumber: orderNumber,
       phone: phone
     });
 
-    if (!result.success || !result.orderToken) {
+    const foundOrder = result.order || {};
+    const foundOrderNumber = result.orderNumber || foundOrder.orderNumber || foundOrder.orderNo || foundOrder.no || '';
+
+    if (!result.success || !result.orderToken || !foundOrderNumber) {
       throw new Error(result.error || 'ORDER_LOOKUP_FAILED');
     }
 
     manageSession = {
-      orderNumber: result.orderNumber,
+      orderNumber: foundOrderNumber,
       orderToken: result.orderToken,
-      order: result.order || {}
+      order: foundOrder
     };
 
     sessionStorage.setItem('meow_manage_order_number', manageSession.orderNumber);
@@ -1230,8 +1230,10 @@ async function verifyManageOrder() {
   } catch (error) {
     console.error('MANAGE_LOOKUP_ERROR:', error);
     manageSession = null;
+    sessionStorage.removeItem('meow_manage_order_number');
+    sessionStorage.removeItem('meow_manage_order_token');
     document.getElementById('manage-upload-panel').classList.remove('show');
-    showMsg('msg-manage-login', 'err', 'Order not found. Please check the order number and phone number.');
+    showMsg('msg-manage-login', 'err', 'Order not found. Please check the phone number.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Find order';

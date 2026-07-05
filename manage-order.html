@@ -58,9 +58,9 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 <nav>
   <a href="index.html" class="nav-brand">just for you and meow</a>
   <div class="nav-right">
+    <a href="index.html#order">Order</a>
     <a href="manage-order.html" class="active">Manage order</a>
     <a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a>
-    <a href="index.html#order">Order</a>
   </div>
 </nav>
 
@@ -70,9 +70,8 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
     <div class="manage-wrap">
       <div class="panel on">
         <div class="panel-title">Upload more photos or payment proof</div>
-        <p class="panel-sub">Enter your order number and phone number to manage your order.</p>
+        <p class="panel-sub">Enter the phone number used for your order.</p>
 
-        <div class="field"><label>Order number</label><input type="text" id="m-order" placeholder="MEOW-2026-0001" autocomplete="off"></div>
         <div class="field"><label>Phone number</label><input type="tel" id="m-phone" placeholder="Phone number used for the order" autocomplete="tel"></div>
         <div id="msg-manage-login" class="status-msg"></div>
         <div class="btn-row"><button class="btn-submit" id="m-login-btn" onclick="verifyManageOrder()">Find order</button></div>
@@ -105,7 +104,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
           </div>
 
           <div id="msg-manage-upload" class="status-msg"></div>
-          <p class="manage-note">For privacy, please do not share your order number publicly.</p>
+          <p class="manage-note">For privacy, please do not share your order details publicly.</p>
         </div>
       </div>
     </div>
@@ -121,7 +120,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
 <footer>
   <span class="footer-brand">just for you and meow</span>
-  <div class="footer-links"><a href="manage-order.html">Manage order</a><a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a><span style="color:var(--mid);font-size:.72rem" id="yr"></span></div>
+  <div class="footer-links"><a href="index.html#order">Order</a><a href="manage-order.html">Manage order</a><a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a><span style="color:var(--mid);font-size:.72rem" id="yr"></span></div>
 </footer>
 
 <script>
@@ -194,11 +193,10 @@ async function postApi_(payload) {
 }
 
 async function verifyManageOrder() {
-  const orderNumber = document.getElementById('m-order').value.trim();
   const phone = document.getElementById('m-phone').value.trim();
 
-  if (!orderNumber || !phone) {
-    showMsg('msg-manage-login', 'err', 'Please enter your order number and phone number.');
+  if (!phone) {
+    showMsg('msg-manage-login', 'err', 'Please enter the phone number used for your order.');
     return;
   }
 
@@ -211,18 +209,20 @@ async function verifyManageOrder() {
   try {
     const result = await postApi_({
       type: 'manage_lookup',
-      orderNumber: orderNumber,
       phone: phone
     });
 
-    if (!result.success || !result.orderToken) {
+    const foundOrder = result.order || {};
+    const foundOrderNumber = result.orderNumber || foundOrder.orderNumber || foundOrder.orderNo || foundOrder.no || '';
+
+    if (!result.success || !result.orderToken || !foundOrderNumber) {
       throw new Error(result.error || 'ORDER_LOOKUP_FAILED');
     }
 
     manageSession = {
-      orderNumber: result.orderNumber,
+      orderNumber: foundOrderNumber,
       orderToken: result.orderToken,
-      order: result.order || {}
+      order: foundOrder
     };
 
     sessionStorage.setItem('meow_manage_order_number', manageSession.orderNumber);
@@ -237,7 +237,7 @@ async function verifyManageOrder() {
     sessionStorage.removeItem('meow_manage_order_number');
     sessionStorage.removeItem('meow_manage_order_token');
     document.getElementById('manage-upload-panel').classList.remove('show');
-    showMsg('msg-manage-login', 'err', 'Order not found. Please check the order number and phone number.');
+    showMsg('msg-manage-login', 'err', 'Order not found. Please check the phone number.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Find order';
