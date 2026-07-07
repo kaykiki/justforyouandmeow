@@ -4,6 +4,9 @@
     <loc>https://justforyouandmeow.com/</loc>
   </url>
   <url>
-    <loc>https://justforyouandmeow.com/manage-order.html</loc>
+    <loc>https://justforyouandmeow.com/order</loc>
+  </url>
+  <url>
+    <loc>https://justforyouandmeow.com/manage-order</loc>
   </url>
 </urlset>
