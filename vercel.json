@@ -4,6 +4,20 @@
       "maxDuration": 60
     }
   },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/order",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/manage-order",
+      "destination": "/manage-order.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
