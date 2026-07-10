@@ -1,4 +1,5 @@
-const MAX_BODY_BYTES = 5_000_000;
+const MAX_BODY_BYTES = 8_000_000;
+
 const ALLOWED_TYPES = new Set([
   'products',
   'terms',
@@ -14,31 +15,52 @@ module.exports = async function handler(req, res) {
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ success: false, error: 'METHOD_NOT_ALLOWED' });
+
+    return res.status(405).json({
+      success: false,
+      error: 'METHOD_NOT_ALLOWED'
+    });
   }
 
   try {
     const contentLength = Number(req.headers['content-length'] || 0);
+
     if (contentLength > MAX_BODY_BYTES) {
-      return res.status(413).json({ success: false, error: 'REQUEST_TOO_LARGE' });
+      return res.status(413).json({
+        success: false,
+        error: 'REQUEST_TOO_LARGE'
+      });
     }
 
     const body = parseBody(req.body);
+
     if (!body || !ALLOWED_TYPES.has(body.type)) {
-      return res.status(400).json({ success: false, error: 'INVALID_REQUEST' });
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_REQUEST'
+      });
     }
 
     assertConfiguration(body.type);
 
-    const measuredSize = Buffer.byteLength(JSON.stringify(body), 'utf8');
+    const measuredSize = Buffer.byteLength(
+      JSON.stringify(body),
+      'utf8'
+    );
+
     if (measuredSize > MAX_BODY_BYTES) {
-      return res.status(413).json({ success: false, error: 'REQUEST_TOO_LARGE' });
+      return res.status(413).json({
+        success: false,
+        error: 'REQUEST_TOO_LARGE'
+      });
     }
 
-    // Only new order submission needs Turnstile.
-    // Products / terms / promo / manage order / uploads should not fail just because Turnstile env is missing.
+    // Only a new order submission requires Turnstile verification.
     if (body.type === 'order') {
-      const turnstileOK = await verifyTurnstile(body.turnstileToken);
+      const turnstileOK = await verifyTurnstile(
+        body.turnstileToken
+      );
+
       if (!turnstileOK) {
         return res.status(403).json({
           success: false,
@@ -47,6 +69,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Never forward client-provided secrets.
     delete body.turnstileToken;
     delete body.apiSecret;
 
@@ -55,88 +78,118 @@ module.exports = async function handler(req, res) {
       apiSecret: process.env.API_SHARED_SECRET
     };
 
-    const result = await callAppsScriptWithRetry(upstreamPayload);
+    // Do not automatically retry uploads.
+    // The first request may already have saved the photo even if its
+    // response was delayed.
+    const result = await callAppsScript(upstreamPayload);
 
     if (!result || result.success !== true) {
       return res.status(400).json({
         success: false,
-        error: result && result.error ? result.error : 'UPSTREAM_REJECTED'
+        error:
+          result && result.error
+            ? result.error
+            : 'UPSTREAM_REJECTED'
       });
     }
 
     return res.status(200).json(result);
   } catch (error) {
     console.error('Order API error:', error);
-    return res.status(500).json({
+
+    const isTimeout =
+      error &&
+      (
+        error.name === 'TimeoutError' ||
+        error.name === 'AbortError' ||
+        String(error.message || '')
+          .toLowerCase()
+          .includes('timeout')
+      );
+
+    return res.status(isTimeout ? 504 : 500).json({
       success: false,
-      error: 'SERVER_ERROR',
-      detail: process.env.NODE_ENV === 'development' ? String(error && error.message ? error.message : error) : undefined
+      error: isTimeout
+        ? 'UPSTREAM_TIMEOUT'
+        : 'SERVER_ERROR',
+      detail:
+        process.env.NODE_ENV === 'development'
+          ? String(
+              error && error.message
+                ? error.message
+                : error
+            )
+          : undefined
     });
   }
 };
 
 module.exports.config = {
   maxDuration: 60,
+
   api: {
     bodyParser: {
-      sizeLimit: '5mb'
+      sizeLimit: '8mb'
     }
   }
 };
 
-async function callAppsScriptWithRetry(payload) {
-  let lastError;
-
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      return await callAppsScript(payload);
-    } catch (error) {
-      lastError = error;
-      console.error(`Apps Script attempt ${attempt} failed:`, error.message);
-      if (attempt < 2) await delay(500);
-    }
-  }
-
-  throw lastError;
-}
-
 async function callAppsScript(payload) {
-  const response = await fetch(process.env.APPS_SCRIPT_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(25000)
-  });
+  const response = await fetch(
+    process.env.APPS_SCRIPT_URL,
+    {
+      method: 'POST',
+      redirect: 'follow',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify(payload),
+
+      // Allow Apps Script more time to save images to Drive.
+      signal: AbortSignal.timeout(55_000)
+    }
+  );
 
   const text = await response.text();
 
   if (!response.ok) {
-    throw new Error(`Apps Script returned HTTP ${response.status}`);
+    console.error(
+      'Apps Script HTTP error:',
+      response.status,
+      text.slice(0, 200)
+    );
+
+    throw new Error(
+      `Apps Script returned HTTP ${response.status}`
+    );
   }
 
   try {
     return JSON.parse(text);
   } catch (error) {
-    const contentType = response.headers.get('content-type') || 'unknown';
+    const contentType =
+      response.headers.get('content-type') ||
+      'unknown';
+
     console.error(
       'Invalid Apps Script response:',
       `content-type=${contentType}`,
       `length=${text.length}`,
-      `preview=${JSON.stringify(text.slice(0, 120))}`
+      `preview=${JSON.stringify(text.slice(0, 200))}`
     );
-    throw new Error('Apps Script returned invalid JSON');
+
+    throw new Error(
+      'Apps Script returned invalid JSON'
+    );
   }
 }
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function parseBody(body) {
-  if (body && typeof body === 'object' && !Buffer.isBuffer(body)) {
+  if (
+    body &&
+    typeof body === 'object' &&
+    !Buffer.isBuffer(body)
+  ) {
     return { ...body };
   }
 
@@ -145,19 +198,30 @@ function parseBody(body) {
   }
 
   if (Buffer.isBuffer(body)) {
-    return JSON.parse(body.toString('utf8'));
+    return JSON.parse(
+      body.toString('utf8')
+    );
   }
 
   return null;
 }
 
 async function verifyTurnstile(token) {
-  if (typeof token !== 'string' || token.length < 20 || token.length > 2048) {
+  if (
+    typeof token !== 'string' ||
+    token.length < 20 ||
+    token.length > 2048
+  ) {
     return false;
   }
 
   const form = new URLSearchParams();
-  form.set('secret', process.env.TURNSTILE_SECRET_KEY);
+
+  form.set(
+    'secret',
+    process.env.TURNSTILE_SECRET_KEY
+  );
+
   form.set('response', token);
 
   const response = await fetch(
@@ -165,25 +229,35 @@ async function verifyTurnstile(token) {
     {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type':
+          'application/x-www-form-urlencoded'
       },
       body: form.toString(),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(10_000)
     }
   );
 
-  if (!response.ok) return false;
+  if (!response.ok) {
+    return false;
+  }
 
   const result = await response.json();
   const allowedHostnames = getAllowedHostnames();
 
-  return result.success === true &&
+  return (
+    result.success === true &&
     allowedHostnames.includes(result.hostname) &&
-    (!result.action || result.action === 'order');
+    (
+      !result.action ||
+      result.action === 'order'
+    )
+  );
 }
 
 function getAllowedHostnames() {
-  return String(process.env.ALLOWED_HOSTNAME || '')
+  return String(
+    process.env.ALLOWED_HOSTNAME || ''
+  )
     .split(',')
     .map((host) => host.trim())
     .filter(Boolean);
@@ -196,12 +270,19 @@ function assertConfiguration(type) {
   ];
 
   if (type === 'order') {
-    required.push('TURNSTILE_SECRET_KEY', 'ALLOWED_HOSTNAME');
+    required.push(
+      'TURNSTILE_SECRET_KEY',
+      'ALLOWED_HOSTNAME'
+    );
   }
 
-  const missing = required.filter((name) => !process.env[name]);
+  const missing = required.filter(
+    (name) => !process.env[name]
+  );
 
   if (missing.length) {
-    throw new Error(`Missing environment variables: ${missing.join(', ')}`);
+    throw new Error(
+      `Missing environment variables: ${missing.join(', ')}`
+    );
   }
 }
