@@ -22,10 +22,28 @@ module.exports = async function handler(req, res) {
     });
   }
 
+  const requestStartedAt = Date.now();
+
   try {
-    const contentLength = Number(req.headers['content-length'] || 0);
+    const contentLength = Number(
+      req.headers['content-length'] || 0
+    );
+
+    console.log(
+      '[API] Request received',
+      JSON.stringify({
+        method: req.method,
+        contentLength: contentLength,
+        timestamp: new Date().toISOString()
+      })
+    );
 
     if (contentLength > MAX_BODY_BYTES) {
+      console.warn(
+        '[API] Request rejected: content-length too large',
+        contentLength
+      );
+
       return res.status(413).json({
         success: false,
         error: 'REQUEST_TOO_LARGE'
@@ -35,6 +53,11 @@ module.exports = async function handler(req, res) {
     const body = parseBody(req.body);
 
     if (!body || !ALLOWED_TYPES.has(body.type)) {
+      console.warn(
+        '[API] Invalid request type',
+        body && body.type
+      );
+
       return res.status(400).json({
         success: false,
         error: 'INVALID_REQUEST'
@@ -43,22 +66,50 @@ module.exports = async function handler(req, res) {
 
     assertConfiguration(body.type);
 
+    const serializedBody = JSON.stringify(body);
     const measuredSize = Buffer.byteLength(
-      JSON.stringify(body),
+      serializedBody,
       'utf8'
     );
 
+    console.log(
+      '[API] Parsed request',
+      JSON.stringify({
+        type: body.type,
+        measuredSizeBytes: measuredSize,
+        measuredSizeMB:
+          Math.round((measuredSize / 1024 / 1024) * 100) /
+          100
+      })
+    );
+
     if (measuredSize > MAX_BODY_BYTES) {
+      console.warn(
+        '[API] Request rejected: measured body too large',
+        measuredSize
+      );
+
       return res.status(413).json({
         success: false,
         error: 'REQUEST_TOO_LARGE'
       });
     }
 
-    // Only a new order submission requires Turnstile verification.
     if (body.type === 'order') {
+      const turnstileStartedAt = Date.now();
+
+      console.log('[Turnstile] Verification started');
+
       const turnstileOK = await verifyTurnstile(
         body.turnstileToken
+      );
+
+      console.log(
+        '[Turnstile] Verification completed',
+        JSON.stringify({
+          success: turnstileOK,
+          durationMs: Date.now() - turnstileStartedAt
+        })
       );
 
       if (!turnstileOK) {
@@ -69,7 +120,6 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Never forward client-provided secrets.
     delete body.turnstileToken;
     delete body.apiSecret;
 
@@ -78,12 +128,34 @@ module.exports = async function handler(req, res) {
       apiSecret: process.env.API_SHARED_SECRET
     };
 
-    // Do not automatically retry uploads.
-    // The first request may already have saved the photo even if its
-    // response was delayed.
-    const result = await callAppsScript(upstreamPayload);
+    console.log(
+      '[API] Sending request to Apps Script',
+      JSON.stringify({
+        type: body.type,
+        orderNumber:
+          body.orderNumber ||
+          body.orderNo ||
+          '',
+        payloadSizeBytes: Buffer.byteLength(
+          JSON.stringify(upstreamPayload),
+          'utf8'
+        )
+      })
+    );
+
+    const result = await callAppsScript(
+      upstreamPayload
+    );
 
     if (!result || result.success !== true) {
+      console.warn(
+        '[API] Apps Script rejected request',
+        JSON.stringify({
+          type: body.type,
+          result: result || null
+        })
+      );
+
       return res.status(400).json({
         success: false,
         error:
@@ -93,9 +165,34 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    console.log(
+      '[API] Request completed successfully',
+      JSON.stringify({
+        type: body.type,
+        totalDurationMs:
+          Date.now() - requestStartedAt
+      })
+    );
+
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Order API error:', error);
+    const totalDurationMs =
+      Date.now() - requestStartedAt;
+
+    console.error(
+      '[API] Request failed',
+      JSON.stringify({
+        name:
+          error && error.name
+            ? error.name
+            : 'UnknownError',
+        message:
+          error && error.message
+            ? error.message
+            : String(error),
+        totalDurationMs: totalDurationMs
+      })
+    );
 
     const isTimeout =
       error &&
@@ -104,7 +201,10 @@ module.exports = async function handler(req, res) {
         error.name === 'AbortError' ||
         String(error.message || '')
           .toLowerCase()
-          .includes('timeout')
+          .includes('timeout') ||
+        String(error.message || '')
+          .toLowerCase()
+          .includes('aborted')
       );
 
     return res.status(isTimeout ? 504 : 500).json({
@@ -135,28 +235,76 @@ module.exports.config = {
 };
 
 async function callAppsScript(payload) {
+  const startedAt = Date.now();
+  const serializedPayload =
+    JSON.stringify(payload);
+
+  const payloadSize = Buffer.byteLength(
+    serializedPayload,
+    'utf8'
+  );
+
+  console.log(
+    '[Apps Script] Request started',
+    JSON.stringify({
+      type: payload.type,
+      payloadSizeBytes: payloadSize,
+      payloadSizeMB:
+        Math.round(
+          (payloadSize / 1024 / 1024) * 100
+        ) / 100
+    })
+  );
+
   const response = await fetch(
     process.env.APPS_SCRIPT_URL,
     {
       method: 'POST',
       redirect: 'follow',
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
+        'Content-Type':
+          'text/plain;charset=utf-8'
       },
-      body: JSON.stringify(payload),
-
-      // Allow Apps Script more time to save images to Drive.
+      body: serializedPayload,
       signal: AbortSignal.timeout(55_000)
     }
   );
 
+  const responseReceivedAt = Date.now();
+
+  console.log(
+    '[Apps Script] Response headers received',
+    JSON.stringify({
+      type: payload.type,
+      status: response.status,
+      statusText: response.statusText,
+      durationMs:
+        responseReceivedAt - startedAt,
+      contentType:
+        response.headers.get('content-type') ||
+        'unknown'
+    })
+  );
+
   const text = await response.text();
+
+  console.log(
+    '[Apps Script] Response body received',
+    JSON.stringify({
+      type: payload.type,
+      totalDurationMs:
+        Date.now() - startedAt,
+      responseLength: text.length
+    })
+  );
 
   if (!response.ok) {
     console.error(
-      'Apps Script HTTP error:',
-      response.status,
-      text.slice(0, 200)
+      '[Apps Script] HTTP error',
+      JSON.stringify({
+        status: response.status,
+        preview: text.slice(0, 300)
+      })
     );
 
     throw new Error(
@@ -165,17 +313,33 @@ async function callAppsScript(payload) {
   }
 
   try {
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+
+    console.log(
+      '[Apps Script] JSON parsed successfully',
+      JSON.stringify({
+        type: payload.type,
+        success:
+          parsed &&
+          parsed.success === true,
+        totalDurationMs:
+          Date.now() - startedAt
+      })
+    );
+
+    return parsed;
   } catch (error) {
     const contentType =
       response.headers.get('content-type') ||
       'unknown';
 
     console.error(
-      'Invalid Apps Script response:',
-      `content-type=${contentType}`,
-      `length=${text.length}`,
-      `preview=${JSON.stringify(text.slice(0, 200))}`
+      '[Apps Script] Invalid JSON response',
+      JSON.stringify({
+        contentType: contentType,
+        responseLength: text.length,
+        preview: text.slice(0, 300)
+      })
     );
 
     throw new Error(
@@ -212,6 +376,10 @@ async function verifyTurnstile(token) {
     token.length < 20 ||
     token.length > 2048
   ) {
+    console.warn(
+      '[Turnstile] Invalid token format'
+    );
+
     return false;
   }
 
@@ -223,6 +391,8 @@ async function verifyTurnstile(token) {
   );
 
   form.set('response', token);
+
+  const startedAt = Date.now();
 
   const response = await fetch(
     'https://challenges.cloudflare.com/turnstile/v0/siteverify',
@@ -237,20 +407,49 @@ async function verifyTurnstile(token) {
     }
   );
 
+  console.log(
+    '[Turnstile] Cloudflare response received',
+    JSON.stringify({
+      status: response.status,
+      durationMs:
+        Date.now() - startedAt
+    })
+  );
+
   if (!response.ok) {
     return false;
   }
 
   const result = await response.json();
-  const allowedHostnames = getAllowedHostnames();
+  const allowedHostnames =
+    getAllowedHostnames();
+
+  const hostnameAllowed =
+    allowedHostnames.includes(
+      result.hostname
+    );
+
+  const actionAllowed =
+    !result.action ||
+    result.action === 'order';
+
+  console.log(
+    '[Turnstile] Verification result',
+    JSON.stringify({
+      success: result.success === true,
+      hostname: result.hostname || '',
+      hostnameAllowed: hostnameAllowed,
+      action: result.action || '',
+      actionAllowed: actionAllowed,
+      errorCodes:
+        result['error-codes'] || []
+    })
+  );
 
   return (
     result.success === true &&
-    allowedHostnames.includes(result.hostname) &&
-    (
-      !result.action ||
-      result.action === 'order'
-    )
+    hostnameAllowed &&
+    actionAllowed
   );
 }
 
@@ -259,7 +458,9 @@ function getAllowedHostnames() {
     process.env.ALLOWED_HOSTNAME || ''
   )
     .split(',')
-    .map((host) => host.trim())
+    .map(function(host) {
+      return host.trim();
+    })
     .filter(Boolean);
 }
 
@@ -277,7 +478,9 @@ function assertConfiguration(type) {
   }
 
   const missing = required.filter(
-    (name) => !process.env[name]
+    function(name) {
+      return !process.env[name];
+    }
   );
 
   if (missing.length) {
