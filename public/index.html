@@ -515,7 +515,7 @@ function renderProducts_() {
     const name = escapeHtml_(p.name);
     const dims = escapeHtml_(p.dims);
     const capacity = escapeHtml_(p.capacity);
-    const price = Number(p.price).toLocaleString();
+    const price = formatPrice_(p.price);
     orderRows.insertAdjacentHTML('beforeend', `
       <div class="size-row" id="wr-${p.safeId}" onclick="toggleProduct('${p.safeId}')">
         <span class="size-letter">${name}</span>
@@ -666,6 +666,17 @@ function firstFiniteNumber_(values) {
   return NaN;
 }
 
+function formatPrice_(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) return '0';
+
+  return number.toLocaleString('en-HK', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
 function getReceiptTotal_(result, digitalCopySelected, digitalCopyPrice) {
   // New Apps Script v8/v9/v10 returns productFinalPrice, so rebuild the grand total safely.
   const productFinalPrice = firstFiniteNumber_([result && result.productFinalPrice]);
@@ -718,7 +729,7 @@ function updateRecaps() {
   if (selectedDigitalCopy) parts.push('JPG digital copy +HK$150');
   ['2','3'].forEach(n => {
     document.getElementById('rb' + n + '-size').textContent = getProductsSummary_();
-    document.getElementById('rb' + n + '-price').textContent = parts.join(' — ') + ' — HK$' + getOrderTotal_().toLocaleString();
+    document.getElementById('rb' + n + '-price').textContent = parts.join(' — ') + ' — HK$' + formatPrice_(getOrderTotal_());
   });
 }
 
@@ -764,8 +775,8 @@ async function applyPromo() {
 
     input.value = promo.code;
     resultEl.className = 'promo-result ok';
-    const totalText = selectedDigitalCopy ? ' · Total with digital copy: HK$' + getOrderTotal_().toLocaleString() : '';
-    resultEl.textContent = promo.code + ' applied: HK$' + Number(promo.originalPrice).toLocaleString() + ' → HK$' + Number(promo.finalPrice).toLocaleString() + totalText;
+    const totalText = selectedDigitalCopy ? ' · Total with digital copy: HK$' + formatPrice_(getOrderTotal_()) : '';
+    resultEl.textContent = promo.code + ' applied: HK$' + formatPrice_(promo.originalPrice) + ' → HK$' + formatPrice_(promo.finalPrice) + totalText;
     updateRecaps();
   } catch (error) {
     appliedPromo = null;
@@ -1122,16 +1133,16 @@ async function doSubmit() {
     ];
 
     if (result.promoCode) {
-      rows.push({ label: 'Original price', value: 'HK$' + result.originalPrice });
+      rows.push({ label: 'Original price', value: 'HK$' + formatPrice_(result.originalPrice) });
       rows.push({ label: 'Promo code', value: result.promoCode });
-      rows.push({ label: 'Discount', value: '-HK$' + result.discount });
+      rows.push({ label: 'Discount', value: '-HK$' + formatPrice_(result.discount) });
     }
 
     if (digitalCopySelected && digitalCopyPrice) {
-      rows.push({ label: 'Digital copy add-on', value: '+HK$' + digitalCopyPrice });
+      rows.push({ label: 'Digital copy add-on', value: '+HK$' + formatPrice_(digitalCopyPrice) });
     }
 
-    rows.push({ label: 'Total', value: 'HK$' + Number(receiptTotal).toLocaleString() });
+    rows.push({ label: 'Total', value: 'HK$' + formatPrice_(receiptTotal) });
 
     rows.forEach(row => {
       const div = document.createElement('div');
@@ -1146,7 +1157,7 @@ async function doSubmit() {
       receipt.appendChild(div);
     });
 
-    document.getElementById('famt').textContent = 'HK$ ' + Number(receiptTotal).toLocaleString();
+    document.getElementById('famt').textContent = 'HK$ ' + formatPrice_(receiptTotal);
     go(4);
 
   } catch (err) {
@@ -1333,7 +1344,7 @@ function renderManageSummary_(order) {
     { label: 'Payment status', value: order.paymentStatus || '—' }
   ];
 
-  if (order.price) rows.push({ label: 'Total', value: 'HK$' + Number(order.price).toLocaleString() });
+  if (order.price) rows.push({ label: 'Total', value: 'HK$' + formatPrice_(order.price) });
 
   rows.forEach(row => {
     const div = document.createElement('div');
