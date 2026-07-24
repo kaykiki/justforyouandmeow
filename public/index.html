@@ -358,6 +358,7 @@ let selectedOutline = null;
 let selectedDigitalCopy = false;
 const DIGITAL_COPY_PRICE = 150;
 let orderReadyForPayment = false;
+let pendingOrderResult = null;
 let manageSession = null;
 let managePetFiles = [];
 let managePayFile = null;
@@ -868,7 +869,7 @@ function onPetFiles(input) {
   const el = document.getElementById('pet-file-chosen');
   const invalid = newFiles.filter(f => f.size > 15 * 1000 * 1000 || !['image/png', 'image/jpeg', 'image/jpg'].includes(f.type));
   if (invalid.length) {
-    el.textContent = 'Photos must be JPG or PNG and no larger than 3 MB each.';
+    el.textContent = 'Photos must be JPG or PNG and no larger than 15 MB each.';
     el.style.color = 'var(--err)';
     input.value = '';
     return;
@@ -1007,6 +1008,86 @@ async function openPaymentPreview() {
   }
 }
 
+function petPhotoUploadStateKey_(orderNumber) {
+  return 'meow_uploaded_pet_indexes_' + String(orderNumber || '').trim();
+}
+
+function getUploadedPetPhotoIndexes_(orderNumber) {
+  try {
+    const raw = sessionStorage.getItem(petPhotoUploadStateKey_(orderNumber));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.map(Number).filter(Number.isFinite) : []);
+  } catch (_) {
+    return new Set();
+  }
+}
+
+function saveUploadedPetPhotoIndexes_(orderNumber, uploadedIndexes) {
+  sessionStorage.setItem(
+    petPhotoUploadStateKey_(orderNumber),
+    JSON.stringify(Array.from(uploadedIndexes).sort((a, b) => a - b))
+  );
+}
+
+function clearUploadedPetPhotoIndexes_(orderNumber) {
+  sessionStorage.removeItem(petPhotoUploadStateKey_(orderNumber));
+}
+
+function wait_(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function uploadPetPhotoWithRetry_(payload, maxAttempts = 3) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await postApi_(payload);
+      if (!result.success) throw new Error(result.error || 'PHOTO_UPLOAD_FAILED');
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        await wait_(700 * attempt);
+      }
+    }
+  }
+
+  throw lastError || new Error('PHOTO_UPLOAD_FAILED');
+}
+
+async function uploadAdditionalPetPhotos_(files, orderNumber, orderToken, button) {
+  const uploadedIndexes = getUploadedPetPhotoIndexes_(orderNumber);
+
+  // Photo 1 is saved as part of the order request in Code.gs.
+  uploadedIndexes.add(1);
+  saveUploadedPetPhotoIndexes_(orderNumber, uploadedIndexes);
+
+  for (let zeroBasedIndex = 1; zeroBasedIndex < files.length; zeroBasedIndex++) {
+    const photoIndex = zeroBasedIndex + 1;
+    if (uploadedIndexes.has(photoIndex)) continue;
+
+    const file = files[zeroBasedIndex];
+    button.innerHTML = '<span class="spinner"></span>Uploading photo ' + photoIndex + ' of ' + files.length + '…';
+
+    const data = await fileToBase64(file);
+
+    await uploadPetPhotoWithRetry_({
+      type: 'pet_photo',
+      orderNumber: orderNumber,
+      orderToken: orderToken,
+      index: photoIndex,
+      photo: {
+        data: data,
+        name: file.name
+      }
+    });
+
+    uploadedIndexes.add(photoIndex);
+    saveUploadedPetPhotoIndexes_(orderNumber, uploadedIndexes);
+  }
+}
+
 async function doSubmit() {
   if (orderReadyForPayment) {
     go(4);
@@ -1040,7 +1121,16 @@ async function doSubmit() {
     return;
   }
 
-  if (IS_DEPLOYED_SITE && !turnstileToken) {
+  const savedPendingOrderToken = sessionStorage.getItem('meow_order_token');
+  const savedPendingRequestId = sessionStorage.getItem('meow_order_request_id');
+  const canResumePhotoUpload = Boolean(
+    orderNum &&
+    pendingOrderResult &&
+    savedPendingOrderToken &&
+    savedPendingRequestId
+  );
+
+  if (IS_DEPLOYED_SITE && !turnstileToken && !canResumePhotoUpload) {
     showMsg('msg-s3', 'err', 'Please complete the security check.');
     return;
   }
@@ -1074,6 +1164,8 @@ async function doSubmit() {
   btn.innerHTML = '<span class="spinner"></span>Submitting…';
   hideMsg('msg-s3');
 
+  let photosComplete = false;
+
   try {
     let requestId = sessionStorage.getItem('meow_order_request_id');
     if (!requestId) {
@@ -1081,40 +1173,55 @@ async function doSubmit() {
       sessionStorage.setItem('meow_order_request_id', requestId);
     }
 
-    const firstPhotoData = await fileToBase64(petFiles[0]);
+    let result;
+    let orderToken;
 
-    const result = await postApi_({
-      type: 'order',
-      requestId: requestId,
-      turnstileToken: turnstileToken,
-      termsAccepted: true,
-      termsVersion: CONFIG.terms.version,
-      promoCode: appliedPromo ? appliedPromo.code : '',
-      productId: sel ? sel.safeId : '',
-      items: getSelectedItemsForPayload_(),
-      outline: selectedOutline,
-      digitalCopy: selectedDigitalCopy,
-      firstPhoto: {
-        data: firstPhotoData
-      },
-      instagram: ig,
-      name: nm,
-      phone: ph,
-      address: ad,
-      size: getProductsSummary_(),
-      notes: document.getElementById('f-notes').value.trim()
-    });
+    if (canResumePhotoUpload) {
+      result = pendingOrderResult;
+      orderToken = savedPendingOrderToken;
+      btn.innerHTML = '<span class="spinner"></span>Resuming photo upload…';
+    } else {
+      const firstPhotoData = await fileToBase64(petFiles[0]);
 
-    if (!result.success) {
-      throw new Error(result.error || 'ORDER_FAILED');
+      result = await postApi_({
+        type: 'order',
+        requestId: requestId,
+        turnstileToken: turnstileToken,
+        termsAccepted: true,
+        termsVersion: CONFIG.terms.version,
+        promoCode: appliedPromo ? appliedPromo.code : '',
+        productId: sel ? sel.safeId : '',
+        items: getSelectedItemsForPayload_(),
+        outline: selectedOutline,
+        digitalCopy: selectedDigitalCopy,
+        firstPhoto: {
+          data: firstPhotoData
+        },
+        instagram: ig,
+        name: nm,
+        phone: ph,
+        address: ad,
+        size: getProductsSummary_(),
+        notes: document.getElementById('f-notes').value.trim()
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'ORDER_FAILED');
+      }
+
+      orderNum = result.orderNumber;
+      orderToken = result.orderToken;
+      pendingOrderResult = result;
+
+      sessionStorage.setItem('meow_order_number', orderNum);
+      sessionStorage.setItem('meow_order_token', orderToken);
     }
 
-    orderNum = result.orderNumber;
-    const orderToken = result.orderToken;
+    await uploadAdditionalPetPhotos_(petFiles, orderNum, orderToken, btn);
+    photosComplete = true;
 
     sessionStorage.removeItem('meow_order_request_id');
-    sessionStorage.setItem('meow_order_number', orderNum);
-    sessionStorage.setItem('meow_order_token', orderToken);
+    clearUploadedPetPhotoIndexes_(orderNum);
 
     const returnedItems = Array.isArray(result.items) && result.items.length ? result.items : selectedItems;
     selectedItems = returnedItems.map(item => ({
@@ -1133,12 +1240,6 @@ async function doSubmit() {
       discount: result.discount,
       price: Number(result.productFinalPrice || (Number(result.originalPrice || getProductsSubtotal_()) - Number(result.discount || 0)))
     } : null;
-
-    /*
-      DO NOT upload pet_photo again here.
-      The first pet photo is already uploaded together with the order in Code.gs.
-      This prevents the false "Order was created, but a photo failed to upload" error.
-    */
 
     orderReadyForPayment = true;
     document.getElementById('order-num-display').textContent = orderNum;
@@ -1192,24 +1293,36 @@ async function doSubmit() {
     });
 
     document.getElementById('famt').textContent = 'HK$ ' + formatPrice_(receiptTotal);
+    pendingOrderResult = null;
     go(4);
 
   } catch (err) {
     console.error('ORDER_SUBMIT_ERROR:', err);
 
-    showMsg(
-      'msg-s3',
-      'err',
-      orderNum
-        ? 'Order ' + orderNum + ' was created. Please continue to payment or contact us on Instagram with your order number.'
-        : 'Order was not submitted. Please retry the security check and try again.'
-    );
-
     if (!orderNum) {
+      showMsg(
+        'msg-s3',
+        'err',
+        'Order was not submitted. Please retry the security check and try again.'
+      );
       resetTurnstileWidget();
       btn.disabled = false;
       btn.textContent = 'Confirm order';
+    } else if (!photosComplete) {
+      showMsg(
+        'msg-s3',
+        'err',
+        'Order ' + orderNum + ' was created, but not all photos finished uploading. Click “Retry photo upload” — this will not create a duplicate order.'
+      );
+      orderReadyForPayment = false;
+      btn.disabled = false;
+      btn.textContent = 'Retry photo upload';
     } else {
+      showMsg(
+        'msg-s3',
+        'err',
+        'Order ' + orderNum + ' and all photos were saved. Please continue to payment.'
+      );
       orderReadyForPayment = true;
       btn.disabled = false;
       btn.textContent = 'Continue to payment';
@@ -1686,9 +1799,17 @@ function closeTerms() {
 }
 
 function doReset() {
+  for (let i = sessionStorage.length - 1; i >= 0; i--) {
+    const key = sessionStorage.key(i);
+    if (key && key.indexOf('meow_uploaded_pet_indexes_') === 0) {
+      sessionStorage.removeItem(key);
+    }
+  }
+
   sel = null;
   selectedItems = [];
   orderNum = null;
+  pendingOrderResult = null;
   petFiles = [];
   payFile = null;
   appliedPromo = null;
