@@ -52,6 +52,9 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 @media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;grid-template-areas:"letter details price radio" "letter capacity price radio";column-gap:1rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}}
 @media(max-width:480px){.process{grid-template-columns:1fr}}
 @media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
+
+.shipping-fee-panel{display:none;border:1px solid var(--black);padding:1.25rem;margin:0 0 2rem;background:var(--white)}.shipping-fee-panel.show{display:block}.shipping-fee-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.shipping-fee-eyebrow{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.25rem}.shipping-fee-title{font-size:.9rem;font-weight:500}.shipping-fee-amount{font-size:1.1rem;font-weight:500;white-space:nowrap}.shipping-fee-status-row{display:grid;grid-template-columns:9rem minmax(0,1fr);gap:1rem;padding:.9rem 0 .4rem;font-size:.78rem}.shipping-fee-status-label{color:var(--mid)}.shipping-fee-status{font-weight:500}.shipping-fee-copy{font-size:.76rem;color:var(--mid);line-height:1.8;margin:.55rem 0 1.1rem}.shipping-fee-proof-date{display:none;font-size:.72rem;color:var(--mid);margin-top:.55rem}.shipping-fee-proof-date.show{display:block}.shipping-fee-upload{padding-top:1rem;border-top:1px solid var(--light)}.shipping-fee-upload[hidden]{display:none}.shipping-fee-upload .field{margin-bottom:0}.shipping-fee-confirmed{font-size:.76rem;line-height:1.8;padding-top:1rem;border-top:1px solid var(--light);display:none}.shipping-fee-confirmed.show{display:block}@media(max-width:560px){.shipping-fee-top{flex-direction:column;gap:.5rem}.shipping-fee-status-row{grid-template-columns:1fr;gap:.1rem}.shipping-fee-amount{font-size:1rem}}
+
 </style>
 </head>
 <body>
@@ -80,6 +83,46 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
         <div class="manage-upload-panel" id="manage-upload-panel">
           <div class="manage-summary" id="manage-summary"></div>
+
+
+          <div class="shipping-fee-panel" id="shipping-fee-panel">
+            <div class="shipping-fee-top">
+              <div>
+                <div class="shipping-fee-eyebrow">International shipping</div>
+                <div class="shipping-fee-title">Additional shipping fee</div>
+              </div>
+              <div class="shipping-fee-amount" id="shipping-fee-amount">—</div>
+            </div>
+
+            <div class="shipping-fee-status-row">
+              <span class="shipping-fee-status-label">Payment status</span>
+              <span class="shipping-fee-status" id="shipping-fee-status">Awaiting payment</span>
+            </div>
+
+            <p class="shipping-fee-copy" id="shipping-fee-copy">
+              Please complete the additional shipping payment using the payment details provided by us, then upload a screenshot below.
+            </p>
+            <div class="shipping-fee-proof-date" id="shipping-fee-proof-date"></div>
+
+            <div class="shipping-fee-upload" id="shipping-fee-upload">
+              <div class="field">
+                <label>Shipping payment screenshot</label>
+                <div class="upfield">
+                  <input type="file" id="m-shipping-payment" accept="image/*" onchange="onManageShippingPayFile(this)">
+                  <span class="upfield-label">Select file</span>
+                  <span class="upfield-hint">Upload a screenshot after paying the additional shipping fee</span>
+                </div>
+                <div class="file-chosen" id="manage-shipping-pay-file-chosen"></div>
+                <div class="photo-list" id="manage-shipping-payment-photo-list"></div>
+                <div class="manage-actions">
+                  <button class="btn-submit" id="m-shipping-payment-btn" onclick="submitManageShippingPayment()">Upload shipping payment proof</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="shipping-fee-confirmed" id="shipping-fee-confirmed"></div>
+            <div id="msg-manage-shipping" class="status-msg"></div>
+          </div>
 
           <div class="tracking-panel" id="manage-tracking-panel">
             <div class="tracking-panel-title">Delivery tracking</div>
@@ -147,6 +190,7 @@ let manageSession = null;
 let manageFoundOrders = [];
 let managePetFiles = [];
 let managePayFile = null;
+let manageShippingPayFile = null;
 
 
 function fileToBase64(file, options = {}) {
@@ -310,7 +354,7 @@ async function verifyManageOrder() {
 
     if (orders.length === 1) {
       selectManageOrder_(orders[0]);
-      showMsg('msg-manage-login', 'ok', 'Order found. You can upload more photos or payment proof below.');
+      showMsg('msg-manage-login', 'ok', 'Order found. You can view shipping details, upload photos or payment proof below.');
       return;
     }
 
@@ -374,17 +418,26 @@ function resetManageOrderView_() {
 
   managePetFiles = [];
   managePayFile = null;
+  manageShippingPayFile = null;
 
   const petInput = document.getElementById('m-photos');
   const payInput = document.getElementById('m-payment');
+  const shippingPayInput = document.getElementById('m-shipping-payment');
   if (petInput) petInput.value = '';
   if (payInput) payInput.value = '';
+  if (shippingPayInput) shippingPayInput.value = '';
+
+  const shippingPanel = document.getElementById('shipping-fee-panel');
+  if (shippingPanel) shippingPanel.classList.remove('show');
+  hideMsg('msg-manage-shipping');
 
   const idsToClear = [
     'manage-pet-file-chosen',
     'manage-pay-file-chosen',
+    'manage-shipping-pay-file-chosen',
     'manage-pet-photo-list',
-    'manage-payment-photo-list'
+    'manage-payment-photo-list',
+    'manage-shipping-payment-photo-list'
   ];
 
   idsToClear.forEach(function(id) {
@@ -423,6 +476,11 @@ function renderManageOrderChoices_(orders) {
       parts.push('Shipping: ' + tracking.shippingStatus);
     }
 
+    const shippingFee = normalizeShippingFeeInfo_(order);
+    if (shippingFee.amount > 0) {
+      parts.push('Shipping fee: ' + formatShippingFeeAmount_(shippingFee.amount, shippingFee.currency));
+    }
+
     if (order.price) {
       parts.push('Total: HK$' + Number(order.price).toLocaleString());
     }
@@ -438,7 +496,7 @@ function renderManageOrderChoices_(orders) {
     button.textContent = 'Manage this order';
     button.onclick = function() {
       selectManageOrder_(order);
-      showMsg('msg-manage-login', 'ok', 'Selected ' + order.orderNumber + '. You can upload more photos or payment proof below.');
+      showMsg('msg-manage-login', 'ok', 'Selected ' + order.orderNumber + '. You can view shipping details, upload photos or payment proof below.');
     };
 
     card.appendChild(info);
@@ -460,6 +518,7 @@ function selectManageOrder_(order) {
   sessionStorage.setItem('meow_manage_order_token', manageSession.orderToken);
 
   renderManageSummary_(manageSession.order);
+  renderManageShippingFee_(manageSession.order);
   renderManageTracking_(manageSession.order);
   document.getElementById('manage-upload-panel').classList.add('show');
 
@@ -508,6 +567,135 @@ function renderManageSummary_(order) {
     div.appendChild(value);
     summary.appendChild(div);
   });
+}
+
+
+function parseShippingFeeAmount_(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value || '').replace(/,/g, '').replace(/[^0-9.-]/g, '');
+  const amount = Number(cleaned);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function normalizeShippingFeeInfo_(order) {
+  const source = order && order.tracking && typeof order.tracking === 'object'
+    ? order.tracking
+    : {};
+
+  return {
+    amount: parseShippingFeeAmount_(
+      source.shippingFee !== undefined ? source.shippingFee : order.shippingFee
+    ),
+    currency: String(
+      source.shippingCurrency ||
+      source.currency ||
+      order.shippingCurrency ||
+      'HKD'
+    ).trim().toUpperCase() || 'HKD',
+    status: String(
+      source.shippingPaymentStatus ||
+      source.paymentStatus ||
+      order.shippingPaymentStatus ||
+      ''
+    ).trim(),
+    proofSubmittedAt: String(
+      source.shippingProofSubmittedAt ||
+      source.proofSubmittedAt ||
+      order.shippingProofSubmittedAt ||
+      ''
+    ).trim()
+  };
+}
+
+function formatShippingFeeAmount_(amount, currency) {
+  const value = Number(amount || 0);
+  const formatted = value.toLocaleString('en-HK', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2
+  });
+
+  const code = String(currency || 'HKD').trim().toUpperCase();
+  const symbols = {
+    HKD: 'HK$',
+    USD: 'US$',
+    GBP: '£',
+    EUR: '€',
+    JPY: '¥',
+    AUD: 'A$',
+    CAD: 'C$',
+    SGD: 'S$',
+    TWD: 'NT$',
+    CNY: 'CN¥',
+    RMB: 'CN¥'
+  };
+
+  return (symbols[code] || (code + ' ')) + formatted;
+}
+
+function isShippingFeePaid_(status) {
+  const value = String(status || '').trim().toLowerCase();
+  return value === 'paid' ||
+    value === 'confirmed' ||
+    value === 'verified' ||
+    value === 'completed' ||
+    value === 'payment confirmed' ||
+    value.indexOf('paid -') === 0 ||
+    value.indexOf('confirmed -') === 0;
+}
+
+function isShippingFeeProofSubmitted_(status) {
+  const value = String(status || '').trim().toLowerCase();
+  return value.indexOf('proof submitted') !== -1 ||
+    value.indexOf('submitted') !== -1 ||
+    value.indexOf('awaiting verification') !== -1;
+}
+
+function renderManageShippingFee_(order) {
+  const panel = document.getElementById('shipping-fee-panel');
+  const upload = document.getElementById('shipping-fee-upload');
+  const confirmed = document.getElementById('shipping-fee-confirmed');
+  const proofDate = document.getElementById('shipping-fee-proof-date');
+  const info = normalizeShippingFeeInfo_(order || {});
+
+  if (!panel || info.amount <= 0) {
+    if (panel) panel.classList.remove('show');
+    return;
+  }
+
+  panel.classList.add('show');
+  document.getElementById('shipping-fee-amount').textContent =
+    formatShippingFeeAmount_(info.amount, info.currency);
+
+  const status = info.status || 'Awaiting payment';
+  document.getElementById('shipping-fee-status').textContent = status;
+
+  const paid = isShippingFeePaid_(status);
+  const submitted = isShippingFeeProofSubmitted_(status);
+
+  if (info.proofSubmittedAt) {
+    proofDate.textContent = 'Proof submitted: ' + info.proofSubmittedAt;
+    proofDate.classList.add('show');
+  } else {
+    proofDate.textContent = '';
+    proofDate.classList.remove('show');
+  }
+
+  upload.hidden = paid || submitted;
+  confirmed.classList.toggle('show', paid || submitted);
+
+  if (paid) {
+    document.getElementById('shipping-fee-copy').textContent =
+      'Your additional shipping payment has been confirmed.';
+    confirmed.textContent = 'Payment confirmed. Thank you — no further action is required.';
+  } else if (submitted) {
+    document.getElementById('shipping-fee-copy').textContent =
+      'Your shipping payment screenshot has been received and is awaiting verification.';
+    confirmed.textContent = 'We will verify the screenshot before arranging international delivery.';
+  } else {
+    document.getElementById('shipping-fee-copy').textContent =
+      'Please complete the additional shipping payment using the payment details provided by us, then upload a screenshot below.';
+    confirmed.textContent = '';
+  }
 }
 
 function normalizeTrackingInfo_(order) {
@@ -745,6 +933,68 @@ async function renderManagePayFile_() {
   list.appendChild(item);
 }
 
+
+function onManageShippingPayFile(input) {
+  manageShippingPayFile = input.files[0] || null;
+  const chosen = document.getElementById('manage-shipping-pay-file-chosen');
+  const list = document.getElementById('manage-shipping-payment-photo-list');
+  list.innerHTML = '';
+
+  if (!manageShippingPayFile) {
+    chosen.textContent = '';
+    return;
+  }
+
+  try {
+    validateImageFile_(manageShippingPayFile, 'Shipping payment screenshot');
+  } catch (error) {
+    chosen.textContent = error.message;
+    chosen.style.color = 'var(--err)';
+    manageShippingPayFile = null;
+    input.value = '';
+    return;
+  }
+
+  chosen.textContent = manageShippingPayFile.name;
+  chosen.style.color = 'var(--black)';
+  renderManageShippingPayFile_();
+}
+
+async function renderManageShippingPayFile_() {
+  const list = document.getElementById('manage-shipping-payment-photo-list');
+  list.innerHTML = '';
+  if (!manageShippingPayFile) return;
+
+  const item = document.createElement('div');
+  item.className = 'photo-item';
+
+  const img = document.createElement('img');
+  img.className = 'photo-thumb';
+  img.alt = manageShippingPayFile.name;
+  img.src = await fileToDataUrl_(manageShippingPayFile);
+  img.onclick = () => openManagePhotoPreview_(manageShippingPayFile);
+
+  const name = document.createElement('div');
+  name.className = 'photo-name';
+  name.textContent = manageShippingPayFile.name;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'photo-remove';
+  remove.textContent = '×';
+  remove.onclick = () => {
+    manageShippingPayFile = null;
+    document.getElementById('m-shipping-payment').value = '';
+    document.getElementById('manage-shipping-pay-file-chosen').textContent = '';
+    list.innerHTML = '';
+  };
+
+  item.appendChild(img);
+  item.appendChild(name);
+  item.appendChild(remove);
+  list.appendChild(item);
+}
+
 function getManageSession_() {
   if (manageSession && manageSession.orderNumber && manageSession.orderToken) return manageSession;
 
@@ -847,6 +1097,79 @@ async function submitManagePayment() {
     btn.textContent = 'Upload payment proof';
   }
 }
+
+async function submitManageShippingPayment() {
+  const session = getManageSession_();
+  if (!session) {
+    showMsg('msg-manage-shipping', 'err', 'Please find your order first.');
+    return;
+  }
+
+  const feeInfo = normalizeShippingFeeInfo_(session.order || {});
+  if (feeInfo.amount <= 0) {
+    showMsg('msg-manage-shipping', 'err', 'No additional shipping fee is required for this order.');
+    return;
+  }
+
+  if (!manageShippingPayFile) {
+    showMsg('msg-manage-shipping', 'err', 'Please select your shipping payment screenshot first.');
+    return;
+  }
+
+  const btn = document.getElementById('m-shipping-payment-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
+  hideMsg('msg-manage-shipping');
+
+  try {
+    validateImageFile_(manageShippingPayFile, 'Shipping payment screenshot');
+    const data = await fileToBase64(manageShippingPayFile, {
+      maxDimension: 2200,
+      quality: 0.9
+    });
+
+    const result = await postApi_({
+      type: 'payment',
+      paymentPurpose: 'shipping_fee',
+      orderNumber: session.orderNumber,
+      orderToken: session.orderToken,
+      screenshot: {
+        data: data,
+        name: manageShippingPayFile.name || 'shipping-payment-proof'
+      }
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'SHIPPING_PAYMENT_UPLOAD_FAILED');
+    }
+
+    manageShippingPayFile = null;
+    document.getElementById('m-shipping-payment').value = '';
+    document.getElementById('manage-shipping-pay-file-chosen').textContent = '';
+    document.getElementById('manage-shipping-payment-photo-list').innerHTML = '';
+
+    const newStatus = result.shippingPaymentStatus || 'Proof submitted - verify manually';
+    const submittedAt = result.shippingProofSubmittedAt || '';
+
+    if (!session.order.tracking || typeof session.order.tracking !== 'object') {
+      session.order.tracking = {};
+    }
+    session.order.tracking.shippingPaymentStatus = newStatus;
+    session.order.tracking.shippingProofSubmittedAt = submittedAt;
+    session.order.shippingPaymentStatus = newStatus;
+    session.order.shippingProofSubmittedAt = submittedAt;
+
+    renderManageShippingFee_(session.order);
+    showMsg('msg-manage-shipping', 'ok', 'Shipping payment proof uploaded successfully.');
+  } catch (error) {
+    console.error('MANAGE_SHIPPING_PAYMENT_UPLOAD_ERROR:', error);
+    showMsg('msg-manage-shipping', 'err', 'Shipping payment proof upload failed. Please try again or DM us on Instagram.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload shipping payment proof';
+  }
+}
+
 </script>
 <div class="paw-cursor-container" id="paw-cursor-container"></div>
 <script>
