@@ -1,3 +1,294 @@
+
+9d56303f-c39a-45e4-9eeb-81457ffe33d7.png
+
+justforyouandmeow-main(3).zip
+Zip Archive
+我想係manage order page 加多樣野: 可能有d係international customer, 佢地需要俾佢extra shipping fee的時候呢到想加多個位係話返俾客人知道幾多錢shipping 同埋佢需要upload screenshot after make the payment
+
+Worked for 10m 49s
+已經加好 International shipping fee 功能，位置放喺訂單資料同 Delivery Tracking 之間。
+
+完整檔案
+下載完整版本：Website＋Apps Script＋設定說明
+
+另外分開提供：
+
+下載 Website Vercel ZIP
+
+下載完整 Google Apps Script
+
+manage-order-preview.png
+
+manage-order-preview-mobile.png
+
+功能流程
+Tracking 工作表會新增：
+
+欄位	用途
+K — Shipping Fee	運費金額，例如 180
+L — Shipping Currency	例如 HKD、USD、GBP、JPY
+M — Shipping Payment Status	運費付款狀態
+N — Shipping Proof Submitted	客人上傳付款截圖的時間
+使用方法：
+
+International order：在 Tracking 的 K 欄填運費，L 欄填貨幣。
+
+客人進入 Manage Order 後，會見到運費金額及獨立的 screenshot upload。
+
+上傳後：
+
+截圖會儲存在該訂單的 Google Drive folder。
+
+Payments 工作表會新增一行 shipping_fee。
+
+M 欄會自動變成 Proof submitted - verify manually。
+
+N 欄會記錄上傳時間。
+
+你核實付款後，將 M 欄改成 Paid，客人頁面便會顯示付款已確認並隱藏上傳位置。
+
+本地訂單只要 K 欄留空或填 0，整個 International Shipping 區域都不會顯示。
+
+部署時要同時更新 Website 和 Apps Script，然後在 Apps Script 執行一次：
+
+setupTrackingSheet()
+前端 JavaScript、Apps Script 語法以及 Desktop／Mobile 顯示已檢查；實際 Google Drive 上傳需要部署新版 Apps Script Web App 後才會正式生效。
+
+
+manage-order-preview.png
+Image
+
+
+manage-order-preview-mobile.png
+Image
+
+
+我需要update邊個file 
+
+你只需要 update 兩個位置：
+
+1. Website / Vercel
+只需替換：
+
+public/manage-order.html
+其他檔案例如 index.html、api/order.js、vercel.json 都無改動。
+
+新版網站檔案：
+
+下載新版 Website ZIP
+
+2. Google Apps Script
+將你目前 Apps Script 入面原本的完整程式碼，換成：
+
+下載 Code-international-shipping-full.gs
+
+Apps Script 入面個檔案名可以仍然叫：
+
+Code.gs
+.gs 檔案名稱不重要，重點係用新版完整 code 取代舊 code。
+
+更新後要：
+
+在 Apps Script 執行一次：
+
+setupTrackingSheet()
+重新部署 Apps Script Web App：
+Deploy → Manage deployments → Edit → New version → Deploy
+
+再重新部署 Vercel。
+
+即係總結：
+
+Vercel：public/manage-order.html
+Apps Script：Code.gs 內的完整程式碼
+
+
+code (2).gs
+File
+呢個係我的code.gs
+
+Worked for 1m 28s
+我已經逐行檢查你上載嘅 code (2).gs。呢個唔係 Manage Order 網頁使用嘅後端 Code.gs，所以唔好用新版本取代佢。
+
+呢份 code 係另一個內部 Order Update Web App，主要功能只有：
+
+listOrders()
+
+lookupOrder()
+
+updateCustomerByOrder()
+
+顯示 Spreadsheet D–K 欄資料
+
+doGet() 開啟名為 WebApp 嘅 HTML
+
+最重要係，呢份 code 完全冇：
+
+function doPost(e)
+亦冇：
+
+manage_lookup
+pet_photo
+payment
+products
+promo
+terms
+order
+所以佢唔可能係你網站 /api/order 正在連接嘅 Apps Script。
+
+你網站實際流程係：
+
+manage-order.html
+↓
+/api/order
+↓
+Vercel 環境變數 APPS_SCRIPT_URL
+↓
+另一個 Apps Script Web App
+你而家要搵嘅檔案
+去真正處理網站訂單嘅 Apps Script project，搜尋：
+
+function doPost(e)
+或者搜尋：
+
+manage_lookup
+正確嗰份 Code.gs 應該會包含：
+
+case 'manage_lookup'
+case 'pet_photo'
+case 'payment'
+亦應該有 Tracking、訂單、付款證明及 Google Drive 上載相關功能。
+
+你亦可以去：
+
+Vercel Dashboard
+→ justforyouandmeow project
+→ Settings
+→ Environment Variables
+→ APPS_SCRIPT_URL
+睇吓網站目前連緊邊個 Apps Script deployment。
+
+結論：
+
+你今次上載嘅 code (2).gs：唔需要修改
+真正要修改：包含 doPost(e) 及 manage_lookup 嘅另一份 Code.gs
+之前叫你直接更換呢份 Code.gs 並不準確；幸好你先上載俾我核實。請上載包含 doPost(e) 嘅完整 Code.gs，我會將 international shipping 功能準確合併入你現有版本，而唔會刪走原本 Tracking、Finance、付款及照片功能。
+
+
+
+code (2)(1).gs
+File
+呢份?
+
+Worked for 56s
+係，呢份 code (2)(1).gs 先係正確嘅網站後端 Code.gs。
+
+我已確認佢包含：
+
+function doPost(e)
+以及：
+
+manage_lookup
+pet_photo
+payment
+products
+promo
+terms
+order
+亦有完整嘅：
+
+Tracking 工作表功能
+
+Finance 同步
+
+訂單查詢
+
+客人相片上載
+
+付款證明上載
+
+之前嗰份只有約 5KB 嘅 code (2).gs 就唔係呢個網站後端。
+
+你可以將呢份 Code.gs 完整替換成以下已合併 International Shipping 功能嘅版本：
+
+下載正確完整新版 Code.gs
+
+呢個新版係直接以你今次上載嘅 code (2)(1).gs 為基礎修改，原有功能有保留，只新增：
+
+K = Shipping Fee
+L = Shipping Currency
+M = Shipping Payment Status
+N = Shipping Proof Submitted
+更新後：
+
+貼上完整新版程式碼。
+
+儲存。
+
+執行一次：
+
+setupTrackingSheet()
+選擇：
+
+Deploy
+→ Manage deployments
+→ Edit
+→ New version
+→ Deploy
+所以今次要更新嘅，正正就係你啱啱上載呢份所在嘅 Apps Script project。
+
+
+要加返個FPS code係Additional shipping fee到
+
+Worked for 3m 54s
+已經加返 FPS付款資料 去 Additional shipping fee 區域：
+
+FPS QR Code
+
+FPS ID／識別代碼：102056686
+
+支付至：Glory On International Limited
+
+自動顯示該訂單嘅 Additional shipping fee 金額
+
+FPS付款步驟
+
+付款後上載 screenshot
+
+當付款狀態變成 Proof submitted 或 Paid，FPS資料同上載位置會自動隱藏。
+
+今次只需要更新：
+
+public/manage-order.html
+Code.gs 不需要再更新。
+
+下載完整新版 Website ZIP
+
+manage-order-additional-shipping-fps.html
+
+下載 Website＋Apps Script 完整備份包
+
+
+
+manage-order-additional-shipping-fps.html
+HTML
+
+
+Library
+/
+manage-order-additional-shipping-fps.html
+
+
+
+
+
+Library
+/
+manage-order-additional-shipping-fps.html
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,7 +344,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 @media(max-width:480px){.process{grid-template-columns:1fr}}
 @media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
 
-.shipping-fee-panel{display:none;border:1px solid var(--black);padding:1.25rem;margin:0 0 2rem;background:var(--white)}.shipping-fee-panel.show{display:block}.shipping-fee-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.shipping-fee-eyebrow{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.25rem}.shipping-fee-title{font-size:.9rem;font-weight:500}.shipping-fee-amount{font-size:1.1rem;font-weight:500;white-space:nowrap}.shipping-fee-status-row{display:grid;grid-template-columns:9rem minmax(0,1fr);gap:1rem;padding:.9rem 0 .4rem;font-size:.78rem}.shipping-fee-status-label{color:var(--mid)}.shipping-fee-status{font-weight:500}.shipping-fee-copy{font-size:.76rem;color:var(--mid);line-height:1.8;margin:.55rem 0 1.1rem}.shipping-fee-proof-date{display:none;font-size:.72rem;color:var(--mid);margin-top:.55rem}.shipping-fee-proof-date.show{display:block}.shipping-fee-upload{padding-top:1rem;border-top:1px solid var(--light)}.shipping-fee-upload[hidden]{display:none}.shipping-fee-upload .field{margin-bottom:0}.shipping-fee-confirmed{font-size:.76rem;line-height:1.8;padding-top:1rem;border-top:1px solid var(--light);display:none}.shipping-fee-confirmed.show{display:block}@media(max-width:560px){.shipping-fee-top{flex-direction:column;gap:.5rem}.shipping-fee-status-row{grid-template-columns:1fr;gap:.1rem}.shipping-fee-amount{font-size:1rem}}
+.shipping-fee-panel{display:none;border:1px solid var(--black);padding:1.25rem;margin:0 0 2rem;background:var(--white)}.shipping-fee-panel.show{display:block}.shipping-fee-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.shipping-fee-eyebrow{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.25rem}.shipping-fee-title{font-size:.9rem;font-weight:500}.shipping-fee-amount{font-size:1.1rem;font-weight:500;white-space:nowrap}.shipping-fee-status-row{display:grid;grid-template-columns:9rem minmax(0,1fr);gap:1rem;padding:.9rem 0 .4rem;font-size:.78rem}.shipping-fee-status-label{color:var(--mid)}.shipping-fee-status{font-weight:500}.shipping-fee-copy{font-size:.76rem;color:var(--mid);line-height:1.8;margin:.55rem 0 1.1rem}.shipping-fee-proof-date{display:none;font-size:.72rem;color:var(--mid);margin-top:.55rem}.shipping-fee-proof-date.show{display:block}.shipping-fee-upload{padding-top:1rem;border-top:1px solid var(--light)}.shipping-fee-upload[hidden]{display:none}.shipping-fee-upload .field{margin-bottom:0}.shipping-fee-confirmed{font-size:.76rem;line-height:1.8;padding-top:1rem;border-top:1px solid var(--light);display:none}.shipping-fee-confirmed.show{display:block}.shipping-fps-box{border:1px solid var(--light);padding:1.35rem;margin-bottom:1.35rem;background:var(--bg)}.shipping-fps-box .fps-eyebrow{margin-bottom:1rem}.shipping-fps-grid{display:grid;grid-template-columns:112px minmax(0,1fr);gap:1.25rem;align-items:center;text-align:left}.shipping-fps-box .fps-qr{width:112px;height:112px;margin:0;background:var(--white)}.shipping-fps-details{min-width:0}.shipping-fps-label{font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin-bottom:.15rem}.shipping-fps-code{font-size:1.05rem;font-weight:500;letter-spacing:.035em;overflow-wrap:anywhere;margin-bottom:.75rem}.shipping-fps-payee{font-size:.78rem;line-height:1.55;margin-bottom:.25rem}.shipping-fps-box .fps-amount{margin:.7rem 0 0}.shipping-fps-box .fps-instructions{margin-top:1.2rem;padding-top:1rem}@media(max-width:560px){.shipping-fee-top{flex-direction:column;gap:.5rem}.shipping-fee-status-row{grid-template-columns:1fr;gap:.1rem}.shipping-fee-amount{font-size:1rem}.shipping-fps-grid{grid-template-columns:1fr;text-align:center}.shipping-fps-box .fps-qr{margin:0 auto}.shipping-fps-details{text-align:center}}
 
 </style>
 </head>
@@ -105,6 +396,30 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="shipping-fee-proof-date" id="shipping-fee-proof-date"></div>
 
             <div class="shipping-fee-upload" id="shipping-fee-upload">
+              <div class="shipping-fps-box" id="shipping-fps-box">
+                <div class="fps-eyebrow">FPS &nbsp;/&nbsp; Faster Payment System</div>
+                <div class="shipping-fps-grid">
+                  <div class="fps-qr">
+                    <img src="images/fps-qr.png" alt="FPS QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>FPS QR</span>')">
+                  </div>
+                  <div class="shipping-fps-details">
+                    <div class="shipping-fps-label">FPS ID / 識別代碼</div>
+                    <div class="shipping-fps-code">102056686</div>
+                    <div class="shipping-fps-label">Payee / 支付至</div>
+                    <div class="shipping-fps-payee">Glory On International Limited</div>
+                    <div class="fps-amount" id="shipping-fps-amount">HK$—</div>
+                  </div>
+                </div>
+                <div class="fps-instructions">
+                  <ol>
+                    <li>Open your banking app and select FPS.</li>
+                    <li>Pay the exact additional shipping amount shown above.</li>
+                    <li>Add your name and order number as the payment reference.</li>
+                    <li>Take a screenshot and upload it below.</li>
+                  </ol>
+                </div>
+              </div>
+
               <div class="field">
                 <label>Shipping payment screenshot</label>
                 <div class="upfield">
@@ -663,8 +978,11 @@ function renderManageShippingFee_(order) {
   }
 
   panel.classList.add('show');
-  document.getElementById('shipping-fee-amount').textContent =
-    formatShippingFeeAmount_(info.amount, info.currency);
+  const formattedShippingFee = formatShippingFeeAmount_(info.amount, info.currency);
+  document.getElementById('shipping-fee-amount').textContent = formattedShippingFee;
+
+  const shippingFpsAmount = document.getElementById('shipping-fps-amount');
+  if (shippingFpsAmount) shippingFpsAmount.textContent = formattedShippingFee;
 
   const status = info.status || 'Awaiting payment';
   document.getElementById('shipping-fee-status').textContent = status;
@@ -693,7 +1011,7 @@ function renderManageShippingFee_(order) {
     confirmed.textContent = 'We will verify the screenshot before arranging international delivery.';
   } else {
     document.getElementById('shipping-fee-copy').textContent =
-      'Please complete the additional shipping payment using the payment details provided by us, then upload a screenshot below.';
+      'Please pay the additional shipping fee via FPS using the details below, then upload your payment screenshot.';
     confirmed.textContent = '';
   }
 }
