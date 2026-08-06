@@ -1,3076 +1,1255 @@
-/***************
- * CONFIG
- ***************/
-const ORDERS_SHEET = 'Orders';
-const PAYMENTS_SHEET = 'Payments';
-const SECURITY_LOGS_SHEET = 'SecurityLogs';
-const PROMOTIONS_SHEET = 'Promotions';
-const PRODUCTS_SHEET = 'Products';
-const TERMS_SHEET = 'Terms';
-const TRACKING_SHEET = 'Tracking';
-
-const FINANCE_SPREADSHEET_ID = '10HB8FULJZEE7czLQI4_o1U56vw5lQpWOVfvRKWxWMfo';
-const DEFAULT_SHEET_NAME = 'Mar-Jun 2026';
-const FINANCE_SETTINGS_SHEET = 'Settings';
-const FINANCE_ACTIVE_SHEET_KEY = 'FINANCE_ACTIVE_SHEET';
-
-// Finance worksheet column positions.
-// Current layout:
-// D = Date, E = No. (Order Number), F = Name,
-// G = AI, H = Product, I = Outline, J = Quantity, K = Paid, L = Amount.
-const FINANCE_COL_ORDER_DATE = 4;
-const FINANCE_COL_ORDER_NUMBER = 5;
-const FINANCE_COL_CUSTOMER_NAME = 6;
-const FINANCE_COL_PRODUCT = 8;
-const FINANCE_COL_OUTLINE = 9;
-const FINANCE_COL_QUANTITY = 10;
-const FINANCE_COL_PAYMENT_STATUS = 11;
-const FINANCE_COL_AMOUNT = 12;
-
-const MAX_PET_PHOTOS = 6;
-const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
-const DIGITAL_COPY_PRICE = 150;
-
-const ORDER_STATUS_AWAITING_PROOF = 'Awaiting payment proof';
-const PAYMENT_STATUS_PROOF_SUBMITTED = 'Proof submitted - verify manually';
-const FINANCE_PAYMENT_STATUS_PENDING = 'Pending';
-const FINANCE_PAYMENT_STATUS_FPS = 'FPS';
-const DEFAULT_TRACKING_STATUS = 'Preparing';
-const DEFAULT_SHIPPING_CURRENCY = 'HKD';
-const SHIPPING_PAYMENT_STATUS_AWAITING = 'Awaiting payment';
-const SHIPPING_PAYMENT_STATUS_PROOF_SUBMITTED = 'Proof submitted - verify manually';
-
-const TRACKING_HEADERS = [
-  'Order Number',
-  'Name',
-  'Instagram',
-  'Courier',
-  'Tracking Number',
-  'Tracking URL',
-  'Shipping Status',
-  'Shipped Date',
-  'Notes',
-  'Last Updated',
-  'Shipping Fee',
-  'Shipping Currency',
-  'Shipping Payment Status',
-  'Shipping Proof Submitted'
-];
-
-/***************
- * MAIN ROUTE
- ***************/
-function doPost(e) {
-  try {
-    const payload = parsePayload_(e);
-
-    if (!payload || !payload.type) {
-      return jsonResponse_({ success: false, error: 'INVALID_REQUEST' });
-    }
-
-    validateApiSecret_(payload);
-
-    if (payload.type === 'products') return listProducts_();
-    if (payload.type === 'terms') return listTerms_();
-    if (payload.type === 'promo') return validatePromo_(payload);
-    if (payload.type === 'order') return createOrder_(payload);
-    if (payload.type === 'manage_lookup') return manageOrderLookup_(payload);
-    if (payload.type === 'pet_photo') return uploadPetPhoto_(payload);
-    if (payload.type === 'payment') return submitPayment_(payload);
-
-    return jsonResponse_({ success: false, error: 'UNKNOWN_TYPE' });
-  } catch (err) {
-    try {
-      logSecurity_('ERROR', '', String(err && err.message ? err.message : err));
-    } catch (_) {}
-
-    return jsonResponse_({
-      success: false,
-      error: String(err && err.message ? err.message : err)
-    });
-  }
-}
-
-/***************
- * API SECURITY
- ***************/
-function parsePayload_(e) {
-  if (!e || !e.postData || !e.postData.contents) {
-    throw new Error('EMPTY_BODY');
-  }
-
-  return JSON.parse(e.postData.contents);
-}
-
-function validateApiSecret_(payload) {
-  const props = getRequiredProperties_();
-
-  if (!payload.apiSecret || payload.apiSecret !== props.apiSecret) {
-    throw new Error('UNAUTHORIZED');
-  }
-}
-
-function getRequiredProperties_() {
-  const props = PropertiesService.getScriptProperties();
-
-  const sheetId = props.getProperty('SHEET_ID');
-  const folderId = props.getProperty('PARENT_FOLDER_ID');
-  const apiSecret = props.getProperty('API_SHARED_SECRET');
-
-  if (!sheetId || !folderId || !apiSecret) {
-    throw new Error('MISSING_SCRIPT_PROPERTIES');
-  }
-
-  return {
-    sheetId: sheetId,
-    folderId: folderId,
-    apiSecret: apiSecret
-  };
-}
-
-/***************
- * PRODUCTS
- ***************/
-function listProducts_() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  const products = getActiveProducts_(ss);
-
-  return jsonResponse_({
-    success: true,
-    products: products
-  });
-}
-
-function getActiveProducts_(ss) {
-  const sheet = requireSheet_(ss, PRODUCTS_SHEET);
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2) return [];
-
-  const rows = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
-
-  return rows
-    .map(function(row) {
-      return {
-        id: String(row[0] || '').trim(),
-        name: String(row[1] || '').trim(),
-        dims: String(row[2] || '').trim(),
-        price: Number(row[3] || 0),
-        capacity: String(row[4] || '').trim(),
-        active: row[5] === true || String(row[5]).toUpperCase() === 'TRUE',
-        displayOrder: Number(row[6] || 999)
-      };
-    })
-    .filter(function(product) {
-      return product.id && product.name && product.price > 0 && product.active;
-    })
-    .sort(function(a, b) {
-      return a.displayOrder - b.displayOrder;
-    });
-}
-
-function getProductById_(ss, productId) {
-  const products = getActiveProducts_(ss);
-  const target = String(productId || '').trim().toLowerCase();
-
-  for (let i = 0; i < products.length; i++) {
-    if (String(products[i].id).toLowerCase() === target) {
-      return products[i];
-    }
-  }
-
-  return null;
-}
-
-/***************
- * TERMS
- ***************/
-function listTerms_() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  const terms = getActiveTerms_(ss);
-
-  if (!terms || !terms.version || !terms.contentEn || !terms.contentZh) {
-    return jsonResponse_({
-      success: false,
-      error: 'TERMS_UNAVAILABLE'
-    });
-  }
-
-  return jsonResponse_({
-    success: true,
-    terms: terms
-  });
-}
-
-function getActiveTerms_(ss) {
-  const sheet = requireSheet_(ss, TERMS_SHEET);
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2) return null;
-
-  const rows = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
-
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-
-    const version = String(row[0] || '').trim();
-    const active = row[1] === true || String(row[1]).toUpperCase() === 'TRUE';
-
-    if (!version || !active) continue;
-
-    return {
-      version: version,
-      titleEn: String(row[2] || 'Terms & Conditions and Privacy Notice').trim(),
-      contentEn: String(row[3] || '').trim(),
-      titleZh: String(row[4] || '注意事項及私隱聲明').trim(),
-      contentZh: String(row[5] || '').trim(),
-      updatedAt: row[6] instanceof Date ? row[6].toISOString() : String(row[6] || '')
-    };
-  }
-
-  return null;
-}
-
-/***************
- * PROMO
- ***************/
-function validatePromo_(payload) {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-
-  const orderItems = normalizeOrderItems_(ss, payload);
-  const result = calculatePromoForItems_(ss, orderItems, payload.promoCode);
-  const subtotal = calculateOrderItemsSubtotal_(orderItems);
-  const discount = result.valid ? result.discount : 0;
-
-  return jsonResponse_({
-    success: true,
-    promo: {
-      valid: result.valid,
-      code: result.code,
-      originalPrice: subtotal,
-      discount: discount,
-      finalPrice: subtotal - discount,
-      price: subtotal - discount,
-      message: result.message || ''
-    }
-  });
-}
-
-function calculatePromo_(ss, product, promoCode) {
-  const code = String(promoCode || '').trim().toUpperCase();
-
-  if (!code) {
-    return {
-      valid: false,
-      code: '',
-      discount: 0,
-      message: ''
-    };
-  }
-
-  const sheet = requireSheet_(ss, PROMOTIONS_SHEET);
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2) {
-    return {
-      valid: false,
-      code: code,
-      discount: 0,
-      message: 'Invalid promo code'
-    };
-  }
-
-  const rows = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
-
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-
-    const rowCode = String(row[0] || '').trim().toUpperCase();
-    if (rowCode !== code) continue;
-
-    const type = String(row[1] || '').trim().toUpperCase();
-    const value = Number(row[2] || 0);
-    const active = row[3] === true || String(row[3]).toUpperCase() === 'TRUE';
-    const startDate = row[4];
-    const endDate = row[5];
-    const applicableProducts = String(row[6] || 'ALL').trim();
-    const maxUses = Number(row[7] || 0);
-    const uses = Number(row[8] || 0);
-
-    if (!active) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code inactive' };
-    }
-
-    const now = new Date();
-
-    if (startDate instanceof Date && now < startDate) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code not started' };
-    }
-
-    if (endDate instanceof Date && now > endDate) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code expired' };
-    }
-
-    if (maxUses > 0 && uses >= maxUses) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code limit reached' };
-    }
-
-    if (!isPromoApplicable_(applicableProducts, product.id)) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code not applicable to this product' };
-    }
-
-    let discount = 0;
-
-    if (type === 'PERCENT') {
-      discount = product.price * value / 100;
-    } else if (type === 'FIXED') {
-      discount = Math.round(value);
-    } else {
-      return { valid: false, code: code, discount: 0, message: 'Invalid promo type' };
-    }
-
-    discount = Math.max(0, Math.min(discount, product.price));
-
-    return {
-      valid: true,
-      code: code,
-      type: type,
-      value: value,
-      applicableProducts: applicableProducts,
-      discount: discount,
-      rowNumber: i + 2,
-      message: 'Promo applied'
-    };
-  }
-
-  return {
-    valid: false,
-    code: code,
-    discount: 0,
-    message: 'Invalid promo code'
-  };
-}
-
-function isPromoApplicable_(applicableProducts, productId) {
-  const value = String(applicableProducts || '').trim();
-
-  if (!value || value.toUpperCase() === 'ALL') return true;
-
-  const ids = value
-    .split(',')
-    .map(function(x) { return x.trim().toLowerCase(); })
-    .filter(Boolean);
-
-  return ids.indexOf(String(productId || '').toLowerCase()) !== -1;
-}
-
-function incrementPromoUse_(ss, promoResult) {
-  if (!promoResult || !promoResult.valid || !promoResult.rowNumber) return;
-
-  const sheet = requireSheet_(ss, PROMOTIONS_SHEET);
-  const current = Number(sheet.getRange(promoResult.rowNumber, 9).getValue() || 0);
-  sheet.getRange(promoResult.rowNumber, 9).setValue(current + 1);
-}
-
-function calculatePromoForItems_(ss, orderItems, promoCode) {
-  const code = String(promoCode || '').trim().toUpperCase();
-
-  if (!code) {
-    return {
-      valid: false,
-      code: '',
-      discount: 0,
-      message: ''
-    };
-  }
-
-  const sheet = requireSheet_(ss, PROMOTIONS_SHEET);
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2) {
-    return {
-      valid: false,
-      code: code,
-      discount: 0,
-      message: 'Invalid promo code'
-    };
-  }
-
-  const rows = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
-
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-
-    const rowCode = String(row[0] || '').trim().toUpperCase();
-    if (rowCode !== code) continue;
-
-    const type = String(row[1] || '').trim().toUpperCase();
-    const value = Number(row[2] || 0);
-    const active = row[3] === true || String(row[3]).toUpperCase() === 'TRUE';
-    const startDate = row[4];
-    const endDate = row[5];
-    const applicableProducts = String(row[6] || 'ALL').trim();
-    const maxUses = Number(row[7] || 0);
-    const uses = Number(row[8] || 0);
-
-    if (!active) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code inactive' };
-    }
-
-    const now = new Date();
-
-    if (startDate instanceof Date && now < startDate) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code not started' };
-    }
-
-    if (endDate instanceof Date && now > endDate) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code expired' };
-    }
-
-    if (maxUses > 0 && uses >= maxUses) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code limit reached' };
-    }
-
-    const eligibleSubtotal = calculateEligiblePromoSubtotal_(orderItems, applicableProducts);
-
-    if (eligibleSubtotal <= 0) {
-      return { valid: false, code: code, discount: 0, message: 'Promo code not applicable to selected products' };
-    }
-
-    let discount = 0;
-
-    if (type === 'PERCENT') {
-      discount = eligibleSubtotal * value / 100;
-    } else if (type === 'FIXED') {
-      discount = Math.round(value);
-    } else {
-      return { valid: false, code: code, discount: 0, message: 'Invalid promo type' };
-    }
-
-    discount = Math.max(0, Math.min(discount, eligibleSubtotal));
-
-    return {
-      valid: true,
-      code: code,
-      type: type,
-      value: value,
-      applicableProducts: applicableProducts,
-      discount: discount,
-      rowNumber: i + 2,
-      message: 'Promo applied'
-    };
-  }
-
-  return {
-    valid: false,
-    code: code,
-    discount: 0,
-    message: 'Invalid promo code'
-  };
-}
-
-function calculateEligiblePromoSubtotal_(orderItems, applicableProducts) {
-  const value = String(applicableProducts || '').trim();
-
-  if (!value || value.toUpperCase() === 'ALL') {
-    return calculateOrderItemsSubtotal_(orderItems);
-  }
-
-  const ids = value
-    .split(',')
-    .map(function(x) { return x.trim().toLowerCase(); })
-    .filter(Boolean);
-
-  return orderItems.reduce(function(sum, item) {
-    const productId = String(item.product.id || '').trim().toLowerCase();
-    if (ids.indexOf(productId) === -1) return sum;
-    return sum + Number(item.product.price || 0) * Number(item.quantity || 0);
-  }, 0);
-}
-
-/***************
- * ORDER
- ***************/
-function createOrder_(payload) {
-  const props = getRequiredProperties_();
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-
-  try {
-    const ss = SpreadsheetApp.openById(props.sheetId);
-    const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-    ensureOrderColumns_(ordersSheet);
-
-    const requestId = String(payload.requestId || '').trim();
-    if (!requestId) throw new Error('MISSING_REQUEST_ID');
-
-    const existing = findOrderByRequestId_(ordersSheet, requestId);
-    if (existing) {
-      const existingOrder = findOrderByNumber_(ordersSheet, existing.orderNumber);
-
-      // Self-heal: a previous submission may already exist in Orders but may
-      // not yet have a corresponding Tracking row.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage order — just for you and meow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#111111;--mid:#555555;--light:#EBEBEB;--bg:#FAFAF8;--white:#FFFFFF;--err:#cc3333}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;font-weight:300;color:var(--black);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,3.5rem);height:50px;border-bottom:1px solid var(--light)}
+.nav-brand{font-size:.8rem;font-weight:400;letter-spacing:.01em;text-decoration:none;color:var(--black)}
+.nav-right{display:flex;gap:2rem}.nav-right a{font-size:.75rem;color:var(--mid);text-decoration:none;letter-spacing:.03em;transition:color .15s}.nav-right a:hover,.nav-right a.active{color:var(--black)}
+main{padding-top:50px}
+.hero{padding:clamp(2rem,4vw,3.5rem) clamp(1.5rem,5vw,3.5rem);display:flex;flex-direction:row;align-items:center;gap:clamp(1.5rem,3vw,2.5rem);flex-wrap:wrap}
+.hero-left{flex:0 1 auto;display:flex;align-items:center}.hero-logo{width:100%;max-width:650px;height:auto;display:block;mix-blend-mode:multiply}
+.hero-right{flex:0 1 auto;display:flex;flex-direction:column;align-items:flex-start;gap:1rem;max-width:500px}
+.hero-tagline{font-size:clamp(.82rem,1.1vw,.9rem);font-weight:300;line-height:1.75;color:var(--black)}
+.link-arrow{font-size:.78rem;font-weight:400;letter-spacing:.04em;color:var(--black);text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--black);padding-bottom:1px;transition:opacity .15s;white-space:nowrap}.link-arrow:hover{opacity:.45}
+@media(max-width:760px){.hero{flex-direction:column;align-items:flex-start}.hero-logo{max-width:500px}.hero-right{max-width:100%}}
+.rule{border:none;border-top:1px solid var(--light)}
+.section{padding:clamp(3.5rem,7vw,6rem) clamp(1.5rem,5vw,3.5rem)}
+.section-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:3rem}
+.process{display:grid;grid-template-columns:repeat(4,1fr);gap:3rem}.step-n{font-size:.68rem;color:var(--mid);letter-spacing:.08em;margin-bottom:.9rem}.step-title{font-size:.88rem;font-weight:500;margin-bottom:.4rem}.step-desc{font-size:.8rem;color:var(--mid);line-height:1.75}
+.size-row{display:grid;grid-template-columns:5rem 1fr 1fr auto 2rem;align-items:center;gap:1.5rem;padding:1.3rem 0;border-bottom:1px solid var(--light);cursor:pointer;transition:background .1s}.size-row:hover{background:rgba(0,0,0,.02)}
+.size-letter{font-size:1.1rem;font-weight:300;letter-spacing:-.01em}.size-dims,.size-cap{font-size:.8rem;color:var(--mid)}.size-cap{font-size:.78rem}.size-price{font-size:.9rem;font-weight:400;white-space:nowrap}.size-radio{width:16px;height:16px;border:1.5px solid var(--light);border-radius:50%;transition:border-color .15s,background .15s;flex-shrink:0;justify-self:end}.size-row.sel .size-radio{background:var(--black);border-color:var(--black)}
+.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:start}
+.prog{display:flex;gap:1.5rem;margin-bottom:3rem}.prog-item{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);padding-bottom:.5rem;border-bottom:1.5px solid transparent;transition:all .2s}.prog-item.on{color:var(--black);border-color:var(--black)}.prog-item.done{opacity:.35}
+.panel{display:none}.panel.on{display:block;animation:fadeUp .22s ease}@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.panel-title{font-size:1rem;font-weight:400;margin-bottom:.4rem}.panel-sub{font-size:.8rem;color:var(--mid);margin-bottom:2rem;line-height:1.75}
+.recap{display:none;justify-content:space-between;align-items:center;border:1px solid var(--light);padding:.8rem 1rem;margin-bottom:2rem;font-size:.78rem}.recap.show{display:flex}.r-size{font-weight:500}.r-price{color:var(--mid)}.r-change{color:var(--mid);text-decoration:underline;cursor:pointer;font-size:.72rem}.r-change:hover{color:var(--black)}
+.field{margin-bottom:1.6rem}.field label{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.6rem}.field label small{text-transform:none;letter-spacing:0;font-weight:300;opacity:.7}
+.field input,.field textarea{width:100%;border:none;border-bottom:1px solid var(--light);background:transparent;padding:.55em 0;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:300;color:var(--black);outline:none;transition:border-color .15s}.field input::placeholder,.field textarea::placeholder{color:#bbb}.field input:focus,.field textarea:focus{border-color:var(--black)}.field textarea{resize:none;min-height:68px}
+.upfield{border:1px solid var(--light);padding:1.6rem;position:relative;text-align:center;cursor:pointer;transition:border-color .15s}.upfield:hover{border-color:var(--black)}.upfield input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}.upfield-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:500;display:block;margin-bottom:.3rem}.upfield-hint{font-size:.75rem;color:var(--mid)}.file-chosen{font-size:.72rem;color:var(--black);margin-top:.5rem;min-height:1em}
+.photo-list{border-top:1px solid var(--light);margin-top:.8rem}.photo-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:.8rem;padding:.65rem 2.2rem .65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}.photo-thumb{width:52px;height:52px;border:1px solid var(--light);object-fit:cover;cursor:zoom-in;background:var(--white)}.photo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.photo-remove{position:absolute;right:0;top:50%;transform:translateY(-50%);width:28px;height:28px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:1.05rem;line-height:1;cursor:pointer}.photo-remove:hover{color:var(--black);border-color:var(--black)}
+.photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
+.promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.promo-row{display:flex;align-items:flex-end;gap:.8rem}.promo-row .field{flex:1;margin:0}.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.promo-apply:disabled{opacity:.35;cursor:not-allowed}.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}.promo-result.ok{color:#1a6b3c}.promo-result.err{color:var(--err)}
+.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}
+.terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
+.terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}.terms-dialog:focus{outline:none}.terms-dialog::backdrop{background:rgba(0,0,0,.42)}.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.terms-head h2{font-size:1rem;font-weight:500}.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}.terms-section{padding-top:1.5rem}.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
+.btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}.btn-submit:hover{opacity:.65}.btn-submit:disabled{opacity:.25;cursor:not-allowed}.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}.btn-back:hover{color:var(--black)}
+.aside-block{border-top:1px solid var(--light);padding-top:1.4rem;margin-bottom:2rem}.aside-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.aside-body{font-size:.78rem;color:var(--mid);line-height:1.85}
+.order-num-box{background:var(--black);color:var(--white);padding:1.2rem 1.5rem;margin-bottom:2rem}.order-num-label{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:.3rem}.order-num-value{font-size:1.1rem;font-weight:500;letter-spacing:.04em}.receipt{border-top:1px solid var(--light);margin-bottom:2.5rem}.r-row{display:flex;justify-content:space-between;font-size:.8rem;padding:.65rem 0;border-bottom:1px solid var(--light)}.r-row:last-child{font-weight:500;border-color:var(--black)}.r-label{color:var(--mid)}
+.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}.fps-qr img{width:100%;height:100%;object-fit:contain}.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}.fps-instructions ol{padding-left:1.1em}.fps-instructions li{margin-bottom:.4rem}
+.manage-wrap{max-width:760px}.manage-summary{border-top:1px solid var(--light);border-bottom:1px solid var(--light);margin:1.5rem 0 1.25rem}.manage-summary .r-row:last-child{font-weight:300;border-color:var(--light)}.tracking-panel{border:1px solid var(--light);padding:1.25rem;margin:0 0 2rem}.tracking-panel-title{font-size:.72rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.9rem}.tracking-empty{font-size:.76rem;color:var(--mid);line-height:1.75}.tracking-details{display:none}.tracking-details.show{display:block}.tracking-row{display:grid;grid-template-columns:9rem minmax(0,1fr);gap:1rem;padding:.45rem 0;font-size:.78rem}.tracking-label{color:var(--mid)}.tracking-number{font-weight:500;overflow-wrap:anywhere}.tracking-actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem}.tracking-link,.tracking-copy{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--black);background:var(--black);color:var(--white);padding:.65em 1.1em;font-family:'Inter',sans-serif;font-size:.68rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;cursor:pointer}.tracking-copy{background:transparent;color:var(--black)}.tracking-link:hover,.tracking-copy:hover{opacity:.65}@media(max-width:560px){.tracking-row{grid-template-columns:1fr;gap:.1rem}.tracking-actions{flex-direction:column}.tracking-link,.tracking-copy{width:100%}}.manage-upload-panel{display:none}.manage-upload-panel.show{display:block}.manage-note{font-size:.75rem;color:var(--mid);line-height:1.8;margin-top:.8rem}.manage-actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem}.order-select-list{display:none;margin:1.5rem 0 2rem;border-top:1px solid var(--light)}.order-select-list.show{display:block}.order-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;align-items:center;padding:1rem 0;border-bottom:1px solid var(--light)}.order-card-title{font-size:.86rem;font-weight:500;margin-bottom:.25rem}.order-card-meta{font-size:.74rem;color:var(--mid);line-height:1.65}.order-card-btn{border:1px solid var(--black);background:transparent;color:var(--black);padding:.55em .9em;font-family:'Inter',sans-serif;font-size:.68rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;white-space:nowrap}.order-card-btn:hover{background:var(--black);color:var(--white)}@media(max-width:560px){.order-card{grid-template-columns:1fr}.order-card-btn{width:max-content}}
+.status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}.status-msg.show{display:block}.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}.status-msg a{color:inherit;font-weight:500;text-decoration:underline}.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}@keyframes spin{to{transform:rotate(360deg)}}
+body{cursor:none}.paw-cursor-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}.paw{position:absolute;pointer-events:none;width:24px;height:28px}
+footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);display:flex;justify-content:flex-end;align-items:center}.footer-meta{display:flex;align-items:center;gap:1.5rem;color:var(--mid);font-size:.72rem}.footer-brand{font-size:.78rem;font-weight:400;color:var(--mid)}
+@media(max-width:780px){.process{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr}.order-aside{display:none}.size-row{grid-template-columns:4rem minmax(0,1fr) auto 1.5rem;grid-template-areas:"letter details price radio" "letter capacity price radio";column-gap:1rem;row-gap:.15rem}.size-letter{grid-area:letter}.size-row>div:not(.size-cap):not(.size-price){grid-area:details}.size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}.size-price{grid-area:price}.size-radio{grid-area:radio}}
+@media(max-width:480px){.process{grid-template-columns:1fr}}
+@media(max-width:768px){.paw-cursor-container{display:none}body{cursor:auto}}
+
+.shipping-fee-panel{display:none;border:1px solid var(--black);padding:1.25rem;margin:0 0 2rem;background:var(--white)}.shipping-fee-panel.show{display:block}.shipping-fee-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.shipping-fee-eyebrow{font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.25rem}.shipping-fee-title{font-size:.9rem;font-weight:500}.shipping-fee-amount{font-size:1.1rem;font-weight:500;white-space:nowrap}.shipping-fee-status-row{display:grid;grid-template-columns:9rem minmax(0,1fr);gap:1rem;padding:.9rem 0 .4rem;font-size:.78rem}.shipping-fee-status-label{color:var(--mid)}.shipping-fee-status{font-weight:500}.shipping-fee-copy{font-size:.76rem;color:var(--mid);line-height:1.8;margin:.55rem 0 1.1rem}.shipping-fee-proof-date{display:none;font-size:.72rem;color:var(--mid);margin-top:.55rem}.shipping-fee-proof-date.show{display:block}.shipping-fee-upload{padding-top:1rem;border-top:1px solid var(--light)}.shipping-fee-upload[hidden]{display:none}.shipping-fee-upload .field{margin-bottom:0}.shipping-fee-confirmed{font-size:.76rem;line-height:1.8;padding-top:1rem;border-top:1px solid var(--light);display:none}.shipping-fee-confirmed.show{display:block}.shipping-fps-box{border:1px solid var(--light);padding:1.35rem;margin-bottom:1.35rem;background:var(--bg)}.shipping-fps-box .fps-eyebrow{margin-bottom:1rem}.shipping-fps-grid{display:grid;grid-template-columns:112px minmax(0,1fr);gap:1.25rem;align-items:center;text-align:left}.shipping-fps-box .fps-qr{width:112px;height:112px;margin:0;background:var(--white)}.shipping-fps-details{min-width:0}.shipping-fps-label{font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin-bottom:.15rem}.shipping-fps-code{font-size:1.05rem;font-weight:500;letter-spacing:.035em;overflow-wrap:anywhere;margin-bottom:.75rem}.shipping-fps-payee{font-size:.78rem;line-height:1.55;margin-bottom:.25rem}.shipping-fps-box .fps-amount{margin:.7rem 0 0}.shipping-fps-box .fps-instructions{margin-top:1.2rem;padding-top:1rem}@media(max-width:560px){.shipping-fee-top{flex-direction:column;gap:.5rem}.shipping-fee-status-row{grid-template-columns:1fr;gap:.1rem}.shipping-fee-amount{font-size:1rem}.shipping-fps-grid{grid-template-columns:1fr;text-align:center}.shipping-fps-box .fps-qr{margin:0 auto}.shipping-fps-details{text-align:center}}
+
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="nav-brand">just for you and meow</a>
+  <div class="nav-right">
+    <a href="index.html#order">Order</a>
+    <a href="manage-order.html" class="active">Manage order</a>
+    <a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a>
+  </div>
+</nav>
+
+<main>
+  <section class="section" id="manage">
+    <p class="section-label">Manage order</p>
+    <div class="manage-wrap">
+      <div class="panel on">
+        <div class="panel-title">Upload more photos or payment proof<br>and track your order</div>
+        <p class="panel-sub">Enter the phone number used for your order.</p>
+
+        <div class="field"><label>Phone number</label><input type="tel" id="m-phone" placeholder="e.g. 91234567" autocomplete="tel"></div>
+        <div id="msg-manage-login" class="status-msg"></div>
+        <div class="btn-row"><button class="btn-submit" id="m-login-btn" onclick="verifyManageOrder()">Find order</button></div>
+
+        <div id="manage-order-list" class="order-select-list"></div>
+
+        <div class="manage-upload-panel" id="manage-upload-panel">
+          <div class="manage-summary" id="manage-summary"></div>
+
+
+          <div class="shipping-fee-panel" id="shipping-fee-panel">
+            <div class="shipping-fee-top">
+              <div>
+                <div class="shipping-fee-eyebrow">International shipping</div>
+                <div class="shipping-fee-title">Additional shipping fee</div>
+              </div>
+              <div class="shipping-fee-amount" id="shipping-fee-amount">—</div>
+            </div>
+
+            <div class="shipping-fee-status-row">
+              <span class="shipping-fee-status-label">Payment status</span>
+              <span class="shipping-fee-status" id="shipping-fee-status">Awaiting payment</span>
+            </div>
+
+            <p class="shipping-fee-copy" id="shipping-fee-copy">
+              Please complete the additional shipping payment using the payment details provided by us, then upload a screenshot below.
+            </p>
+            <div class="shipping-fee-proof-date" id="shipping-fee-proof-date"></div>
+
+            <div class="shipping-fee-upload" id="shipping-fee-upload">
+              <div class="shipping-fps-box" id="shipping-fps-box">
+                <div class="fps-eyebrow">FPS &nbsp;/&nbsp; Faster Payment System</div>
+                <div class="shipping-fps-grid">
+                  <div class="fps-qr">
+                    <img src="images/fps-qr.png" alt="FPS QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>FPS QR</span>')">
+                  </div>
+                  <div class="shipping-fps-details">
+                    <div class="shipping-fps-label">FPS ID / 識別代碼</div>
+                    <div class="shipping-fps-code">102056686</div>
+                    <div class="shipping-fps-label">Payee / 支付至</div>
+                    <div class="shipping-fps-payee">Glory On International Limited</div>
+                    <div class="fps-amount" id="shipping-fps-amount">HK$—</div>
+                  </div>
+                </div>
+                <div class="fps-instructions">
+                  <ol>
+                    <li>Open your banking app and select FPS.</li>
+                    <li>Pay the exact additional shipping amount shown above.</li>
+                    <li>Add your name and order number as the payment reference.</li>
+                    <li>Take a screenshot and upload it below.</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Shipping payment screenshot</label>
+                <div class="upfield">
+                  <input type="file" id="m-shipping-payment" accept="image/*" onchange="onManageShippingPayFile(this)">
+                  <span class="upfield-label">Select file</span>
+                  <span class="upfield-hint">Upload a screenshot after paying the additional shipping fee</span>
+                </div>
+                <div class="file-chosen" id="manage-shipping-pay-file-chosen"></div>
+                <div class="photo-list" id="manage-shipping-payment-photo-list"></div>
+                <div class="manage-actions">
+                  <button class="btn-submit" id="m-shipping-payment-btn" onclick="submitManageShippingPayment()">Upload shipping payment proof</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="shipping-fee-confirmed" id="shipping-fee-confirmed"></div>
+            <div id="msg-manage-shipping" class="status-msg"></div>
+          </div>
+
+          <div class="tracking-panel" id="manage-tracking-panel">
+            <div class="tracking-panel-title">Delivery tracking</div>
+            <div class="tracking-empty" id="tracking-empty">Tracking information will appear here after your order has been shipped.</div>
+            <div class="tracking-details" id="tracking-details">
+              <div class="tracking-row"><span class="tracking-label">Shipping status</span><span id="tracking-status">—</span></div>
+              <div class="tracking-row"><span class="tracking-label">Courier</span><span id="tracking-courier">—</span></div>
+              <div class="tracking-row"><span class="tracking-label">Tracking number</span><span class="tracking-number" id="tracking-number">—</span></div>
+              <div class="tracking-row" id="tracking-date-row"><span class="tracking-label">Shipped date</span><span id="tracking-date">—</span></div>
+              <div class="tracking-actions">
+                <a class="tracking-link" id="tracking-link" href="#" target="_blank" rel="noopener noreferrer">Track shipment &rarr;</a>
+                <button class="tracking-copy" id="tracking-copy" type="button" onclick="copyTrackingNumber_()">Copy tracking number</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>More pet photos <small>optional</small></label>
+            <div class="upfield">
+              <input type="file" id="m-photos" accept="image/*" multiple onchange="onManagePetFiles(this)">
+              <span class="upfield-label">Select files</span>
+              <span class="upfield-hint">JPG or PNG · up to 6 files · 3 MB each</span>
+            </div>
+            <div class="file-chosen" id="manage-pet-file-chosen"></div>
+            <div class="photo-list" id="manage-pet-photo-list"></div>
+            <div class="manage-actions"><button class="btn-submit" id="m-photo-btn" onclick="uploadManagePetPhotos()">Upload photos</button></div>
+          </div>
+
+          <div class="field" style="margin-top:2rem">
+            <label>Payment screenshot <small>optional</small></label>
+            <div class="upfield">
+              <input type="file" id="m-payment" accept="image/*" onchange="onManagePayFile(this)">
+              <span class="upfield-label">Select file</span>
+              <span class="upfield-hint">Upload your FPS payment screenshot</span>
+            </div>
+            <div class="file-chosen" id="manage-pay-file-chosen"></div>
+            <div class="photo-list" id="manage-payment-photo-list"></div>
+            <div class="manage-actions"><button class="btn-submit" id="m-payment-btn" onclick="submitManagePayment()">Upload payment proof</button></div>
+          </div>
+
+          <div id="msg-manage-upload" class="status-msg"></div>
+          <p class="manage-note">For privacy, please do not share your order details publicly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog class="photo-preview-dialog" id="photo-preview-dialog">
+  <div class="photo-preview-inner">
+    <button class="photo-preview-close" type="button" onclick="closePhotoPreview()" aria-label="Close">&times;</button>
+    <img class="photo-preview-image" id="photo-preview-image" alt="Selected photo preview">
+  </div>
+</dialog>
+
+<footer>
+  <div class="footer-meta">
+    <span class="footer-brand">© just for you and meow. All rights reserved.</span>
+  </div>
+</footer>
+
+<script>
+const API_URL = '/api/order';
+let manageSession = null;
+let manageFoundOrders = [];
+let managePetFiles = [];
+let managePayFile = null;
+let manageShippingPayFile = null;
+
+
+function fileToBase64(file, options = {}) {
+  const maxDimension = Number(options.maxDimension || 1800);
+  const initialQuality = Number(options.quality || 0.82);
+  const targetBytes = Number(options.targetBytes || 2.4 * 1000 * 1000);
+
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = async () => {
       try {
-        addOrderToTrackingSheet_(ss, existing.orderNumber);
-      } catch (trackingErr) {
-        logSecurity_(
-          'TRACKING_ROW_FAILED',
-          existing.orderNumber,
-          String(trackingErr && trackingErr.message ? trackingErr.message : trackingErr)
-        );
+        const originalWidth = image.naturalWidth || image.width;
+        const originalHeight = image.naturalHeight || image.height;
+        const scale = Math.min(1, maxDimension / Math.max(originalWidth, originalHeight));
+        const width = Math.max(1, Math.round(originalWidth * scale));
+        const height = Math.max(1, Math.round(originalHeight * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d', { alpha: false });
+        if (!context) throw new Error('Image compression is not supported by this browser.');
+
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+
+        let quality = initialQuality;
+        let blob = await canvasToBlob_(canvas, quality);
+        while (blob.size > targetBytes && quality > 0.56) {
+          quality -= 0.08;
+          blob = await canvasToBlob_(canvas, quality);
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = () => reject(new Error('Cannot process ' + file.name));
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        reject(error);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
       }
-
-      return jsonResponse_({
-        success: true,
-        orderNumber: existing.orderNumber,
-        orderToken: deriveOrderToken_(requestId),
-        duplicate: true,
-        product: existingOrder ? {
-          id: 'multi',
-          name: existingOrder.productName,
-          dims: '',
-          price: existingOrder.originalPrice
-        } : undefined,
-        items: existingOrder ? removeDimsFromOrderItems_(existingOrder.items) : [],
-        price: existingOrder ? existingOrder.price : undefined,
-        finalPrice: existingOrder ? existingOrder.price : undefined,
-        total: existingOrder ? existingOrder.price : undefined,
-        amount: existingOrder ? existingOrder.price : undefined,
-        originalPrice: existingOrder ? existingOrder.originalPrice : undefined,
-        discount: existingOrder ? existingOrder.discount : undefined,
-        promoCode: existingOrder ? existingOrder.promoCode : '',
-        outline: existingOrder ? existingOrder.outline : '',
-        digitalCopy: existingOrder ? existingOrder.digitalCopy : false,
-        digitalCopyPrice: existingOrder ? existingOrder.digitalCopyPrice : 0
-      });
-    }
-
-    const orderItems = normalizeOrderItems_(ss, payload);
-    const itemSummary = summarizeOrderItems_(orderItems);
-
-    const terms = getActiveTerms_(ss);
-    if (!terms) throw new Error('TERMS_UNAVAILABLE');
-
-    const acceptedTermsVersion = String(payload.termsVersion || '').trim();
-    if (!acceptedTermsVersion || acceptedTermsVersion !== terms.version) {
-      throw new Error('TERMS_NOT_ACCEPTED');
-    }
-
-    const outline = normalizeOutline_(payload.outline);
-    const customer = normalizeCustomerPayload_(payload);
-    const digitalCopy = normalizeBoolean_(payload.digitalCopy);
-    const digitalCopyPrice = digitalCopy ? DIGITAL_COPY_PRICE : 0;
-
-    if (!payload.firstPhoto || !payload.firstPhoto.data) {
-      throw new Error('MISSING_FIRST_PHOTO');
-    }
-
-    const firstPhotoBlob = decodeAndValidateImage_(payload.firstPhoto.data, 'PET_01');
-
-    const subtotal = calculateOrderItemsSubtotal_(orderItems);
-    const promoResult = calculatePromoForItems_(ss, orderItems, payload.promoCode);
-    const discount = promoResult.valid ? promoResult.discount : 0;
-    const productFinalPrice = subtotal - discount;
-    const finalPrice = productFinalPrice + digitalCopyPrice;
-
-    const orderNumber = generateSequentialOrderNumber_(ordersSheet);
-    const orderToken = deriveOrderToken_(requestId);
-    const orderTokenHash = sha256Hex_(orderToken);
-
-    const folder = DriveApp.getFolderById(props.folderId).createFolder(orderNumber);
-    folder.createFile(firstPhotoBlob);
-
-    const folderUrl = folder.getUrl();
-    const folderFormula = '=HYPERLINK("' + folderUrl + '","' + orderNumber + '")';
-    const itemsForStorage = itemsToSerializable_(orderItems);
-
-    const rowValues = [
-      orderNumber,
-      new Date(),
-      safeText_(customer.instagram),
-      safeText_(customer.name),
-      safeText_(customer.phone),
-      safeText_(customer.address),
-      safeText_(itemSummary.names),
-      safeText_(itemSummary.dims),
-      finalPrice,
-      safeText_(payload.notes || ''),
-      '',
-      ORDER_STATUS_AWAITING_PROOF,
-      orderTokenHash,
-      requestId,
-      new Date(),
-      terms.version,
-      promoResult.valid ? promoResult.code : '',
-      subtotal,
-      discount,
-      outline,
-      digitalCopy ? 'Yes' : 'No',
-      digitalCopyPrice,
-      JSON.stringify(itemsForStorage),
-      itemSummary.productCount,
-      itemSummary.totalQuantity
-    ];
-
-    ordersSheet.appendRow(rowValues);
-
-    const lastRow = ordersSheet.getLastRow();
-    ordersSheet.getRange(lastRow, 11).setFormula(folderFormula);
-
-    // Automatically add the new order number to the Tracking sheet.
-    // Tracking failure will not cancel an otherwise successful order.
-    try {
-      addOrderToTrackingSheet_(ss, orderNumber);
-    } catch (trackingErr) {
-      logSecurity_(
-        'TRACKING_ROW_FAILED',
-        orderNumber,
-        String(trackingErr && trackingErr.message ? trackingErr.message : trackingErr)
-      );
-    }
-
-    if (promoResult.valid) {
-      incrementPromoUse_(ss, promoResult);
-    }
-
-    try {
-      syncOrderToFinanceSheet_({
-        orderNumber: orderNumber,
-        orderDate: new Date(),
-        instagram: safeText_(customer.instagram),
-        name: safeText_(customer.name),
-        phone: safeText_(customer.phone),
-        address: safeText_(customer.address),
-        productName: itemSummary.names,
-        promoCode: promoResult.valid ? promoResult.code : '',
-        promoType: promoResult.valid ? promoResult.type : '',
-        promoValue: promoResult.valid ? promoResult.value : 0,
-        promoApplicableProducts: promoResult.valid ? promoResult.applicableProducts : '',
-        outline: outline,
-        digitalCopy: digitalCopy,
-        digitalCopyPrice: digitalCopyPrice,
-        items: itemsForStorage,
-        productCount: itemSummary.productCount,
-        totalQuantity: itemSummary.totalQuantity
-      });
-    } catch (financeErr) {
-      logSecurity_('FINANCE_SYNC_FAILED', orderNumber, String(financeErr.message || financeErr));
-    }
-
-    logSecurity_('ORDER_CREATED', orderNumber, 'Order created');
-
-    return jsonResponse_({
-      success: true,
-      orderNumber: orderNumber,
-      orderToken: orderToken,
-      product: {
-        id: itemSummary.productCount > 1 ? 'multi' : itemsForStorage[0].productId,
-        name: itemSummary.names,
-        dims: '',
-        price: subtotal
-      },
-      items: removeDimsFromOrderItems_(itemsForStorage),
-      price: finalPrice,
-      finalPrice: finalPrice,
-      total: finalPrice,
-      amount: finalPrice,
-      originalPrice: subtotal,
-      discount: discount,
-      productFinalPrice: productFinalPrice,
-      digitalCopy: digitalCopy,
-      digitalCopyPrice: digitalCopyPrice,
-      promoCode: promoResult.valid ? promoResult.code : '',
-      outline: outline,
-      termsVersion: terms.version
-    });
-
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function ensureOrderColumns_(sheet) {
-  const headers = [
-    'Order #',
-    'Date',
-    'Instagram',
-    'Name',
-    'Phone',
-    'Address',
-    'Size',
-    'Dims',
-    'Price',
-    'Notes',
-    'Folder',
-    'Payment Status',
-    'Payment Token Hash',
-    'Request ID',
-    'Terms Accepted At',
-    'Terms Version',
-    'Promo Code',
-    'Original Price',
-    'Discount',
-    'Outline',
-    'Digital Copy',
-    'Digital Copy Price',
-    'Items JSON',
-    'Product Count',
-    'Total Quantity'
-  ];
-
-  const existing = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
-
-  for (let i = 0; i < headers.length; i++) {
-    if (!existing[i]) {
-      sheet.getRange(1, i + 1).setValue(headers[i]);
-    }
-  }
-}
-
-function findOrderByRequestId_(sheet, requestId) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return null;
-
-  const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
-
-  for (let i = 0; i < data.length; i++) {
-    if (String(data[i][13] || '').trim() === requestId) {
-      return {
-        row: i + 2,
-        orderNumber: String(data[i][0] || '')
-      };
-    }
-  }
-
-  return null;
-}
-
-function generateSequentialOrderNumber_(sheet) {
-  const year = Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy');
-  const prefix = 'MEOW-' + year + '-';
-
-  const lastRow = sheet.getLastRow();
-  let max = 0;
-
-  if (lastRow >= 2) {
-    const orderNumbers = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-
-    orderNumbers.forEach(function(row) {
-      const value = String(row[0] || '');
-
-      if (value.indexOf(prefix) === 0) {
-        const n = Number(value.replace(prefix, ''));
-        if (n > max) max = n;
-      }
-    });
-  }
-
-  const next = max + 1;
-  return prefix + String(next).padStart(4, '0');
-}
-
-function normalizeOutline_(value) {
-  const v = String(value || '').trim().toLowerCase();
-
-  if (v === 'black' || v === 'black outline') return 'Black outline';
-  if (v === 'white' || v === 'white outline') return 'White outline';
-
-  throw new Error('INVALID_OUTLINE');
-}
-
-function normalizeCustomerPayload_(payload) {
-  return {
-    instagram: firstText_([
-      payload.instagram,
-      payload.ig,
-      payload.instagramHandle,
-      payload.customer && payload.customer.instagram
-    ]),
-    name: firstText_([
-      payload.name,
-      payload.fullName,
-      payload.customerName,
-      payload.customer && payload.customer.name,
-      payload.customer && payload.customer.fullName
-    ]),
-    phone: firstText_([
-      payload.phone,
-      payload.phoneNumber,
-      payload.mobile,
-      payload.customer && payload.customer.phone
-    ]),
-    address: firstText_([
-      payload.address,
-      payload.deliveryAddress,
-      payload.shippingAddress,
-      payload.fullAddress,
-      payload.sfAddress,
-      payload.sfLocationAddress,
-      payload.lockerAddress,
-      payload.delivery && payload.delivery.address,
-      payload.shipping && payload.shipping.address,
-      payload.customer && payload.customer.address
-    ])
-  };
-}
-
-function firstText_(values) {
-  for (let i = 0; i < values.length; i++) {
-    const value = String(values[i] || '').trim();
-    if (value) return value;
-  }
-  return '';
-}
-
-function normalizeOrderItems_(ss, payload) {
-  const rawItems = Array.isArray(payload.items) ? payload.items : [];
-  const items = [];
-
-  if (rawItems.length) {
-    for (let i = 0; i < rawItems.length; i++) {
-      const raw = rawItems[i] || {};
-      const productId = String(raw.productId || raw.id || '').trim();
-      const quantity = Math.max(1, Math.min(20, Number(raw.quantity || 1)));
-      const product = getProductById_(ss, productId);
-      if (!product) throw new Error('INVALID_PRODUCT');
-      items.push({
-        product: product,
-        quantity: quantity
-      });
-    }
-  } else {
-    const product = getProductById_(ss, payload.productId);
-    if (!product) throw new Error('INVALID_PRODUCT');
-    items.push({
-      product: product,
-      quantity: 1
-    });
-  }
-
-  if (!items.length) throw new Error('MISSING_PRODUCTS');
-  if (items.length > 12) throw new Error('TOO_MANY_PRODUCTS');
-
-  const merged = [];
-  items.forEach(function(item) {
-    const id = String(item.product.id || '').trim().toLowerCase();
-    let existing = null;
-    for (let i = 0; i < merged.length; i++) {
-      if (String(merged[i].product.id || '').trim().toLowerCase() === id) {
-        existing = merged[i];
-        break;
-      }
-    }
-    if (existing) {
-      existing.quantity = Math.min(20, Number(existing.quantity || 0) + Number(item.quantity || 0));
-    } else {
-      merged.push(item);
-    }
-  });
-
-  return merged;
-}
-
-function calculateOrderItemsSubtotal_(orderItems) {
-  return orderItems.reduce(function(sum, item) {
-    return sum + Number(item.product.price || 0) * Number(item.quantity || 0);
-  }, 0);
-}
-
-function summarizeOrderItems_(orderItems) {
-  const names = orderItems.map(function(item) {
-    return item.product.name + ' x' + Number(item.quantity || 1);
-  }).join(' + ');
-
-  const dims = orderItems.map(function(item) {
-    return item.product.name + ': ' + item.product.dims;
-  }).join(' | ');
-
-  const totalQuantity = orderItems.reduce(function(sum, item) {
-    return sum + Number(item.quantity || 0);
-  }, 0);
-
-  return {
-    names: names,
-    dims: dims,
-    productCount: orderItems.length,
-    totalQuantity: totalQuantity
-  };
-}
-
-function itemsToSerializable_(orderItems) {
-  return orderItems.map(function(item) {
-    return {
-      productId: item.product.id,
-      name: item.product.name,
-      dims: item.product.dims,
-      price: Number(item.product.price || 0),
-      quantity: Number(item.quantity || 1),
-      lineTotal: Number(item.product.price || 0) * Number(item.quantity || 1)
     };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Cannot open ' + file.name));
+    };
+
+    image.src = objectUrl;
   });
 }
 
-function parseOrderItemsJson_(value) {
-  const text = String(value || '').trim();
-  if (!text) return [];
+function canvasToBlob_(canvas, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error('Image compression failed.'));
+    }, 'image/jpeg', quality);
+  });
+}
+function fileToDataUrl_(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Cannot preview ' + file.name));
+    reader.readAsDataURL(file);
+  });
+}
+
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-msg ' + type + ' show';
+  el.textContent = text;
+}
+
+function hideMsg(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-msg';
+  el.textContent = '';
+}
+
+function validateImageFile_(file, label) {
+  const MAX_SIZE = 15 * 1000 * 1000;
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+  if (!file) throw new Error(label + ' is missing.');
+  if (file.size > MAX_SIZE) throw new Error(label + ' is too large (max 15MB).');
+  if (!ALLOWED_TYPES.includes(file.type)) throw new Error(label + ' must be PNG or JPEG only.');
+}
+
+async function postApi_(payload) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  let result;
   try {
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
+    result = await response.json();
   } catch (_) {
-    return [];
+    throw new Error('INVALID_SERVER_RESPONSE');
   }
-}
-
-function deriveOrderToken_(requestId) {
-  const props = getRequiredProperties_();
-  return sha256Hex_(props.apiSecret + '|' + String(requestId || ''));
-}
-
-/***************
- * MANAGE ORDER
- * Revised:
- * - Phone only lookup
- * - No order number required
- * - Returns all matching orders, newest first
- * - Customer selects which order to manage on the website
- * - Removes dimensions from manage order response
- * - Includes tracking information
- ***************/
-function manageOrderLookup_(payload) {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-
-  const phone = String(
-    payload.phone ||
-    payload.phoneDigits ||
-    payload.phoneLast8 ||
-    payload.phoneRaw ||
-    ''
-  ).trim();
-
-  if (!phone) throw new Error('MISSING_PHONE');
-
-  const matchingOrders = findOrdersByPhone_(ordersSheet, phone);
-
-  if (!matchingOrders.length) {
-    logSecurity_('MANAGE_LOOKUP_FAILED', '', 'Order not found by phone');
-    throw new Error('ORDER_NOT_FOUND');
-  }
-
-  const manageableOrders = [];
-
-  matchingOrders.forEach(function(order) {
-    if (!order.requestId) return;
-
-    const orderToken = deriveOrderToken_(order.requestId);
-
-    try {
-      verifyOrderToken_(order, orderToken);
-      manageableOrders.push(buildManageOrderResponse_(ss, order, orderToken));
-    } catch (err) {
-      logSecurity_('MANAGE_LOOKUP_TOKEN_FAILED', order.orderNumber, String(err && err.message ? err.message : err));
-    }
-  });
-
-  if (!manageableOrders.length) {
-    throw new Error('ORDER_CANNOT_BE_MANAGED');
-  }
-
-  logSecurity_(
-    'MANAGE_LOOKUP_SUCCESS',
-    manageableOrders[0].orderNumber,
-    'Customer verified order management access by phone. Orders found: ' + manageableOrders.length
-  );
-
-  return jsonResponse_({
-    success: true,
-    multiple: manageableOrders.length > 1,
-    count: manageableOrders.length,
-    orders: manageableOrders,
-
-    // Backwards compatibility for old front-end versions.
-    orderNumber: manageableOrders[0].orderNumber,
-    orderToken: manageableOrders[0].orderToken,
-    order: manageableOrders[0]
-  });
-}
-
-function buildManageOrderResponse_(ss, order, orderToken) {
-  const tracking = getTrackingForOrder_(ss, order.orderNumber);
 
   return {
-    orderNumber: order.orderNumber,
-    orderToken: orderToken,
-    instagram: order.instagram,
-    name: order.name,
-    phone: maskPhone_(order.phone),
-    productName: order.productName,
-    dims: '',
-    price: order.price,
-    paymentStatus: order.paymentStatus,
-    promoCode: order.promoCode,
-    outline: order.outline,
-    digitalCopy: order.digitalCopy,
-    digitalCopyPrice: order.digitalCopyPrice,
-    items: removeDimsFromOrderItems_(order.items),
-    productCount: order.productCount,
-    totalQuantity: order.totalQuantity,
-
-    // Tracking data for the Manage Order page.
-    tracking: tracking,
-    courier: tracking.courier,
-    trackingNumber: tracking.trackingNumber,
-    trackingUrl: tracking.trackingUrl,
-    shippingStatus: tracking.shippingStatus,
-    shippedDate: tracking.shippedDate,
-    trackingNotes: tracking.notes,
-    trackingLastUpdated: tracking.lastUpdated,
-    shippingFee: tracking.shippingFee,
-    shippingCurrency: tracking.shippingCurrency,
-    shippingPaymentStatus: tracking.shippingPaymentStatus,
-    shippingProofSubmittedAt: tracking.shippingProofSubmittedAt
+    ...result,
+    success: response.ok && result.success === true
   };
 }
 
-function findOrdersByPhone_(sheet, inputPhone) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return [];
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 25).getValues();
-  const orders = [];
-
-  // Search from bottom to top = newest orders first.
-  for (let i = data.length - 1; i >= 0; i--) {
-    const rowPhone = String(data[i][4] || '').trim();
-
-    if (!phoneMatchesForLookup_(rowPhone, inputPhone)) {
-      continue;
-    }
-
-    orders.push({
-      row: i + 2,
-      orderNumber: String(data[i][0] || '').trim(),
-      date: data[i][1],
-      instagram: String(data[i][2] || '').trim(),
-      name: String(data[i][3] || '').trim(),
-      phone: String(data[i][4] || '').trim(),
-      address: String(data[i][5] || '').trim(),
-      productName: String(data[i][6] || '').trim(),
-      dims: String(data[i][7] || '').trim(),
-      price: Number(data[i][8] || 0),
-      paymentStatus: String(data[i][11] || '').trim(),
-      tokenHash: String(data[i][12] || '').trim(),
-      requestId: String(data[i][13] || '').trim(),
-      termsVersion: String(data[i][15] || '').trim(),
-      promoCode: String(data[i][16] || '').trim(),
-      originalPrice: Number(data[i][17] || 0),
-      discount: Number(data[i][18] || 0),
-      outline: String(data[i][19] || '').trim(),
-      digitalCopy: normalizeYesNo_(data[i][20]),
-      digitalCopyPrice: Number(data[i][21] || 0),
-      itemsJson: String(data[i][22] || '').trim(),
-      items: parseOrderItemsJson_(data[i][22]),
-      productCount: Number(data[i][23] || 0),
-      totalQuantity: Number(data[i][24] || 0)
-    });
-  }
-
-  return orders;
-}
-
-function findLatestOrderByPhone_(sheet, inputPhone) {
-  const orders = findOrdersByPhone_(sheet, inputPhone);
-  return orders.length ? orders[0] : null;
-}
-
-function phoneMatchesForLookup_(sheetPhone, inputPhone) {
-  const a = normalizePhone_(sheetPhone);
-  const b = normalizePhone_(inputPhone);
-
-  if (!a || !b) return false;
-  if (a === b) return true;
-
-  if (a.length >= 8 && b.length >= 8 && a.slice(-8) === b.slice(-8)) {
-    return true;
-  }
-
-  return false;
-}
-
-function removeDimsFromOrderItems_(items) {
-  if (!Array.isArray(items)) return [];
-
-  return items.map(function(item) {
-    const copy = {};
-    Object.keys(item || {}).forEach(function(key) {
-      if (key !== 'dims' && key !== 'dimensions') {
-        copy[key] = item[key];
-      }
-    });
-    return copy;
-  });
-}
-
-function normalizeBoolean_(value) {
-  if (value === true) return true;
-  const text = String(value || '').trim().toLowerCase();
-  return ['true', 'yes', 'y', '1', 'on'].indexOf(text) !== -1;
-}
-
-function normalizeYesNo_(value) {
-  const text = String(value || '').trim().toLowerCase();
-  return ['yes', 'true', 'y', '1', 'on'].indexOf(text) !== -1;
-}
-
-function normalizePhone_(value) {
+function normalizePhoneForLookup_(value) {
   return String(value || '').replace(/[^0-9]/g, '');
 }
 
-function maskPhone_(value) {
-  const digits = normalizePhone_(value);
-  if (digits.length <= 4) return digits;
-  return '••••' + digits.slice(-4);
+function phoneLookupPayload_(phone) {
+  const phoneDigits = normalizePhoneForLookup_(phone);
+  return {
+    type: 'manage_lookup',
+    phone: phone,
+    phoneRaw: phone,
+    phoneDigits: phoneDigits,
+    phoneLast8: phoneDigits.slice(-8)
+  };
 }
 
-/***************
- * TRACKING
- ***************/
-function setupTrackingSheet() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  let sheet = ss.getSheetByName(TRACKING_SHEET);
+async function verifyManageOrder() {
+  const phone = document.getElementById('m-phone').value.trim();
 
-  if (!sheet) {
-    sheet = ss.insertSheet(TRACKING_SHEET);
+  if (!phone) {
+    showMsg('msg-manage-login', 'err', 'Please enter the phone number used for your order.');
+    return;
   }
 
-  // Repairs mixed old/new rows, rewrites the correct headers,
-  // and fills Name + Instagram from the Orders sheet.
-  repairTrackingSheetLayout_(ss, sheet);
-  backfillTrackingCustomerReferences_(ss, sheet);
-  applyTrackingSheetFormatting_(sheet);
+  const btn = document.getElementById('m-login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Checking…';
+  hideMsg('msg-manage-login');
+  hideMsg('msg-manage-upload');
+  resetManageOrderView_();
 
-  console.log('Tracking sheet repaired and ready: ' + sheet.getName());
-}
+  try {
+    const result = await postApi_(phoneLookupPayload_(phone));
 
-// Optional one-time repair function. It performs the same repair as
-// setupTrackingSheet(), but the name makes its purpose clearer in Apps Script.
-function repairTrackingSheetLayout() {
-  setupTrackingSheet();
-}
-
-function getOrCreateTrackingSheet_(ss) {
-  let sheet = ss.getSheetByName(TRACKING_SHEET);
-
-  if (!sheet) {
-    sheet = ss.insertSheet(TRACKING_SHEET);
-  }
-
-  // Only run the heavier repair when the headers are not already correct.
-  if (!trackingHeadersAreCurrent_(sheet)) {
-    repairTrackingSheetLayout_(ss, sheet);
-  }
-
-  applyTrackingSheetFormatting_(sheet);
-  return sheet;
-}
-
-function trackingHeadersAreCurrent_(sheet) {
-  const headers = sheet.getRange(1, 1, 1, TRACKING_HEADERS.length).getDisplayValues()[0];
-
-  for (let i = 0; i < TRACKING_HEADERS.length; i++) {
-    if (String(headers[i] || '').trim() !== TRACKING_HEADERS[i]) {
-      return false;
+    if (!result.success) {
+      throw new Error(result.error || 'ORDER_LOOKUP_FAILED');
     }
-  }
 
-  return true;
-}
+    const orders = normalizeManageLookupResult_(result);
 
-function repairTrackingSheetLayout_(ss, sheet) {
-  const headerValues = sheet.getRange(1, 1, 1, TRACKING_HEADERS.length).getDisplayValues()[0];
-  const legacyHeaderLayout =
-    String(headerValues[0] || '').trim() === 'Order Number' &&
-    String(headerValues[1] || '').trim() === 'Courier' &&
-    String(headerValues[2] || '').trim() === 'Tracking Number';
-
-  const customerByOrderNumber = getTrackingCustomerMap_(ss);
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow >= 2) {
-    const rows = sheet.getRange(2, 1, lastRow - 1, TRACKING_HEADERS.length).getValues();
-
-    for (let i = 0; i < rows.length; i++) {
-      const rowNumber = i + 2;
-      const row = rows[i];
-      const orderNumber = String(row[0] || '').trim();
-
-      if (!orderNumber) continue;
-
-      const customer = customerByOrderNumber[orderNumber.toUpperCase()] || {
-        name: '',
-        instagram: ''
-      };
-
-      if (isLegacyTrackingDataRow_(row, customer, legacyHeaderLayout)) {
-        // Legacy eight-column row:
-        // A Order Number
-        // B Courier
-        // C Tracking Number
-        // D Tracking URL
-        // E Shipping Status
-        // F Shipped Date
-        // G Notes
-        // H Last Updated
-        //
-        // Convert it to the new ten-column layout without losing data.
-        sheet.getRange(rowNumber, 1, 1, TRACKING_HEADERS.length).setValues([[
-          row[0],
-          customer.name || '',
-          customer.instagram || '',
-          row[1],
-          row[2],
-          row[3],
-          row[4] || DEFAULT_TRACKING_STATUS,
-          row[5],
-          row[6],
-          row[7],
-          '',
-          '',
-          '',
-          ''
-        ]]);
-        continue;
-      }
-
-      // Row is already using the new layout. Only fill missing references
-      // and a missing default status; do not rewrite the tracking fields.
-      const currentName = String(row[1] || '').trim();
-      const currentInstagram = String(row[2] || '').trim();
-      const currentStatus = String(row[6] || '').trim();
-
-      if (!currentName && customer.name) {
-        sheet.getRange(rowNumber, 2).setValue(customer.name);
-      }
-
-      if (!currentInstagram && customer.instagram) {
-        sheet.getRange(rowNumber, 3).setValue(customer.instagram);
-      }
-
-      if (!currentStatus) {
-        sheet.getRange(rowNumber, 7).setValue(DEFAULT_TRACKING_STATUS);
-      }
+    if (!orders.length) {
+      throw new Error('ORDER_NOT_FOUND');
     }
+
+    manageFoundOrders = orders;
+
+    if (orders.length === 1) {
+      selectManageOrder_(orders[0]);
+      showMsg('msg-manage-login', 'ok', 'Order found. You can view shipping details, upload photos or payment proof below.');
+      return;
+    }
+
+    renderManageOrderChoices_(orders);
+    showMsg('msg-manage-login', 'ok', 'We found ' + orders.length + ' orders. Please choose which order you want to manage.');
+  } catch (error) {
+    console.error('MANAGE_LOOKUP_ERROR:', error);
+    manageSession = null;
+    manageFoundOrders = [];
+    sessionStorage.removeItem('meow_manage_order_number');
+    sessionStorage.removeItem('meow_manage_order_token');
+    resetManageOrderView_();
+    showMsg('msg-manage-login', 'err', 'Order not found. Please check the phone number.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Find order';
+  }
+}
+
+function normalizeManageLookupResult_(result) {
+  if (Array.isArray(result.orders) && result.orders.length) {
+    return result.orders
+      .map(function(entry) {
+        if (entry && entry.order) {
+          return {
+            ...entry.order,
+            orderNumber: entry.orderNumber || entry.order.orderNumber,
+            orderToken: entry.orderToken || entry.order.orderToken
+          };
+        }
+        return entry;
+      })
+      .filter(function(order) {
+        return order && order.orderNumber && order.orderToken;
+      });
   }
 
-  // Always rewrite the complete header row. This fixes the situation where
-  // the data moved right but the old headings remained in A:H.
-  sheet.getRange(1, 1, 1, TRACKING_HEADERS.length).setValues([TRACKING_HEADERS]);
+  const foundOrder = result.order || {};
+  const foundOrderNumber = result.orderNumber || foundOrder.orderNumber || foundOrder.orderNo || foundOrder.no || '';
+
+  if (result.orderToken && foundOrderNumber) {
+    return [{
+      ...foundOrder,
+      orderNumber: foundOrderNumber,
+      orderToken: result.orderToken
+    }];
+  }
+
+  return [];
 }
 
-function isLegacyTrackingDataRow_(row, customer, legacyHeaderLayout) {
-  const b = String(row[1] || '').trim();
-  const c = String(row[2] || '').trim();
-  const d = String(row[3] || '').trim();
-  const e = String(row[4] || '').trim();
-  const f = String(row[5] || '').trim();
-  const g = String(row[6] || '').trim();
-  const h = row[7];
-  const j = row[9];
+function resetManageOrderView_() {
+  const list = document.getElementById('manage-order-list');
+  if (list) {
+    list.classList.remove('show');
+    list.innerHTML = '';
+  }
 
-  const expectedName = String(customer.name || '').trim();
-  const expectedInstagram = String(customer.instagram || '').trim();
+  const panel = document.getElementById('manage-upload-panel');
+  if (panel) panel.classList.remove('show');
 
-  const matchesName = expectedName && normalizeTrackingCompare_(b) === normalizeTrackingCompare_(expectedName);
-  const matchesInstagram = expectedInstagram && normalizeTrackingCompare_(c) === normalizeTrackingCompare_(expectedInstagram);
+  managePetFiles = [];
+  managePayFile = null;
+  manageShippingPayFile = null;
 
-  // Strong signs that this row is already in the new layout.
-  const currentLayoutSignal =
-    matchesName ||
-    matchesInstagram ||
-    !!g ||
-    !!j ||
-    looksLikeTrackingUrl_(f) ||
-    (looksLikeInstagramReference_(c) && !looksLikeTrackingUrl_(d)) ||
-    (looksLikeCourier_(d) && !looksLikeTrackingUrl_(d));
+  const petInput = document.getElementById('m-photos');
+  const payInput = document.getElementById('m-payment');
+  const shippingPayInput = document.getElementById('m-shipping-payment');
+  if (petInput) petInput.value = '';
+  if (payInput) payInput.value = '';
+  if (shippingPayInput) shippingPayInput.value = '';
 
-  if (currentLayoutSignal) return false;
+  const shippingPanel = document.getElementById('shipping-fee-panel');
+  if (shippingPanel) shippingPanel.classList.remove('show');
+  hideMsg('msg-manage-shipping');
 
-  // Strong signs that this row was appended by the old eight-column code.
-  const legacyLayoutSignal =
-    looksLikeTrackingUrl_(d) ||
-    looksLikeShippingStatus_(e) ||
-    (hasTrackingValue_(h) && !hasTrackingValue_(j));
+  const idsToClear = [
+    'manage-pet-file-chosen',
+    'manage-pay-file-chosen',
+    'manage-shipping-pay-file-chosen',
+    'manage-pet-photo-list',
+    'manage-payment-photo-list',
+    'manage-shipping-payment-photo-list'
+  ];
 
-  if (legacyLayoutSignal) return true;
-
-  // When the header itself is still the original eight-column header and
-  // there are no signs of the new layout, treat the row as legacy.
-  return legacyHeaderLayout;
-}
-
-function normalizeTrackingCompare_(value) {
-  return String(value || '').trim().toLowerCase().replace(/^@/, '');
-}
-
-function hasTrackingValue_(value) {
-  if (value instanceof Date) return !isNaN(value.getTime());
-  return String(value || '').trim() !== '';
-}
-
-function looksLikeTrackingUrl_(value) {
-  const text = String(value || '').trim();
-  return /^https?:\/\//i.test(text) || /^www\./i.test(text);
-}
-
-function looksLikeInstagramReference_(value) {
-  const text = String(value || '').trim();
-  if (!text) return false;
-  if (/^@[^\s]+$/.test(text)) return true;
-  return /^[a-z0-9._]{2,30}$/i.test(text) && !/^\d+$/.test(text);
-}
-
-function looksLikeCourier_(value) {
-  const text = String(value || '').trim().toLowerCase();
-  if (!text) return false;
-
-  return [
-    'sf express',
-    'sf-express',
-    '順豐',
-    'dhl',
-    'fedex',
-    'ups',
-    'hongkong post',
-    '香港郵政',
-    'kerry',
-    'lalamove'
-  ].some(function(keyword) {
-    return text.indexOf(keyword) !== -1;
+  idsToClear.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
   });
 }
 
-function looksLikeShippingStatus_(value) {
-  const text = String(value || '').trim().toLowerCase();
-  if (!text) return false;
+function renderManageOrderChoices_(orders) {
+  const list = document.getElementById('manage-order-list');
+  if (!list) return;
 
-  return [
-    'preparing',
-    'pending',
-    'ready',
-    'shipped',
-    'in transit',
-    'delivered',
-    'completed',
-    'cancelled',
-    'canceled',
-    '準備中',
-    '待處理',
-    '已寄出',
-    '運送中',
-    '已送達',
-    '已完成',
-    '已取消'
-  ].indexOf(text) !== -1;
-}
+  list.innerHTML = '';
+  list.classList.add('show');
 
-function getTrackingCustomerMap_(ss) {
-  const customerByOrderNumber = {};
+  orders.forEach(function(order, index) {
+    const card = document.createElement('div');
+    card.className = 'order-card';
 
-  try {
-    const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-    const lastRow = ordersSheet.getLastRow();
+    const info = document.createElement('div');
 
-    if (lastRow < 2) return customerByOrderNumber;
+    const title = document.createElement('div');
+    title.className = 'order-card-title';
+    title.textContent = order.orderNumber || ('Order ' + (index + 1));
 
-    // Orders columns: A Order Number, C Instagram, D Name.
-    const rows = ordersSheet.getRange(2, 1, lastRow - 1, 4).getDisplayValues();
+    const meta = document.createElement('div');
+    meta.className = 'order-card-meta';
 
-    for (let i = 0; i < rows.length; i++) {
-      const orderNumber = String(rows[i][0] || '').trim().toUpperCase();
-      if (!orderNumber) continue;
+    const tracking = normalizeTrackingInfo_(order);
+    const parts = [
+      'Products: ' + formatManageItems_(order),
+      'Status: ' + (order.paymentStatus || '—')
+    ];
 
-      customerByOrderNumber[orderNumber] = {
-        instagram: String(rows[i][2] || '').trim(),
-        name: String(rows[i][3] || '').trim()
-      };
+    if (tracking.shippingStatus) {
+      parts.push('Shipping: ' + tracking.shippingStatus);
     }
-  } catch (_) {}
 
-  return customerByOrderNumber;
-}
-
-function applyTrackingSheetFormatting_(sheet) {
-  sheet.setFrozenRows(1);
-
-  sheet.getRange(1, 1, 1, TRACKING_HEADERS.length)
-    .setFontWeight('bold')
-    .setBackground('#111111')
-    .setFontColor('#ffffff');
-
-  sheet.setColumnWidth(1, 180); // Order Number
-  sheet.setColumnWidth(2, 180); // Name
-  sheet.setColumnWidth(3, 180); // Instagram
-  sheet.setColumnWidth(4, 140); // Courier
-  sheet.setColumnWidth(5, 220); // Tracking Number
-  sheet.setColumnWidth(6, 320); // Tracking URL
-  sheet.setColumnWidth(7, 150); // Shipping Status
-  sheet.setColumnWidth(8, 140); // Shipped Date
-  sheet.setColumnWidth(9, 260); // Notes
-  sheet.setColumnWidth(10, 170); // Last Updated
-  sheet.setColumnWidth(11, 130); // Shipping Fee
-  sheet.setColumnWidth(12, 130); // Shipping Currency
-  sheet.setColumnWidth(13, 220); // Shipping Payment Status
-  sheet.setColumnWidth(14, 190); // Shipping Proof Submitted
-
-  sheet.getRange('A:A').setNumberFormat('@');
-  sheet.getRange('C:C').setNumberFormat('@');
-  sheet.getRange('E:E').setNumberFormat('@');
-  sheet.getRange('H2:H').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('J2:J').setNumberFormat('yyyy-mm-dd hh:mm');
-  sheet.getRange('K2:K').setNumberFormat('0.00');
-  sheet.getRange('L:L').setNumberFormat('@');
-  sheet.getRange('N2:N').setNumberFormat('yyyy-mm-dd hh:mm');
-}
-
-function addOrderToTrackingSheet_(ss, orderNumber) {
-  const cleanOrderNumber = String(orderNumber || '').trim();
-
-  if (!cleanOrderNumber) {
-    throw new Error('MISSING_TRACKING_ORDER_NUMBER');
-  }
-
-  const sheet = getOrCreateTrackingSheet_(ss);
-  const customer = getOrderCustomerReferenceForTracking_(ss, cleanOrderNumber);
-  const existingRow = findTrackingRow_(sheet, cleanOrderNumber);
-
-  // Avoid duplicate rows. For an older row, fill blank reference cells.
-  if (existingRow) {
-    const currentName = String(sheet.getRange(existingRow, 2).getDisplayValue() || '').trim();
-    const currentInstagram = String(sheet.getRange(existingRow, 3).getDisplayValue() || '').trim();
-
-    if (!currentName && customer.name) {
-      sheet.getRange(existingRow, 2).setValue(customer.name);
+    const shippingFee = normalizeShippingFeeInfo_(order);
+    if (shippingFee.amount > 0) {
+      parts.push('Shipping fee: ' + formatShippingFeeAmount_(shippingFee.amount, shippingFee.currency));
     }
-    if (!currentInstagram && customer.instagram) {
-      sheet.getRange(existingRow, 3).setValue(customer.instagram);
+
+    if (order.price) {
+      parts.push('Total: HK$' + Number(order.price).toLocaleString());
     }
-    return existingRow;
-  }
 
-  sheet.appendRow([
-    cleanOrderNumber,
-    customer.name,
-    customer.instagram,
-    '',
-    '',
-    '',
-    DEFAULT_TRACKING_STATUS,
-    '',
-    '',
-    new Date(),
-    '',
-    '',
-    '',
-    ''
-  ]);
+    meta.textContent = parts.join(' · ');
 
-  return sheet.getLastRow();
-}
+    info.appendChild(title);
+    info.appendChild(meta);
 
-function getOrderCustomerReferenceForTracking_(ss, orderNumber) {
-  try {
-    const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-    const order = findOrderByNumber_(ordersSheet, orderNumber);
-    return {
-      name: order ? safeText_(order.name) : '',
-      instagram: order ? safeText_(order.instagram) : ''
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'order-card-btn';
+    button.textContent = 'Manage this order';
+    button.onclick = function() {
+      selectManageOrder_(order);
+      showMsg('msg-manage-login', 'ok', 'Selected ' + order.orderNumber + '. You can view shipping details, upload photos or payment proof below.');
     };
-  } catch (_) {
-    return { name: '', instagram: '' };
-  }
+
+    card.appendChild(info);
+    card.appendChild(button);
+    list.appendChild(card);
+  });
 }
 
-function backfillTrackingCustomerReferences_(ss, trackingSheet) {
-  const lastRow = trackingSheet.getLastRow();
-  if (lastRow < 2) return;
+function selectManageOrder_(order) {
+  if (!order || !order.orderNumber || !order.orderToken) return;
 
-  const customerByOrderNumber = getTrackingCustomerMap_(ss);
-  const trackingRows = trackingSheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
-  const valuesToWrite = [];
-  let hasChanges = false;
-
-  for (let i = 0; i < trackingRows.length; i++) {
-    const orderNumber = String(trackingRows[i][0] || '').trim().toUpperCase();
-    const currentName = String(trackingRows[i][1] || '').trim();
-    const currentInstagram = String(trackingRows[i][2] || '').trim();
-    const source = customerByOrderNumber[orderNumber] || { name: '', instagram: '' };
-    const resolvedName = currentName || source.name || '';
-    const resolvedInstagram = currentInstagram || source.instagram || '';
-
-    if (resolvedName !== currentName || resolvedInstagram !== currentInstagram) {
-      hasChanges = true;
-    }
-
-    valuesToWrite.push([resolvedName, resolvedInstagram]);
-  }
-
-  if (hasChanges) {
-    trackingSheet.getRange(2, 2, valuesToWrite.length, 2).setValues(valuesToWrite);
-  }
-}
-
-function findTrackingRow_(sheet, orderNumber) {
-  const target = String(orderNumber || '').trim().toUpperCase();
-  const lastRow = sheet.getLastRow();
-
-  if (!target || lastRow < 2) return null;
-
-  const orderNumbers = sheet
-    .getRange(2, 1, lastRow - 1, 1)
-    .getDisplayValues();
-
-  for (let i = 0; i < orderNumbers.length; i++) {
-    if (String(orderNumbers[i][0] || '').trim().toUpperCase() === target) {
-      return i + 2;
-    }
-  }
-
-  return null;
-}
-
-function getTrackingForOrder_(ss, orderNumber) {
-  const empty = emptyTrackingRecord_();
-  const cleanOrderNumber = String(orderNumber || '').trim();
-
-  if (!cleanOrderNumber) return empty;
-
-  const sheet = getOrCreateTrackingSheet_(ss);
-  let rowNumber = findTrackingRow_(sheet, cleanOrderNumber);
-
-  // Self-heal existing orders: opening Manage Order creates the missing
-  // Tracking row automatically without duplicating existing records.
-  if (!rowNumber) {
-    try {
-      rowNumber = addOrderToTrackingSheet_(ss, cleanOrderNumber);
-    } catch (_) {
-      return empty;
-    }
-  }
-
-  const row = sheet.getRange(rowNumber, 1, 1, TRACKING_HEADERS.length).getValues()[0];
-
-  return {
-    courier: String(row[3] || '').trim(),
-    trackingNumber: String(row[4] || '').trim(),
-    trackingUrl: normalizeTrackingUrl_(row[5]),
-    shippingStatus: String(row[6] || '').trim() || DEFAULT_TRACKING_STATUS,
-    shippedDate: formatTrackingDate_(row[7]),
-    notes: String(row[8] || '').trim(),
-    lastUpdated: formatTrackingDateTime_(row[9]),
-    shippingFee: normalizeShippingFeeAmount_(row[10]),
-    shippingCurrency: String(row[11] || '').trim().toUpperCase() || DEFAULT_SHIPPING_CURRENCY,
-    shippingPaymentStatus: String(row[12] || '').trim() || (
-      normalizeShippingFeeAmount_(row[10]) > 0 ? SHIPPING_PAYMENT_STATUS_AWAITING : ''
-    ),
-    shippingProofSubmittedAt: formatTrackingDateTime_(row[13])
+  manageSession = {
+    orderNumber: order.orderNumber,
+    orderToken: order.orderToken,
+    order: order
   };
-}
 
-function emptyTrackingRecord_() {
-  return {
-    courier: '',
-    trackingNumber: '',
-    trackingUrl: '',
-    shippingStatus: '',
-    shippedDate: '',
-    notes: '',
-    lastUpdated: '',
-    shippingFee: 0,
-    shippingCurrency: DEFAULT_SHIPPING_CURRENCY,
-    shippingPaymentStatus: '',
-    shippingProofSubmittedAt: ''
-  };
-}
+  sessionStorage.setItem('meow_manage_order_number', manageSession.orderNumber);
+  sessionStorage.setItem('meow_manage_order_token', manageSession.orderToken);
 
-function normalizeShippingFeeAmount_(value) {
-  if (typeof value === 'number') {
-    return isFinite(value) && value > 0 ? value : 0;
+  renderManageSummary_(manageSession.order);
+  renderManageShippingFee_(manageSession.order);
+  renderManageTracking_(manageSession.order);
+  document.getElementById('manage-upload-panel').classList.add('show');
+
+  const list = document.getElementById('manage-order-list');
+  if (list && manageFoundOrders.length <= 1) {
+    list.classList.remove('show');
+    list.innerHTML = '';
   }
+}
 
-  const cleaned = String(value || '')
-    .replace(/,/g, '')
-    .replace(/[^0-9.-]/g, '');
+function formatManageItems_(order) {
+  if (Array.isArray(order.items) && order.items.length) {
+    return order.items.map(item => {
+      const name = item.name || item.productName || item.productId || 'Product';
+      const qty = Number(item.quantity || 1);
+      return name + ' × ' + qty;
+    }).join(' + ');
+  }
+  return order.productName || order.size || '—';
+}
 
+function renderManageSummary_(order) {
+  const summary = document.getElementById('manage-summary');
+  summary.innerHTML = '';
+
+  const rows = [
+    { label: 'Order', value: manageSession.orderNumber },
+    { label: 'Name', value: order.name || '—' },
+    { label: 'Phone', value: order.phone || '—' },
+    { label: 'Products', value: formatManageItems_(order) },
+    { label: 'Digital copy', value: order.digitalCopy ? 'Yes — JPG for personal / non-commercial use' : 'No' },
+    { label: 'Payment status', value: order.paymentStatus || '—' }
+  ];
+
+  if (order.price) rows.push({ label: 'Total', value: 'HK$' + Number(order.price).toLocaleString() });
+
+  rows.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'r-row';
+    const label = document.createElement('span');
+    label.className = 'r-label';
+    label.textContent = row.label;
+    const value = document.createElement('span');
+    value.textContent = row.value;
+    div.appendChild(label);
+    div.appendChild(value);
+    summary.appendChild(div);
+  });
+}
+
+
+function parseShippingFeeAmount_(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value || '').replace(/,/g, '').replace(/[^0-9.-]/g, '');
   const amount = Number(cleaned);
-  return isFinite(amount) && amount > 0 ? amount : 0;
+  return Number.isFinite(amount) ? amount : 0;
 }
 
-function normalizeTrackingUrl_(value) {
-  const url = String(value || '').trim();
-  if (!url) return '';
-  return /^https?:\/\//i.test(url) ? url : '';
+function normalizeShippingFeeInfo_(order) {
+  const source = order && order.tracking && typeof order.tracking === 'object'
+    ? order.tracking
+    : {};
+
+  return {
+    amount: parseShippingFeeAmount_(
+      source.shippingFee !== undefined ? source.shippingFee : order.shippingFee
+    ),
+    currency: String(
+      source.shippingCurrency ||
+      source.currency ||
+      order.shippingCurrency ||
+      'HKD'
+    ).trim().toUpperCase() || 'HKD',
+    status: String(
+      source.shippingPaymentStatus ||
+      source.paymentStatus ||
+      order.shippingPaymentStatus ||
+      ''
+    ).trim(),
+    proofSubmittedAt: String(
+      source.shippingProofSubmittedAt ||
+      source.proofSubmittedAt ||
+      order.shippingProofSubmittedAt ||
+      ''
+    ).trim()
+  };
 }
 
-function formatTrackingDate_(value) {
-  if (!value) return '';
+function formatShippingFeeAmount_(amount, currency) {
+  const value = Number(amount || 0);
+  const formatted = value.toLocaleString('en-HK', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2
+  });
 
-  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
-    return Utilities.formatDate(value, 'Asia/Hong_Kong', 'yyyy-MM-dd');
-  }
+  const code = String(currency || 'HKD').trim().toUpperCase();
+  const symbols = {
+    HKD: 'HK$',
+    USD: 'US$',
+    GBP: '£',
+    EUR: '€',
+    JPY: '¥',
+    AUD: 'A$',
+    CAD: 'C$',
+    SGD: 'S$',
+    TWD: 'NT$',
+    CNY: 'CN¥',
+    RMB: 'CN¥'
+  };
 
-  return String(value).trim();
+  return (symbols[code] || (code + ' ')) + formatted;
 }
 
-function formatTrackingDateTime_(value) {
-  if (!value) return '';
-
-  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
-    return Utilities.formatDate(value, 'Asia/Hong_Kong', 'yyyy-MM-dd HH:mm');
-  }
-
-  return String(value).trim();
+function isShippingFeePaid_(status) {
+  const value = String(status || '').trim().toLowerCase();
+  return value === 'paid' ||
+    value === 'confirmed' ||
+    value === 'verified' ||
+    value === 'completed' ||
+    value === 'payment confirmed' ||
+    value.indexOf('paid -') === 0 ||
+    value.indexOf('confirmed -') === 0;
 }
 
-// Optional one-time utility: add all existing Orders to Tracking.
-// Existing tracking rows will not be duplicated.
-function backfillTrackingOrders() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-  const lastRow = ordersSheet.getLastRow();
+function isShippingFeeProofSubmitted_(status) {
+  const value = String(status || '').trim().toLowerCase();
+  return value.indexOf('proof submitted') !== -1 ||
+    value.indexOf('submitted') !== -1 ||
+    value.indexOf('awaiting verification') !== -1;
+}
 
-  getOrCreateTrackingSheet_(ss);
+function renderManageShippingFee_(order) {
+  const panel = document.getElementById('shipping-fee-panel');
+  const upload = document.getElementById('shipping-fee-upload');
+  const confirmed = document.getElementById('shipping-fee-confirmed');
+  const proofDate = document.getElementById('shipping-fee-proof-date');
+  const info = normalizeShippingFeeInfo_(order || {});
 
-  if (lastRow < 2) {
-    console.log('No existing orders to backfill.');
+  if (!panel || info.amount <= 0) {
+    if (panel) panel.classList.remove('show');
     return;
   }
 
-  const orderNumbers = ordersSheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
-  let added = 0;
+  panel.classList.add('show');
+  const formattedShippingFee = formatShippingFeeAmount_(info.amount, info.currency);
+  document.getElementById('shipping-fee-amount').textContent = formattedShippingFee;
 
-  orderNumbers.forEach(function(row) {
-    const orderNumber = String(row[0] || '').trim();
-    if (!orderNumber) return;
+  const shippingFpsAmount = document.getElementById('shipping-fps-amount');
+  if (shippingFpsAmount) shippingFpsAmount.textContent = formattedShippingFee;
 
-    const trackingSheet = getOrCreateTrackingSheet_(ss);
-    if (!findTrackingRow_(trackingSheet, orderNumber)) {
-      addOrderToTrackingSheet_(ss, orderNumber);
-      added++;
-    }
-  });
+  const status = info.status || 'Awaiting payment';
+  document.getElementById('shipping-fee-status').textContent = status;
 
-  console.log('Tracking backfill completed. Added: ' + added);
-}
+  const paid = isShippingFeePaid_(status);
+  const submitted = isShippingFeeProofSubmitted_(status);
 
-// Diagnostic helper: add the newest Orders row to Tracking and log the result.
-function testAddLatestOrderToTracking() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-  const lastRow = ordersSheet.getLastRow();
-
-  if (lastRow < 2) {
-    throw new Error('NO_ORDERS_FOUND');
+  if (info.proofSubmittedAt) {
+    proofDate.textContent = 'Proof submitted: ' + info.proofSubmittedAt;
+    proofDate.classList.add('show');
+  } else {
+    proofDate.textContent = '';
+    proofDate.classList.remove('show');
   }
 
-  const orderNumber = String(ordersSheet.getRange(lastRow, 1).getDisplayValue() || '').trim();
-  if (!orderNumber) {
-    throw new Error('LATEST_ORDER_NUMBER_EMPTY');
-  }
+  upload.hidden = paid || submitted;
+  confirmed.classList.toggle('show', paid || submitted);
 
-  const trackingRow = addOrderToTrackingSheet_(ss, orderNumber);
-  console.log('Tracking row ready. Order: ' + orderNumber + ', row: ' + trackingRow);
-}
-
-/***************
- * PET PHOTO
- ***************/
-function uploadPetPhoto_(payload) {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-
-  const orderNumber = String(payload.orderNumber || '').trim();
-  const orderToken = String(payload.orderToken || '').trim();
-
-  const order = findOrderByNumber_(ordersSheet, orderNumber);
-  if (!order) throw new Error('ORDER_NOT_FOUND');
-
-  verifyOrderToken_(order, orderToken);
-
-  const photo = payload.photo;
-  const index = Number(payload.index || 1);
-
-  if (!photo || !photo.data) throw new Error('MISSING_PHOTO');
-  if (index < 1 || index > MAX_PET_PHOTOS) throw new Error('INVALID_PHOTO_INDEX');
-
-  const blob = decodeAndValidateImage_(photo.data, 'PET_' + String(index).padStart(2, '0'));
-
-  const folder = getOrderFolder_(props.folderId, orderNumber);
-  folder.createFile(blob);
-
-  logSecurity_('PET_PHOTO_UPLOADED', orderNumber, 'Photo uploaded');
-
-  return jsonResponse_({
-    success: true
-  });
-}
-
-/***************
- * PAYMENT
- ***************/
-function submitPayment_(payload) {
-  const purpose = String(
-    payload.paymentPurpose ||
-    payload.purpose ||
-    'order_payment'
-  ).trim().toLowerCase();
-
-  if (purpose === 'shipping_fee') {
-    return submitShippingFeePayment_(payload);
-  }
-
-  return submitOrderPayment_(payload);
-}
-
-function submitOrderPayment_(payload) {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-
-  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-  const paymentsSheet = requireSheet_(ss, PAYMENTS_SHEET);
-
-  const orderNumber = String(payload.orderNumber || '').trim();
-  const orderToken = String(payload.orderToken || '').trim();
-
-  const order = findOrderByNumber_(ordersSheet, orderNumber);
-  if (!order) throw new Error('ORDER_NOT_FOUND');
-
-  verifyOrderToken_(order, orderToken);
-
-  const screenshot = payload.screenshot;
-  if (!screenshot || !screenshot.data) throw new Error('MISSING_PAYMENT_SCREENSHOT');
-
-  const blob = decodeAndValidateImage_(screenshot.data, 'PAYMENT_PROOF_' + orderNumber);
-
-  const folder = getOrderFolder_(props.folderId, orderNumber);
-  folder.createFile(blob);
-
-  paymentsSheet.appendRow([
-    new Date(),
-    orderNumber,
-    'FPS',
-    PAYMENT_STATUS_PROOF_SUBMITTED,
-    'proof',
-    '',
-    safeText_(screenshot.name || 'payment-proof'),
-    'web'
-  ]);
-
-  ordersSheet.getRange(order.row, 12).setValue(PAYMENT_STATUS_PROOF_SUBMITTED);
-
-  // Only change the finance sheet payment status after the screenshot
-  // has been successfully saved to the order folder.
-  updateFinancePaymentStatus_(orderNumber, FINANCE_PAYMENT_STATUS_FPS);
-
-  logSecurity_('PAYMENT_PROOF_SUBMITTED', orderNumber, 'Payment proof submitted');
-
-  return jsonResponse_({
-    success: true,
-    message: 'Payment proof submitted'
-  });
-}
-
-function submitShippingFeePayment_(payload) {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-
-  const ordersSheet = requireSheet_(ss, ORDERS_SHEET);
-  const paymentsSheet = requireSheet_(ss, PAYMENTS_SHEET);
-  const trackingSheet = getOrCreateTrackingSheet_(ss);
-
-  const orderNumber = String(payload.orderNumber || '').trim();
-  const orderToken = String(payload.orderToken || '').trim();
-
-  const order = findOrderByNumber_(ordersSheet, orderNumber);
-  if (!order) throw new Error('ORDER_NOT_FOUND');
-
-  verifyOrderToken_(order, orderToken);
-
-  let trackingRow = findTrackingRow_(trackingSheet, orderNumber);
-  if (!trackingRow) {
-    trackingRow = addOrderToTrackingSheet_(ss, orderNumber);
-  }
-
-  const trackingValues = trackingSheet
-    .getRange(trackingRow, 1, 1, TRACKING_HEADERS.length)
-    .getValues()[0];
-
-  const shippingFee = normalizeShippingFeeAmount_(trackingValues[10]);
-  const shippingCurrency = String(trackingValues[11] || '')
-    .trim()
-    .toUpperCase() || DEFAULT_SHIPPING_CURRENCY;
-
-  if (shippingFee <= 0) {
-    throw new Error('SHIPPING_FEE_NOT_REQUIRED');
-  }
-
-  const screenshot = payload.screenshot;
-  if (!screenshot || !screenshot.data) {
-    throw new Error('MISSING_SHIPPING_PAYMENT_SCREENSHOT');
-  }
-
-  const blob = decodeAndValidateImage_(
-    screenshot.data,
-    'SHIPPING_PAYMENT_PROOF_' + orderNumber
-  );
-
-  const folder = getOrderFolder_(props.folderId, orderNumber);
-  folder.createFile(blob);
-
-  const submittedAt = new Date();
-
-  paymentsSheet.appendRow([
-    submittedAt,
-    orderNumber,
-    'Shipping fee',
-    SHIPPING_PAYMENT_STATUS_PROOF_SUBMITTED,
-    'shipping_fee',
-    shippingCurrency + ' ' + shippingFee,
-    safeText_(screenshot.name || 'shipping-payment-proof'),
-    'manage-order'
-  ]);
-
-  // Tracking columns:
-  // J Last Updated, M Shipping Payment Status, N Shipping Proof Submitted.
-  trackingSheet.getRange(trackingRow, 10).setValue(submittedAt);
-  trackingSheet.getRange(trackingRow, 13).setValue(SHIPPING_PAYMENT_STATUS_PROOF_SUBMITTED);
-  trackingSheet.getRange(trackingRow, 14).setValue(submittedAt);
-
-  logSecurity_(
-    'SHIPPING_PAYMENT_PROOF_SUBMITTED',
-    orderNumber,
-    'Shipping payment proof submitted: ' + shippingCurrency + ' ' + shippingFee
-  );
-
-  return jsonResponse_({
-    success: true,
-    message: 'Shipping payment proof submitted',
-    shippingPaymentStatus: SHIPPING_PAYMENT_STATUS_PROOF_SUBMITTED,
-    shippingProofSubmittedAt: formatTrackingDateTime_(submittedAt)
-  });
-}
-
-/***************
- * ORDER HELPERS
- ***************/
-function findOrderByNumber_(sheet, orderNumber) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return null;
-
-  const data = sheet.getRange(2, 1, lastRow - 1, 25).getValues();
-
-  for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0] || '').trim() === orderNumber) {
-      return {
-        row: i + 2,
-        orderNumber: String(data[i][0] || '').trim(),
-        date: data[i][1],
-        instagram: String(data[i][2] || '').trim(),
-        name: String(data[i][3] || '').trim(),
-        phone: String(data[i][4] || '').trim(),
-        address: String(data[i][5] || '').trim(),
-        productName: String(data[i][6] || '').trim(),
-        dims: String(data[i][7] || '').trim(),
-        price: Number(data[i][8] || 0),
-        paymentStatus: String(data[i][11] || '').trim(),
-        tokenHash: String(data[i][12] || '').trim(),
-        requestId: String(data[i][13] || '').trim(),
-        termsVersion: String(data[i][15] || '').trim(),
-        promoCode: String(data[i][16] || '').trim(),
-        originalPrice: Number(data[i][17] || 0),
-        discount: Number(data[i][18] || 0),
-        outline: String(data[i][19] || '').trim(),
-        digitalCopy: normalizeYesNo_(data[i][20]),
-        digitalCopyPrice: Number(data[i][21] || 0),
-        itemsJson: String(data[i][22] || '').trim(),
-        items: parseOrderItemsJson_(data[i][22]),
-        productCount: Number(data[i][23] || 0),
-        totalQuantity: Number(data[i][24] || 0)
-      };
-    }
-  }
-
-  return null;
-}
-
-function verifyOrderToken_(order, token) {
-  if (!token || !order.tokenHash) {
-    throw new Error('INVALID_ORDER_TOKEN');
-  }
-
-  const hash = sha256Hex_(token);
-
-  if (hash !== order.tokenHash) {
-    throw new Error('INVALID_ORDER_TOKEN');
+  if (paid) {
+    document.getElementById('shipping-fee-copy').textContent =
+      'Your additional shipping payment has been confirmed.';
+    confirmed.textContent = 'Payment confirmed. Thank you — no further action is required.';
+  } else if (submitted) {
+    document.getElementById('shipping-fee-copy').textContent =
+      'Your shipping payment screenshot has been received and is awaiting verification.';
+    confirmed.textContent = 'We will verify the screenshot before arranging international delivery.';
+  } else {
+    document.getElementById('shipping-fee-copy').textContent =
+      'Please pay the additional shipping fee via FPS using the details below, then upload your payment screenshot.';
+    confirmed.textContent = '';
   }
 }
 
-function getOrderFolder_(parentFolderId, orderNumber) {
-  const parent = DriveApp.getFolderById(parentFolderId);
-  const folders = parent.getFoldersByName(orderNumber);
+function normalizeTrackingInfo_(order) {
+  const source = order && order.tracking && typeof order.tracking === 'object'
+    ? order.tracking
+    : {};
 
-  if (!folders.hasNext()) {
-    return parent.createFolder(orderNumber);
-  }
-
-  return folders.next();
+  return {
+    courier: String(source.courier || order.courier || order.shippingCourier || '').trim(),
+    trackingNumber: String(source.trackingNumber || source.number || order.trackingNumber || '').trim(),
+    trackingUrl: String(source.trackingUrl || source.url || order.trackingUrl || '').trim(),
+    shippingStatus: String(source.shippingStatus || source.status || order.shippingStatus || '').trim(),
+    shippedDate: String(source.shippedDate || source.shippedAt || order.shippedDate || '').trim()
+  };
 }
 
-/***************
- * IMAGE HANDLING
- ***************/
-function decodeAndValidateImage_(data, fallbackName) {
-  const rawData = String(data || '');
-  const base64 = rawData.indexOf(',') >= 0 ? rawData.split(',')[1] : rawData;
-
-  if (!base64) {
-    throw new Error('MISSING_IMAGE_DATA');
-  }
-
-  const bytes = Utilities.base64Decode(base64);
-
-  if (bytes.length > MAX_IMAGE_BYTES) {
-    throw new Error('IMAGE_TOO_LARGE');
-  }
-
-  const imageInfo = detectImageType_(bytes);
-
-  if (!imageInfo) {
-    throw new Error('INVALID_IMAGE_TYPE');
-  }
-
-  return Utilities.newBlob(bytes, imageInfo.mimeType, fallbackName + imageInfo.extension);
-}
-
-function detectImageType_(bytes) {
-  if (!bytes || bytes.length < 8) return null;
-
-  const b0 = bytes[0] & 255;
-  const b1 = bytes[1] & 255;
-  const b2 = bytes[2] & 255;
-  const b3 = bytes[3] & 255;
-  const b4 = bytes[4] & 255;
-  const b5 = bytes[5] & 255;
-  const b6 = bytes[6] & 255;
-  const b7 = bytes[7] & 255;
-
-  const isJpg = b0 === 0xFF && b1 === 0xD8 && b2 === 0xFF;
-  if (isJpg) {
-    return {
-      mimeType: 'image/jpeg',
-      extension: '.jpg'
-    };
-  }
-
-  const isPng =
-    b0 === 0x89 &&
-    b1 === 0x50 &&
-    b2 === 0x4E &&
-    b3 === 0x47 &&
-    b4 === 0x0D &&
-    b5 === 0x0A &&
-    b6 === 0x1A &&
-    b7 === 0x0A;
-
-  if (isPng) {
-    return {
-      mimeType: 'image/png',
-      extension: '.png'
-    };
-  }
-
-  return null;
-}
-
-/***************
- * FINANCE SYNC
- ***************/
-function getFinanceSheet_() {
-  const ss = SpreadsheetApp.openById(FINANCE_SPREADSHEET_ID);
-
-  const selectedSheetName = getFinanceSetting_(ss, FINANCE_ACTIVE_SHEET_KEY);
-  const availableSheetNames = getAvailableFinanceSheetNames_(ss);
-
-  if (selectedSheetName) {
-    const matchedName = findSheetNameLoose_(availableSheetNames, selectedSheetName);
-
-    if (!matchedName) {
-      throw new Error(
-        'Selected finance sheet not found or not valid: ' +
-        selectedSheetName +
-        '. Please choose from Settings dropdown.'
-      );
-    }
-
-    const selectedSheet = ss.getSheetByName(matchedName);
-    if (selectedSheet) return selectedSheet;
-  }
-
-  const defaultMatchedName = findSheetNameLoose_(availableSheetNames, DEFAULT_SHEET_NAME);
-  if (defaultMatchedName) {
-    return ss.getSheetByName(defaultMatchedName);
-  }
-
-  if (availableSheetNames.length > 0) {
-    return ss.getSheetByName(availableSheetNames[0]);
-  }
-
-  throw new Error('No available finance sheet found. Please check finance sheet headers.');
-}
-
-function getFinanceSetting_(ss, key) {
-  const sheet = ss.getSheetByName(FINANCE_SETTINGS_SHEET);
-  if (!sheet) return '';
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return '';
-
-  const values = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
-  const target = String(key || '').trim();
-
-  for (let i = 0; i < values.length; i++) {
-    const rowKey = String(values[i][0] || '').trim();
-    const rowValue = String(values[i][1] || '').trim();
-
-    if (rowKey === target) {
-      return rowValue;
-    }
-  }
-
-  return '';
-}
-
-function setupFinanceSettingsSheet() {
-  const ss = SpreadsheetApp.openById(FINANCE_SPREADSHEET_ID);
-
-  let sheet = ss.getSheetByName(FINANCE_SETTINGS_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(FINANCE_SETTINGS_SHEET);
-  }
-
-  sheet.clear();
-
-  sheet.getRange(1, 1, 1, 2).setValues([[
-    'Key',
-    'Value'
-  ]]);
-
-  sheet.getRange(2, 1).setValue(FINANCE_ACTIVE_SHEET_KEY);
-  sheet.getRange(2, 2).setNumberFormat('@');
-
-  const availableSheetNames = getAvailableFinanceSheetNames_(ss);
-
-  if (availableSheetNames.length === 0) {
-    throw new Error('No available finance sheets found. Check headers: For Delivery / Instagram / Full Name / Phone / Address and RUG MAKING COST.');
-  }
-
-  const defaultName =
-    availableSheetNames.indexOf(DEFAULT_SHEET_NAME) !== -1
-      ? DEFAULT_SHEET_NAME
-      : availableSheetNames[0];
-
-  sheet.getRange(2, 2).setValue(defaultName);
-  applyFinanceSheetDropdown_(sheet, availableSheetNames);
-
-  sheet.setFrozenRows(1);
-
-  sheet.getRange(1, 1, 1, 2)
-    .setFontWeight('bold')
-    .setBackground('#111111')
-    .setFontColor('#ffffff');
-
-  sheet.setColumnWidth(1, 240);
-  sheet.setColumnWidth(2, 260);
-
-  console.log('Finance Settings sheet ready. Selected: ' + defaultName);
-  console.log('Available finance sheets: ' + availableSheetNames.join(', '));
-}
-
-function refreshFinanceSettingsDropdown() {
-  const ss = SpreadsheetApp.openById(FINANCE_SPREADSHEET_ID);
-  let sheet = ss.getSheetByName(FINANCE_SETTINGS_SHEET);
-
-  if (!sheet) {
-    setupFinanceSettingsSheet();
-    return;
-  }
-
-  const availableSheetNames = getAvailableFinanceSheetNames_(ss);
-
-  if (availableSheetNames.length === 0) {
-    throw new Error('No available finance sheets found.');
-  }
-
-  sheet.getRange(1, 1, 1, 2).setValues([[
-    'Key',
-    'Value'
-  ]]);
-
-  sheet.getRange(2, 1).setValue(FINANCE_ACTIVE_SHEET_KEY);
-  sheet.getRange(2, 2).setNumberFormat('@');
-
-  const currentValue = String(sheet.getRange(2, 2).getDisplayValue() || '').trim();
-  const matchedSheet = findSheetNameLoose_(availableSheetNames, currentValue);
-
-  const selectedName = matchedSheet ||
-    (availableSheetNames.indexOf(DEFAULT_SHEET_NAME) !== -1 ? DEFAULT_SHEET_NAME : availableSheetNames[0]);
-
-  sheet.getRange(2, 2).setValue(selectedName);
-  applyFinanceSheetDropdown_(sheet, availableSheetNames);
-
-  sheet.setFrozenRows(1);
-
-  sheet.getRange(1, 1, 1, 2)
-    .setFontWeight('bold')
-    .setBackground('#111111')
-    .setFontColor('#ffffff');
-
-  sheet.setColumnWidth(1, 240);
-  sheet.setColumnWidth(2, 260);
-
-  console.log('Finance Settings dropdown refreshed. Selected: ' + selectedName);
-  console.log('Available finance sheets: ' + availableSheetNames.join(', '));
-}
-
-function applyFinanceSheetDropdown_(settingsSheet, availableSheetNames) {
-  const rule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(availableSheetNames, true)
-    .setAllowInvalid(false)
-    .build();
-
-  settingsSheet.getRange(2, 2).setDataValidation(rule);
-}
-
-function getAvailableFinanceSheetNames_(ss) {
-  const sheets = ss.getSheets();
-  const names = [];
-
-  for (let i = 0; i < sheets.length; i++) {
-    const sheet = sheets[i];
-    const name = sheet.getName();
-
-    if (name === FINANCE_SETTINGS_SHEET) continue;
-
-    if (isValidFinanceSheet_(sheet)) {
-      names.push(name);
-    }
-  }
-
-  return names;
-}
-
-function isValidFinanceSheet_(sheet) {
+function isSafeTrackingUrl_(value) {
   try {
-    getFinanceDeliveryColumns_(sheet);
-    findFinanceCostRow_(sheet);
-    return true;
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
   } catch (_) {
     return false;
   }
 }
 
-function findSheetNameLoose_(availableSheetNames, inputName) {
-  const target = normalizeSheetName_(inputName);
-  if (!target) return '';
+function renderManageTracking_(order) {
+  const tracking = normalizeTrackingInfo_(order || {});
+  const empty = document.getElementById('tracking-empty');
+  const details = document.getElementById('tracking-details');
+  const link = document.getElementById('tracking-link');
+  const copyButton = document.getElementById('tracking-copy');
+  const dateRow = document.getElementById('tracking-date-row');
 
-  for (let i = 0; i < availableSheetNames.length; i++) {
-    if (normalizeSheetName_(availableSheetNames[i]) === target) {
-      return availableSheetNames[i];
-    }
-  }
-
-  return '';
-}
-
-function normalizeSheetName_(value) {
-  return String(value || '')
-    .replace(/\s+/g, '')
-    .replace(/-/g, '')
-    .trim()
-    .toUpperCase();
-}
-
-function syncOrderToFinanceSheet_(order) {
-  const sheet = getFinanceSheet_();
-  const lines = buildFinanceOrderLines_(order);
-  const rows = ensureFinanceOrderRows_(sheet, order.orderNumber, lines.length);
-
-  for (let i = 0; i < lines.length; i++) {
-    writeFinanceOrderRow_(sheet, rows[i], order, lines[i], i);
-  }
-}
-
-function updateFinancePaymentStatus_(orderNumber, status) {
-  const sheet = getFinanceSheet_();
-  const rows = findFinanceOrderRows_(sheet, orderNumber);
-
-  if (rows.length === 0) {
-    throw new Error('Finance order not found: ' + orderNumber);
-  }
-
-  rows.forEach(function(row) {
-    sheet.getRange(row, FINANCE_COL_PAYMENT_STATUS).setValue(status);
-  });
-}
-
-function buildFinanceOrderLines_(order) {
-  const lines = [];
-  const items = Array.isArray(order.items) ? order.items : [];
-  const promoType = String(order.promoType || '').trim().toUpperCase();
-  const promoValue = Number(order.promoValue || 0);
-  const applicableProducts = String(order.promoApplicableProducts || 'ALL').trim();
-
-  if (items.length > 0) {
-    items.forEach(function(item) {
-      const name = firstText_([
-        item.name,
-        item.productName,
-        item.product && item.product.name
-      ]);
-
-      const productId = firstText_([
-        item.productId,
-        item.id,
-        item.product && item.product.id
-      ]);
-
-      const quantity = Math.max(1, Number(item.quantity || 1));
-      const unitPrice = getFinanceItemUnitPrice_(item, name);
-      const discountPercent =
-        promoType === 'PERCENT' &&
-        promoValue > 0 &&
-        isFinancePromoApplicableToItem_(applicableProducts, productId)
-          ? promoValue
-          : 0;
-
-      if (name) {
-        lines.push({
-          productName: name,
-          productId: productId,
-          quantity: quantity,
-          isDigitalCopy: false,
-          discountPercent: discountPercent,
-          amount: calculateFinanceProductLineAmount_(unitPrice, quantity, discountPercent)
-        });
-      }
-    });
-  }
-
-  if (lines.length === 0) {
-    const fallbackAmount = Math.max(
-      0,
-      Number(order.price || order.finalPrice || order.total || 0) - Number(order.digitalCopyPrice || 0)
-    );
-
-    lines.push({
-      productName: order.productName,
-      productId: '',
-      quantity: Math.max(1, Number(order.totalQuantity || 1)),
-      isDigitalCopy: false,
-      discountPercent: promoType === 'PERCENT' ? promoValue : 0,
-      amount: fallbackAmount
-    });
-  }
-
-  const digitalCopyPrice = Number(order.digitalCopyPrice || 0);
-  const hasDigitalCopy = normalizeBoolean_(order.digitalCopy) || digitalCopyPrice > 0;
-
-  if (hasDigitalCopy) {
-    lines.push({
-      productName: 'Digital copy',
-      productId: 'digital-copy',
-      quantity: 1,
-      isDigitalCopy: true,
-      discountPercent: 0,
-      amount: 0
-    });
-  }
-
-  return lines;
-}
-
-function isFinancePromoApplicableToItem_(applicableProducts, productId) {
-  const value = String(applicableProducts || '').trim();
-
-  if (!value || value.toUpperCase() === 'ALL') return true;
-
-  const target = String(productId || '').trim().toLowerCase();
-  if (!target) return false;
-
-  const ids = value
-    .split(',')
-    .map(function(x) { return x.trim().toLowerCase(); })
-    .filter(Boolean);
-
-  return ids.indexOf(target) !== -1;
-}
-
-function getFinanceItemUnitPrice_(item, productName) {
-  const directPrice = Number(item && item.price || 0);
-  if (directPrice > 0) return directPrice;
-
-  const productPrice = Number(item && item.product && item.product.price || 0);
-  if (productPrice > 0) return productPrice;
-
-  const lineTotal = Number(item && item.lineTotal || 0);
-  const quantity = Math.max(1, Number(item && item.quantity || 1));
-  if (lineTotal > 0) return lineTotal / quantity;
-
-  return getFinanceBasePriceByProductName_(productName);
-}
-
-function getFinanceBasePriceByProductName_(productName) {
-  const name = extractSingleFinanceProductName_(productName);
-
-  const priceMap = {
-    'S': 590,
-    'M': 690,
-    'L': 990,
-    'S - Oval': 590,
-    'M - Oval': 690,
-    'L - Oval': 990,
-    'Mini Rug': 350,
-    '20cm Mini Rug': 350,
-    'Coaster': 300,
-    '15cm Coaster': 300
-  };
-
-  return Number(priceMap[name] || 0);
-}
-
-function calculateFinanceProductLineAmount_(unitPrice, quantity, discountPercent) {
-  let amount = Number(unitPrice || 0) * Math.max(1, Number(quantity || 1));
-  const percent = Math.max(0, Number(discountPercent || 0));
-
-  if (percent > 0) {
-    amount = amount * (1 - percent / 100);
-  }
-
-  return Math.max(0, amount);
-}
-
-function ensureFinanceOrderRows_(sheet, orderNumber, requiredCount) {
-  requiredCount = Math.max(1, Number(requiredCount || 1));
-
-  let rows = findFinanceOrderRows_(sheet, orderNumber);
-
-  if (rows.length === 0) {
-    rows.push(createFinanceOrderRow_(sheet));
-  }
-
-  while (rows.length < requiredCount) {
-    const insertAt = rows[rows.length - 1] + 1;
-    const lastCol = sheet.getLastColumn();
-
-    sheet.insertRowBefore(insertAt);
-    sheet
-      .getRange(insertAt - 1, 1, 1, lastCol)
-      .copyTo(sheet.getRange(insertAt, 1, 1, lastCol), { formatOnly: false });
-
-    rows.push(insertAt);
-  }
-
-  while (rows.length > requiredCount) {
-    const removeRow = rows.pop();
-    sheet.deleteRow(removeRow);
-  }
-
-  return rows;
-}
-
-function createFinanceOrderRow_(sheet) {
-  const costRow = findFinanceCostRow_(sheet);
-  const insertRow = findFinanceInsertRow_(sheet, costRow);
-
-  let row;
-  if (insertRow >= costRow) {
-    sheet.insertRowBefore(costRow);
-    row = costRow;
-  } else {
-    row = insertRow;
-  }
-
-  const templateRow = Math.max(5, row - 1);
-  const lastCol = sheet.getLastColumn();
-
-  sheet
-    .getRange(templateRow, 1, 1, lastCol)
-    .copyTo(sheet.getRange(row, 1, 1, lastCol), { formatOnly: false });
-
-  return row;
-}
-
-function findFinanceOrderRow_(sheet, orderNumber) {
-  const rows = findFinanceOrderRows_(sheet, orderNumber);
-  return rows.length ? rows[0] : null;
-}
-
-function findFinanceOrderRows_(sheet, orderNumber) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 5) return [];
-
-  const target = String(orderNumber || '').trim();
-  if (!target) return [];
-
-  let scanLastRow = lastRow;
-  try {
-    scanLastRow = Math.max(5, findFinanceCostRow_(sheet) - 1);
-  } catch (_) {}
-
-  if (scanLastRow < 5) return [];
-
-  const values = sheet.getRange(5, FINANCE_COL_ORDER_NUMBER, scanLastRow - 4, 1).getValues();
-  const rows = [];
-
-  for (let i = 0; i < values.length; i++) {
-    if (String(values[i][0] || '').trim() === target) {
-      rows.push(i + 5);
-    }
-  }
-
-  return rows;
-}
-
-function writeFinanceOrderRow_(sheet, row, order, line, lineIndex) {
-  const deliveryCols = getFinanceDeliveryColumns_(sheet);
-  const currentLine = line || {
-    productName: order.productName,
-    quantity: Math.max(1, Number(order.totalQuantity || 1)),
-    isDigitalCopy: false
-  };
-
-  // Clean rows created by the previous layout where Product started in G.
-  clearLegacyFinanceProductColumns_(sheet, row);
-
-  // C is the old Order/date position. Clear it for website-synced rows,
-  // then write Date / Order Number / Name to D / E / F.
-  sheet.getRange(row, 3, 1, 4).clearContent();
-
-  const financeOrderDate = order.orderDate instanceof Date
-    ? order.orderDate
-    : (order.date instanceof Date ? order.date : new Date());
-
-  sheet.getRange(row, FINANCE_COL_ORDER_DATE).setValue(financeOrderDate);
-  sheet.getRange(row, FINANCE_COL_ORDER_NUMBER).setValue(safeText_(order.orderNumber));
-  sheet.getRange(row, FINANCE_COL_CUSTOMER_NAME).setValue(
-    safeText_(order.name || order.instagram)
+  const hasTracking = Boolean(
+    tracking.trackingNumber ||
+    tracking.trackingUrl ||
+    tracking.courier ||
+    tracking.shippingStatus ||
+    tracking.shippedDate
   );
 
-  if (currentLine.isDigitalCopy) {
-    const productCell = sheet.getRange(row, FINANCE_COL_PRODUCT);
-    productCell.clearDataValidations();
-    productCell.setValue('Digital copy');
+  if (!hasTracking) {
+    empty.style.display = 'block';
+    details.classList.remove('show');
+    return;
+  }
+
+  empty.style.display = 'none';
+  details.classList.add('show');
+  document.getElementById('tracking-status').textContent = tracking.shippingStatus || 'Shipped';
+  document.getElementById('tracking-courier').textContent = tracking.courier || '—';
+  document.getElementById('tracking-number').textContent = tracking.trackingNumber || '—';
+  document.getElementById('tracking-date').textContent = tracking.shippedDate || '—';
+  dateRow.style.display = tracking.shippedDate ? 'grid' : 'none';
+  copyButton.style.display = tracking.trackingNumber ? 'inline-flex' : 'none';
+
+  if (isSafeTrackingUrl_(tracking.trackingUrl)) {
+    link.href = tracking.trackingUrl;
+    link.style.display = 'inline-flex';
   } else {
-    setFinanceProductName_(
-      sheet.getRange(row, FINANCE_COL_PRODUCT),
-      currentLine.productName,
-      currentLine.discountPercent
-    );
+    link.removeAttribute('href');
+    link.style.display = 'none';
+  }
+}
+
+async function copyTrackingNumber_() {
+  const value = document.getElementById('tracking-number').textContent.trim();
+  if (!value || value === '—') return;
+
+  const button = document.getElementById('tracking-copy');
+  const originalText = button.textContent;
+
+  try {
+    await navigator.clipboard.writeText(value);
+    button.textContent = 'Copied';
+  } catch (_) {
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    button.textContent = 'Copied';
   }
 
-  sheet
-    .getRange(row, FINANCE_COL_OUTLINE)
-    .setValue(currentLine.isDigitalCopy ? '' : mapFinanceOutline_(order.outline));
+  window.setTimeout(function() {
+    button.textContent = originalText;
+  }, 1400);
+}
 
-  sheet
-    .getRange(row, FINANCE_COL_QUANTITY)
-    .setValue(Number(currentLine.quantity || 1));
+function onManagePetFiles(input) {
+  const newFiles = Array.from(input.files || []);
+  const chosen = document.getElementById('manage-pet-file-chosen');
 
-  sheet
-    .getRange(row, FINANCE_COL_PAYMENT_STATUS)
-    .setValue(FINANCE_PAYMENT_STATUS_PENDING);
+  try {
+    newFiles.forEach(file => validateImageFile_(file, 'Photo'));
+  } catch (error) {
+    chosen.textContent = error.message;
+    chosen.style.color = 'var(--err)';
+    input.value = '';
+    return;
+  }
 
-  sheet
-    .getRange(row, FINANCE_COL_AMOUNT)
-    .setFormula(getFinanceAmountFormula_(row));
+  const uniqueFiles = newFiles.filter(file => !managePetFiles.some(existing =>
+    existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
+  ));
 
-  if (Number(lineIndex || 0) === 0) {
-    sheet.getRange(row, deliveryCols.forDelivery).setValue(safeText_(order.orderNumber));
-    sheet.getRange(row, deliveryCols.instagram).setValue(safeText_(order.instagram));
-    sheet.getRange(row, deliveryCols.fullName).setValue(safeText_(order.name));
-    sheet.getRange(row, deliveryCols.phone).setValue(safeText_(order.phone));
-    sheet.getRange(row, deliveryCols.address).setValue(safeText_(order.address));
+  const totalAfterAdd = managePetFiles.length + uniqueFiles.length;
+  managePetFiles = managePetFiles.concat(uniqueFiles).slice(0, 6);
+
+  if (totalAfterAdd > 6) {
+    chosen.textContent = 'Maximum 6 photos per upload. Only the first 6 files are kept.';
+    chosen.style.color = 'var(--err)';
   } else {
-    sheet.getRange(row, deliveryCols.forDelivery).clearContent();
-    sheet.getRange(row, deliveryCols.instagram).clearContent();
-    sheet.getRange(row, deliveryCols.fullName).clearContent();
-    sheet.getRange(row, deliveryCols.phone).clearContent();
-    sheet.getRange(row, deliveryCols.address).clearContent();
+    chosen.textContent = managePetFiles.length ? managePetFiles.length + ' photo(s) selected' : '';
+    chosen.style.color = 'var(--black)';
+  }
+
+  input.value = '';
+  renderManagePetFiles_();
+}
+
+function removeManagePetFile(index) {
+  managePetFiles.splice(index, 1);
+  document.getElementById('manage-pet-file-chosen').textContent = managePetFiles.length ? managePetFiles.length + ' photo(s) selected' : '';
+  renderManagePetFiles_();
+}
+
+async function renderManagePetFiles_() {
+  const list = document.getElementById('manage-pet-photo-list');
+  list.innerHTML = '';
+
+  for (let i = 0; i < managePetFiles.length; i++) {
+    const file = managePetFiles[i];
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+
+    const img = document.createElement('img');
+    img.className = 'photo-thumb';
+    img.alt = file.name;
+    img.src = await fileToDataUrl_(file);
+    img.onclick = () => openManagePhotoPreview_(file);
+
+    const name = document.createElement('div');
+    name.className = 'photo-name';
+    name.textContent = file.name;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'photo-remove';
+    remove.textContent = '×';
+    remove.onclick = () => removeManagePetFile(i);
+
+    item.appendChild(img);
+    item.appendChild(name);
+    item.appendChild(remove);
+    list.appendChild(item);
   }
 }
 
-function clearLegacyFinanceProductColumns_(sheet, row) {
-  const legacyProduct = String(sheet.getRange(row, 7).getDisplayValue() || '').trim();
-  const currentProduct = String(
-    sheet.getRange(row, FINANCE_COL_PRODUCT).getDisplayValue() || ''
-  ).trim();
-
-  // Only clear the old G:K layout when G contains a known product and
-  // the current Product column H does not already contain a product.
-  if (
-    isFinanceProductDisplayValue_(legacyProduct) &&
-    !isFinanceProductDisplayValue_(currentProduct)
-  ) {
-    sheet.getRange(row, 7, 1, 5).clearContent();
-  }
+async function openManagePhotoPreview_(file) {
+  const image = document.getElementById('photo-preview-image');
+  const dialog = document.getElementById('photo-preview-dialog');
+  image.src = await fileToDataUrl_(file);
+  dialog.showModal();
 }
 
-function isFinanceProductDisplayValue_(value) {
-  const text = String(value || '').trim();
-
-  if (!text) return false;
-
-  return /^(S|M|L|Oval\s*-\s*[SML]|[SML]\s*-\s*Oval|15cm Coaster|20cm Mini Rug|Mini Rug|Coaster|Digital copy|Digtial Copy)(\s*\([^)]+off\))?$/i.test(text);
+function closePhotoPreview() {
+  const image = document.getElementById('photo-preview-image');
+  const dialog = document.getElementById('photo-preview-dialog');
+  image.removeAttribute('src');
+  dialog.close();
 }
 
-function getFinanceDeliveryColumns_(sheet) {
-  const lastCol = sheet.getLastColumn();
-  const maxHeaderRows = Math.min(10, sheet.getLastRow());
-  const values = sheet.getRange(1, 1, maxHeaderRows, lastCol).getDisplayValues();
+function onManagePayFile(input) {
+  managePayFile = input.files[0] || null;
+  const chosen = document.getElementById('manage-pay-file-chosen');
+  const list = document.getElementById('manage-payment-photo-list');
+  list.innerHTML = '';
 
-  for (let r = 0; r < values.length; r++) {
-    const row = values[r];
-
-    const forDelivery = findHeaderColInRow_(row, 'For Delivery');
-    const instagram = findHeaderColInRow_(row, 'Instagram');
-    const fullName = findHeaderColInRow_(row, 'Full Name');
-    const phone = findHeaderColInRow_(row, 'Phone');
-    const address = findHeaderColInRow_(row, 'Address');
-
-    if (forDelivery && instagram && fullName && phone && address) {
-      return {
-        forDelivery: forDelivery,
-        instagram: instagram,
-        fullName: fullName,
-        phone: phone,
-        address: address
-      };
-    }
+  if (!managePayFile) {
+    chosen.textContent = '';
+    return;
   }
 
-  throw new Error('Finance delivery headers not found: For Delivery / Instagram / Full Name / Phone / Address');
+  try {
+    validateImageFile_(managePayFile, 'Payment screenshot');
+  } catch (error) {
+    chosen.textContent = error.message;
+    chosen.style.color = 'var(--err)';
+    managePayFile = null;
+    input.value = '';
+    return;
+  }
+
+  chosen.textContent = managePayFile.name;
+  chosen.style.color = 'var(--black)';
+  renderManagePayFile_();
 }
 
-function findHeaderColInRow_(rowValues, headerName) {
-  const target = normalizeHeader_(headerName);
+async function renderManagePayFile_() {
+  const list = document.getElementById('manage-payment-photo-list');
+  list.innerHTML = '';
+  if (!managePayFile) return;
 
-  for (let i = 0; i < rowValues.length; i++) {
-    if (normalizeHeader_(rowValues[i]) === target) {
-      return i + 1;
-    }
+  const item = document.createElement('div');
+  item.className = 'photo-item';
+
+  const img = document.createElement('img');
+  img.className = 'photo-thumb';
+  img.alt = managePayFile.name;
+  img.src = await fileToDataUrl_(managePayFile);
+  img.onclick = () => openManagePhotoPreview_(managePayFile);
+
+  const name = document.createElement('div');
+  name.className = 'photo-name';
+  name.textContent = managePayFile.name;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'photo-remove';
+  remove.textContent = '×';
+  remove.onclick = () => {
+    managePayFile = null;
+    document.getElementById('m-payment').value = '';
+    document.getElementById('manage-pay-file-chosen').textContent = '';
+    list.innerHTML = '';
+  };
+
+  item.appendChild(img);
+  item.appendChild(name);
+  item.appendChild(remove);
+  list.appendChild(item);
+}
+
+
+function onManageShippingPayFile(input) {
+  manageShippingPayFile = input.files[0] || null;
+  const chosen = document.getElementById('manage-shipping-pay-file-chosen');
+  const list = document.getElementById('manage-shipping-payment-photo-list');
+  list.innerHTML = '';
+
+  if (!manageShippingPayFile) {
+    chosen.textContent = '';
+    return;
+  }
+
+  try {
+    validateImageFile_(manageShippingPayFile, 'Shipping payment screenshot');
+  } catch (error) {
+    chosen.textContent = error.message;
+    chosen.style.color = 'var(--err)';
+    manageShippingPayFile = null;
+    input.value = '';
+    return;
+  }
+
+  chosen.textContent = manageShippingPayFile.name;
+  chosen.style.color = 'var(--black)';
+  renderManageShippingPayFile_();
+}
+
+async function renderManageShippingPayFile_() {
+  const list = document.getElementById('manage-shipping-payment-photo-list');
+  list.innerHTML = '';
+  if (!manageShippingPayFile) return;
+
+  const item = document.createElement('div');
+  item.className = 'photo-item';
+
+  const img = document.createElement('img');
+  img.className = 'photo-thumb';
+  img.alt = manageShippingPayFile.name;
+  img.src = await fileToDataUrl_(manageShippingPayFile);
+  img.onclick = () => openManagePhotoPreview_(manageShippingPayFile);
+
+  const name = document.createElement('div');
+  name.className = 'photo-name';
+  name.textContent = manageShippingPayFile.name;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'photo-remove';
+  remove.textContent = '×';
+  remove.onclick = () => {
+    manageShippingPayFile = null;
+    document.getElementById('m-shipping-payment').value = '';
+    document.getElementById('manage-shipping-pay-file-chosen').textContent = '';
+    list.innerHTML = '';
+  };
+
+  item.appendChild(img);
+  item.appendChild(name);
+  item.appendChild(remove);
+  list.appendChild(item);
+}
+
+function getManageSession_() {
+  if (manageSession && manageSession.orderNumber && manageSession.orderToken) return manageSession;
+
+  const orderNumber = sessionStorage.getItem('meow_manage_order_number');
+  const orderToken = sessionStorage.getItem('meow_manage_order_token');
+  if (orderNumber && orderToken) {
+    manageSession = { orderNumber, orderToken, order: {} };
+    return manageSession;
   }
 
   return null;
 }
 
-function normalizeHeader_(value) {
-  return String(value || '')
-    .replace(/\s+/g, '')
-    .trim()
-    .toUpperCase();
-}
-
-function mapFinanceOutline_(outline) {
-  const v = String(outline || '').trim().toLowerCase();
-
-  if (v === 'black' || v === 'black outline') return 'Black';
-  if (v === 'white' || v === 'white outline') return 'White';
-
-  return '';
-}
-
-function financeOrderExists_(sheet, orderNumber) {
-  return !!findFinanceOrderRow_(sheet, orderNumber);
-}
-
-function findFinanceCostRow_(sheet) {
-  const values = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getDisplayValues();
-
-  for (let r = 0; r < values.length; r++) {
-    const joined = values[r].join(' ').replace(/\s+/g, '').toUpperCase();
-
-    if (joined.indexOf('RUGMAKINGCOST') >= 0) {
-      return r + 1;
-    }
+async function uploadManagePetPhotos() {
+  const session = getManageSession_();
+  if (!session) {
+    showMsg('msg-manage-upload', 'err', 'Please find your order first.');
+    return;
   }
 
-  throw new Error('找不到 RUG MAKING COST 行');
-}
-
-function findFinanceInsertRow_(sheet, costRow) {
-  for (let r = 5; r < costRow; r++) {
-    const orderNo = String(
-      sheet.getRange(r, FINANCE_COL_ORDER_NUMBER).getValue() || ''
-    ).trim();
-
-    const product = String(
-      sheet.getRange(r, FINANCE_COL_PRODUCT).getValue() || ''
-    ).trim();
-
-    if (!orderNo && !product) {
-      return r;
-    }
+  if (!managePetFiles.length) {
+    showMsg('msg-manage-upload', 'err', 'Please select at least one photo.');
+    return;
   }
 
-  return costRow;
-}
-
-function setFinanceProductName_(cell, productName, discountPercent) {
-  const value = mapFinanceProductName_(productName, discountPercent);
+  const btn = document.getElementById('m-photo-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
+  hideMsg('msg-manage-upload');
 
   try {
-    cell.setValue(value);
-  } catch (err) {
-    cell.clearDataValidations();
-    cell.setValue(value);
+    for (let i = 0; i < managePetFiles.length; i++) {
+      const file = managePetFiles[i];
+      validateImageFile_(file, 'Photo');
+      const data = await fileToBase64(file);
+      const result = await postApi_({
+        type: 'pet_photo',
+        orderNumber: session.orderNumber,
+        orderToken: session.orderToken,
+        index: i + 1,
+        photo: { data: data, name: file.name }
+      });
+
+      if (!result.success) throw new Error(result.error || 'PHOTO_UPLOAD_FAILED');
+    }
+
+    managePetFiles = [];
+    document.getElementById('m-photos').value = '';
+    document.getElementById('manage-pet-file-chosen').textContent = '';
+    document.getElementById('manage-pet-photo-list').innerHTML = '';
+    showMsg('msg-manage-upload', 'ok', 'Photo(s) uploaded successfully.');
+  } catch (error) {
+    console.error('MANAGE_PHOTO_UPLOAD_ERROR:', error);
+    showMsg('msg-manage-upload', 'err', 'Photo upload failed. Please try again or DM us on Instagram.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload photos';
   }
 }
 
-function mapFinanceProductName_(productName, discountPercent) {
-  const rawName = String(productName || '').trim();
-  const singleProductName = extractSingleFinanceProductName_(rawName);
-  const normalized = String(singleProductName || rawName)
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-
-  const baseMap = {
-    's': 'S',
-    'm': 'M',
-    'l': 'L',
-    's - oval': 'Oval - S',
-    'm - oval': 'Oval - M',
-    'l - oval': 'Oval - L',
-    'oval - s': 'Oval - S',
-    'oval - m': 'Oval - M',
-    'oval - l': 'Oval - L',
-    'mini rug': '20cm Mini Rug',
-    '20cm mini rug': '20cm Mini Rug',
-    'coaster': '15cm Coaster',
-    '15cm coaster': '15cm Coaster',
-    'digital copy': 'Digital copy',
-    'digtial copy': 'Digital copy'
-  };
-
-  const mapped = baseMap[normalized] || singleProductName || rawName;
-  const percent = Number(discountPercent || 0);
-
-  const discountableProducts = [
-    'S',
-    'M',
-    'L',
-    'Oval - S',
-    'Oval - M',
-    'Oval - L'
-  ];
-
-  if (percent > 0 && discountableProducts.indexOf(mapped) !== -1) {
-    const cleanPercent = Math.round(percent * 100) / 100;
-    return mapped + ' (' + cleanPercent + '% off)';
+async function submitManagePayment() {
+  const session = getManageSession_();
+  if (!session) {
+    showMsg('msg-manage-upload', 'err', 'Please find your order first.');
+    return;
   }
 
-  return mapped;
-}
+  if (!managePayFile) {
+    showMsg('msg-manage-upload', 'err', 'Please select your payment screenshot first.');
+    return;
+  }
 
-function getFinanceAmountFormula_(row) {
-  return '=IF(LOWER(K' + row + ')="pinkoi","Pinkoi",IF(H' + row + '= "","",SWITCH(H' + row + ',"S",590,"M",690,"L",990,"S (10% off)",531,"M (10% off)",621,"L (10% off)",891,"S (15% off)",501.5,"M (15% off)",586.5,"L (15% off)",841.5,"Oval - S",590,"Oval - M",690,"Oval - L",990,"Oval - S (10% off)",531,"Oval - M (10% off)",621,"Oval - L (10% off)",891,"Oval - S (15% off)",501.5,"Oval - M (15% off)",586.5,"Oval - L (15% off)",841.5,"15cm Coaster",300,"20cm Mini Rug",350,"Digital copy",0,"Digtial Copy",0,0)*N(J' + row + ')))';
-}
+  const btn = document.getElementById('m-payment-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
+  hideMsg('msg-manage-upload');
 
-function extractSingleFinanceProductName_(value) {
-  let text = String(value || '').trim();
-  if (!text) return '';
-
-  if (text.indexOf(' + ') !== -1) return text;
-
-  text = text.replace(/\s*[x×]\s*\d+\s*$/i, '').trim();
-
-  if (/^Oval\s*-\s*S$/i.test(text)) return 'S - Oval';
-  if (/^Oval\s*-\s*M$/i.test(text)) return 'M - Oval';
-  if (/^Oval\s*-\s*L$/i.test(text)) return 'L - Oval';
-
-  return text;
-}
-
-function testFinanceSyncAccess() {
-  const sheet = getFinanceSheet_();
-
-  findFinanceCostRow_(sheet);
-  getFinanceDeliveryColumns_(sheet);
-
-  console.log('Finance sync access OK: ' + sheet.getName());
-}
-
-function debugFinanceSyncTarget() {
-  const sheet = getFinanceSheet_();
-
-  console.log('Selected finance sheet: ' + sheet.getName());
-  console.log('Last row: ' + sheet.getLastRow());
-  console.log('Last column: ' + sheet.getLastColumn());
-
-  const deliveryCols = getFinanceDeliveryColumns_(sheet);
-  console.log('Delivery columns: ' + JSON.stringify(deliveryCols));
-
-  const costRow = findFinanceCostRow_(sheet);
-  console.log('RUG MAKING COST row: ' + costRow);
-}
-
-function testWriteFinanceOneOrder() {
-  syncOrderToFinanceSheet_({
-    orderNumber: 'TEST-SYNC-001',
-    instagram: '@test',
-    name: 'Test Name',
-    phone: '12345678',
-    address: 'Test Address',
-    productName: 'S',
-    promoCode: '',
-    outline: 'Black outline'
-  });
-
-  console.log('Test order synced');
-}
-
-function resyncFinanceDeliveryFromOrders() {
-  const props = getRequiredProperties_();
-  const orderSS = SpreadsheetApp.openById(props.sheetId);
-  const ordersSheet = requireSheet_(orderSS, ORDERS_SHEET);
-
-  const lastRow = ordersSheet.getLastRow();
-  if (lastRow < 2) return;
-
-  const rows = ordersSheet.getRange(2, 1, lastRow - 1, 25).getValues();
-
-  rows.forEach(function(row) {
-    const orderNumber = String(row[0] || '').trim();
-    if (!orderNumber) return;
-
-    syncOrderToFinanceSheet_({
-      orderNumber: orderNumber,
-      orderDate: row[1],
-      instagram: row[2],
-      name: row[3],
-      phone: row[4],
-      address: row[5],
-      productName: row[6],
-      promoCode: row[16],
-      outline: row[19],
-      digitalCopy: normalizeYesNo_(row[20]),
-      digitalCopyPrice: Number(row[21] || 0),
-      items: parseOrderItemsJson_(row[22]),
-      productCount: Number(row[23] || 0),
-      totalQuantity: Number(row[24] || 0)
+  try {
+    validateImageFile_(managePayFile, 'Payment screenshot');
+    const data = await fileToBase64(managePayFile, { maxDimension: 2200, quality: 0.9 });
+    const result = await postApi_({
+      type: 'payment',
+      orderNumber: session.orderNumber,
+      orderToken: session.orderToken,
+      screenshot: { data: data, name: managePayFile.name || 'payment-proof' }
     });
-  });
 
-  console.log('Finance delivery columns resynced from Orders');
+    if (!result.success) throw new Error(result.error || 'PAYMENT_UPLOAD_FAILED');
+
+    managePayFile = null;
+    document.getElementById('m-payment').value = '';
+    document.getElementById('manage-pay-file-chosen').textContent = '';
+    document.getElementById('manage-payment-photo-list').innerHTML = '';
+    showMsg('msg-manage-upload', 'ok', 'Payment proof uploaded successfully. Please send us a DM with your order number.');
+  } catch (error) {
+    console.error('MANAGE_PAYMENT_UPLOAD_ERROR:', error);
+    showMsg('msg-manage-upload', 'err', 'Payment proof upload failed. Please try again or DM us on Instagram.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload payment proof';
+  }
 }
 
+async function submitManageShippingPayment() {
+  const session = getManageSession_();
+  if (!session) {
+    showMsg('msg-manage-shipping', 'err', 'Please find your order first.');
+    return;
+  }
 
-/**
- * Repairs rows written with the previous finance layout and then
- * re-syncs every order from the Orders sheet.
- *
- * Run this once manually after replacing Code.gs.
- */
-function repairFinanceColumnsAndResync() {
-  const sheet = getFinanceSheet_();
-  const costRow = findFinanceCostRow_(sheet);
-  let migratedOrderRows = 0;
-  let clearedProductRows = 0;
+  const feeInfo = normalizeShippingFeeInfo_(session.order || {});
+  if (feeInfo.amount <= 0) {
+    showMsg('msg-manage-shipping', 'err', 'No additional shipping fee is required for this order.');
+    return;
+  }
 
-  for (let row = 5; row < costRow; row++) {
-    // Previous version wrote Date to C and Order Number to D.
-    // Move only website order rows, identified by a MEOW order number in D.
-    const oldDate = sheet.getRange(row, 3).getValue();
-    const oldOrderNumber = String(sheet.getRange(row, 4).getDisplayValue() || '').trim();
-    const currentOrderNumber = String(
-      sheet.getRange(row, FINANCE_COL_ORDER_NUMBER).getDisplayValue() || ''
-    ).trim();
+  if (!manageShippingPayFile) {
+    showMsg('msg-manage-shipping', 'err', 'Please select your shipping payment screenshot first.');
+    return;
+  }
 
-    if (
-      /^MEOW-\d{4}-\d+$/i.test(oldOrderNumber) &&
-      !/^MEOW-\d{4}-\d+$/i.test(currentOrderNumber)
-    ) {
-      sheet.getRange(row, 3).clearContent();
-      sheet.getRange(row, FINANCE_COL_ORDER_DATE).setValue(oldDate || new Date());
-      sheet.getRange(row, FINANCE_COL_ORDER_NUMBER).setValue(oldOrderNumber);
-      migratedOrderRows++;
+  const btn = document.getElementById('m-shipping-payment-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
+  hideMsg('msg-manage-shipping');
+
+  try {
+    validateImageFile_(manageShippingPayFile, 'Shipping payment screenshot');
+    const data = await fileToBase64(manageShippingPayFile, {
+      maxDimension: 2200,
+      quality: 0.9
+    });
+
+    const result = await postApi_({
+      type: 'payment',
+      paymentPurpose: 'shipping_fee',
+      orderNumber: session.orderNumber,
+      orderToken: session.orderToken,
+      screenshot: {
+        data: data,
+        name: manageShippingPayFile.name || 'shipping-payment-proof'
+      }
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'SHIPPING_PAYMENT_UPLOAD_FAILED');
     }
 
-    const legacyProduct = String(sheet.getRange(row, 7).getDisplayValue() || '').trim();
-    const currentProduct = String(
-      sheet.getRange(row, FINANCE_COL_PRODUCT).getDisplayValue() || ''
-    ).trim();
+    manageShippingPayFile = null;
+    document.getElementById('m-shipping-payment').value = '';
+    document.getElementById('manage-shipping-pay-file-chosen').textContent = '';
+    document.getElementById('manage-shipping-payment-photo-list').innerHTML = '';
 
-    if (
-      isFinanceProductDisplayValue_(legacyProduct) &&
-      !isFinanceProductDisplayValue_(currentProduct)
-    ) {
-      sheet.getRange(row, 7, 1, 5).clearContent();
-      clearedProductRows++;
+    const newStatus = result.shippingPaymentStatus || 'Proof submitted - verify manually';
+    const submittedAt = result.shippingProofSubmittedAt || '';
+
+    if (!session.order.tracking || typeof session.order.tracking !== 'object') {
+      session.order.tracking = {};
     }
+    session.order.tracking.shippingPaymentStatus = newStatus;
+    session.order.tracking.shippingProofSubmittedAt = submittedAt;
+    session.order.shippingPaymentStatus = newStatus;
+    session.order.shippingProofSubmittedAt = submittedAt;
+
+    renderManageShippingFee_(session.order);
+    showMsg('msg-manage-shipping', 'ok', 'Shipping payment proof uploaded successfully.');
+  } catch (error) {
+    console.error('MANAGE_SHIPPING_PAYMENT_UPLOAD_ERROR:', error);
+    showMsg('msg-manage-shipping', 'err', 'Shipping payment proof upload failed. Please try again or DM us on Instagram.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload shipping payment proof';
   }
-
-  // Re-sync all website orders. Existing rows are now found by Order Number in E,
-  // and Name is rewritten to F from the Orders sheet.
-  resyncFinanceDeliveryFromOrders();
-
-  console.log(
-    'Finance columns repaired and orders re-synced. ' +
-    'Order rows migrated: ' + migratedOrderRows +
-    '; legacy product rows cleared: ' + clearedProductRows
-  );
 }
 
-/***************
- * SETUP SHEETS
- ***************/
-function setupProductsSheet() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-
-  let sheet = ss.getSheetByName(PRODUCTS_SHEET);
-  if (!sheet) sheet = ss.insertSheet(PRODUCTS_SHEET);
-
-  sheet.clear();
-
-  sheet.getRange(1, 1, 1, 7).setValues([[
-    'Product ID',
-    'Product Name',
-    'Dimensions',
-    'Price',
-    'Capacity',
-    'Active',
-    'Display Order'
-  ]]);
-
-  const products = [
-    ['s', 'S', '70 × 30-40 cm', 590, '1 person + 1 pet', true, 1],
-    ['m', 'M', '100 × 40-50 cm', 690, '2 people + 1-2 pets', true, 2],
-    ['l', 'L', '130 × 50-60 cm', 990, '2+ people + 3+ pets', true, 3],
-    ['s-oval', 'S - Oval', '70 × 30-40 cm', 590, 'up to 6 heads', true, 4],
-    ['m-oval', 'M - Oval', '100 × 40-50 cm', 690, 'up to 8 heads', true, 5],
-    ['l-oval', 'L - Oval', '130 × 50-60 cm', 990, 'up to 10 heads', true, 6],
-    ['mini', 'Mini Rug', '20 cm', 350, '1 pet', true, 7],
-    ['coaster', 'Coaster', '15 cm', 300, '1 pet', true, 8]
-  ];
-
-  sheet.getRange(2, 1, products.length, 7).setValues(products);
-
-  sheet.getRange('F2:F1000')
-    .setDataValidation(
-      SpreadsheetApp.newDataValidation()
-        .requireCheckbox()
-        .build()
-    );
-
-  console.log('Products sheet ready');
-}
-
-function setupPromotionsSheet() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-
-  let sheet = ss.getSheetByName(PROMOTIONS_SHEET);
-  if (!sheet) sheet = ss.insertSheet(PROMOTIONS_SHEET);
-
-  sheet.clear();
-
-  sheet.getRange(1, 1, 1, 10).setValues([[
-    'Code',
-    'Discount Type',
-    'Discount Value',
-    'Active',
-    'Start Date',
-    'End Date',
-    'Applicable Products',
-    'Max Uses',
-    'Uses',
-    'Notes'
-  ]]);
-
-  sheet.appendRow([
-    'MEOW10',
-    'PERCENT',
-    10,
-    true,
-    '',
-    '',
-    'ALL',
-    '',
-    0,
-    '10% off'
-  ]);
-
-  sheet.getRange('D2:D1000')
-    .setDataValidation(
-      SpreadsheetApp.newDataValidation()
-        .requireCheckbox()
-        .build()
-    );
-
-  console.log('Promotions sheet ready');
-}
-
-function setupTermsSheet() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-
-  let sheet = ss.getSheetByName(TERMS_SHEET);
-  if (!sheet) sheet = ss.insertSheet(TERMS_SHEET);
-
-  if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, 7).setValues([[
-      'Version',
-      'Active',
-      'Title EN',
-      'Content EN',
-      'Title ZH',
-      'Content ZH',
-      'Updated At'
-    ]]);
+</script>
+<div class="paw-cursor-container" id="paw-cursor-container"></div>
+<script>
+const PAW_SVG_BLACK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 79 70"><g><path d="M41.41,27.35c-1.02.88-4.18-.39-4.98-1.41-1-1.28-1.63-4.51-.32-5.93s4.67-.46,5.58.78c1.1,1.51,1.93,4.65-.28,6.55Z" fill="#222"/><circle cx="48.79" cy="22.86" r="3.66" fill="#222"/></g><path d="M56.55,37.66c-8.58,6.59-6.08,12.19-12.04,11.26-2.12-.33-3.6-2.58-3.73-4.68l-.52-8.51c-.06-1.03.04-3.46.79-4.05s2.63-1.06,3.64-1.1c7.19-.29,12.04-1.78,13.17.98.64,1.58,0,5.09-1.3,6.09Z" fill="#222"/><g><path d="M36.6,32.18c-.55,2.92-3.98,2.83-5.44,2.18-1.87-.83-3.88-2.98-3.27-5.45.33-1.33,3.81-2.09,5.06-1.65,1.42.49,4.03,2.95,3.65,4.92Z" fill="#222"/><path d="M36.58,43.1c-.75,1.24-4.43,1.35-5.55.72s-2.54-3.19-1.9-4.64c.69-1.55,3.5-2.05,4.73-1.61,1.78.63,4.13,3.19,2.72,5.53Z" fill="#222"/></g></svg>`;
+const PAW_SVG_GRAY = PAW_SVG_BLACK.replaceAll('#222', '#aaa');
+const container = document.getElementById('paw-cursor-container');
+const pawList = [];
+let lastSpawnTime = 0;
+let trailOffset = 0;
+if (container) {
+  const cursorPaw = document.createElement('div');
+  cursorPaw.className = 'paw';
+  cursorPaw.innerHTML = PAW_SVG_BLACK;
+  cursorPaw.style.opacity = '1';
+  container.appendChild(cursorPaw);
+  function createPaw(x, y, offset) {
+    const paw = document.createElement('div');
+    paw.className = 'paw';
+    const waveShift = Math.sin(offset * 0.05) * 15;
+    paw.style.left = (x + waveShift) + 'px';
+    paw.style.top = y + 'px';
+    paw.style.transform = 'translate(-50%, -50%)';
+    paw.innerHTML = PAW_SVG_GRAY;
+    paw.style.opacity = '0.7';
+    container.appendChild(paw);
+    return { element: paw, age: 0, maxAge: 1200 };
   }
-
-  sheet.setFrozenRows(1);
-
-  sheet.getRange(1, 1, 1, 7)
-    .setFontWeight('bold')
-    .setBackground('#111111')
-    .setFontColor('#ffffff');
-
-  sheet.getRange('B2:B1000')
-    .setDataValidation(
-      SpreadsheetApp.newDataValidation()
-        .requireCheckbox()
-        .build()
-    );
-
-  sheet.setColumnWidth(1, 150);
-  sheet.setColumnWidth(2, 80);
-  sheet.setColumnWidth(3, 260);
-  sheet.setColumnWidth(4, 600);
-  sheet.setColumnWidth(5, 220);
-  sheet.setColumnWidth(6, 600);
-  sheet.setColumnWidth(7, 160);
-
-  sheet.getRange('D:D').setWrap(true);
-  sheet.getRange('F:F').setWrap(true);
-
-  if (sheet.getLastRow() < 2) {
-    sheet.appendRow([
-      '2026-06-24-v1',
-      true,
-      'Terms & Conditions and Privacy Notice',
-      'Please paste the English terms here.',
-      '注意事項及私隱聲明',
-      '請在此貼上中文條款。',
-      new Date()
-    ]);
-  }
-
-  console.log('Terms sheet ready');
-}
-
-/***************
- * TESTS
- ***************/
-function testConfiguration() {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-
-  [
-    ORDERS_SHEET,
-    PAYMENTS_SHEET,
-    SECURITY_LOGS_SHEET,
-    PROMOTIONS_SHEET,
-    PRODUCTS_SHEET,
-    TERMS_SHEET
-  ].forEach(function(name) {
-    requireSheet_(ss, name);
+  document.addEventListener('mousemove', (e) => {
+    cursorPaw.style.left = e.clientX + 'px';
+    cursorPaw.style.top = e.clientY + 'px';
+    cursorPaw.style.transform = 'translate(-50%, -50%)';
+    const now = Date.now();
+    if (now - lastSpawnTime > 150 && pawList.length < 20) {
+      pawList.push(createPaw(e.clientX, e.clientY, trailOffset));
+      trailOffset++;
+      lastSpawnTime = now;
+    }
   });
-
-  // Creates Tracking automatically if it does not already exist.
-  getOrCreateTrackingSheet_(ss);
-
-  DriveApp.getFolderById(props.folderId);
-
-  const terms = getActiveTerms_(ss);
-  if (!terms || !terms.version || !terms.contentEn || !terms.contentZh) {
-    throw new Error('Terms sheet has no active complete version');
+  function animate() {
+    for (let i = pawList.length - 1; i >= 0; i--) {
+      const p = pawList[i];
+      p.age += 16;
+      const life = Math.max(0, 1 - (p.age / p.maxAge));
+      p.element.style.opacity = life * 0.7;
+      if (life <= 0) {
+        p.element.remove();
+        pawList.splice(i, 1);
+      }
+    }
+    requestAnimationFrame(animate);
   }
-
-  console.log('Secure backend configuration OK');
+  animate();
 }
-
-/***************
- * UTILITIES
- ***************/
-function requireSheet_(ss, name) {
-  const sheet = ss.getSheetByName(name);
-
-  if (!sheet) {
-    throw new Error('Missing sheet: ' + name);
-  }
-
-  return sheet;
-}
-
-function jsonResponse_(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function safeText_(value) {
-  let text = String(value || '').trim();
-
-  if (/^[=+\-@]/.test(text)) {
-    text = "'" + text;
-  }
-
-  return text;
-}
-
-function sha256Hex_(value) {
-  const bytes = Utilities.computeDigest(
-    Utilities.DigestAlgorithm.SHA_256,
-    String(value),
-    Utilities.Charset.UTF_8
-  );
-
-  return bytes.map(function(byte) {
-    const v = (byte + 256) % 256;
-    return ('0' + v.toString(16)).slice(-2);
-  }).join('');
-}
-
-function logSecurity_(eventType, orderNumber, message) {
-  const props = getRequiredProperties_();
-  const ss = SpreadsheetApp.openById(props.sheetId);
-  const sheet = requireSheet_(ss, SECURITY_LOGS_SHEET);
-
-  sheet.appendRow([
-    new Date(),
-    eventType,
-    '',
-    orderNumber || '',
-    message || ''
-  ]);
-}
+</script>
+</body>
+</html>
