@@ -127,7 +127,7 @@ main{padding-top:50px}
 .photo-list{border-top:1px solid var(--light);margin-top:.8rem}.photo-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:.8rem;padding:.65rem 2.2rem .65rem 0;border-bottom:1px solid var(--light);font-size:.74rem}.photo-thumb{width:52px;height:52px;border:1px solid var(--light);object-fit:cover;cursor:zoom-in;background:var(--white)}.photo-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.photo-remove{position:absolute;right:0;top:50%;transform:translateY(-50%);width:28px;height:28px;border:1px solid var(--light);border-radius:50%;background:var(--white);color:var(--mid);font:inherit;font-size:1.05rem;line-height:1;cursor:pointer}.photo-remove:hover{color:var(--black);border-color:var(--black)}
 .photo-preview-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;border:0;padding:0;background:var(--white)}.photo-preview-dialog::backdrop{background:rgba(0,0,0,.72)}.photo-preview-inner{position:relative;padding:2.5rem 1rem 1rem;display:flex;align-items:center;justify-content:center;max-height:90vh}.photo-preview-image{display:block;max-width:100%;max-height:calc(90vh - 3.5rem);object-fit:contain}.photo-preview-close{position:absolute;top:.65rem;right:.8rem;border:0;background:none;color:var(--black);font:inherit;font-size:1.35rem;line-height:1;cursor:pointer}
 .promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.promo-row{display:flex;align-items:flex-end;gap:.8rem}.promo-row .field{flex:1;margin:0}.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.promo-apply:disabled{opacity:.35;cursor:not-allowed}.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}.promo-result.ok{color:#1a6b3c}.promo-result.err{color:var(--err)}
-.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}
+.outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}.outline-error{display:none;margin-top:.65rem;font-size:.74rem;line-height:1.5;color:var(--err)}.outline-error.show{display:block}
 .addon-box{margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--light)}.addon-option{width:100%;display:flex;justify-content:space-between;align-items:center;gap:1rem;border:1px solid var(--light);background:transparent;padding:.9rem 1rem;font-family:'Inter',sans-serif;color:var(--mid);cursor:pointer;text-align:left}.addon-option:hover,.addon-option.sel{border-color:var(--black);color:var(--black)}.addon-title{display:block;font-size:.78rem;color:var(--black);letter-spacing:.02em}.addon-desc{display:block;font-size:.72rem;color:var(--mid);line-height:1.55;margin-top:.25rem}.addon-price{font-size:.78rem;white-space:nowrap;color:var(--black)}
 .terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
 .terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}.terms-dialog:focus{outline:none}.terms-dialog::backdrop{background:rgba(0,0,0,.42)}.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.terms-head h2{font-size:1rem;font-weight:500}.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}.terms-section{padding-top:1.5rem}.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
@@ -231,6 +231,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
               <button type="button" class="outline-option" data-outline="Black" onclick="pickOutline('Black')"><span class="outline-swatch black"></span>Black outline</button>
               <button type="button" class="outline-option" data-outline="White" onclick="pickOutline('White')"><span class="outline-swatch white"></span>White outline</button>
             </div>
+            <div class="outline-error" id="outline-error" role="alert" aria-live="polite">Please select an outline colour before continuing.</div>
           </div>
 
           <div class="addon-box">
@@ -256,7 +257,7 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="promo-result" id="promo-result"></div>
           </div>
 
-          <div class="btn-row"><button class="btn-submit" id="s1n" disabled onclick="go(2)">Continue</button></div>
+          <div class="btn-row"><button class="btn-submit" id="s1n" disabled onclick="continueFromProducts()">Continue</button></div>
         </div>
 
         <div class="panel" id="p2">
@@ -669,7 +670,28 @@ function pickOutline(colour) {
   document.querySelectorAll('.outline-option').forEach(button => {
     button.classList.toggle('sel', button.dataset.outline === colour);
   });
+  setOutlineError_(false);
   updateSizeContinue_();
+}
+
+function setOutlineError_(show) {
+  const error = document.getElementById('outline-error');
+  if (!error) return;
+  error.classList.toggle('show', Boolean(show));
+}
+
+function continueFromProducts() {
+  if (!hasSelectedProducts_()) return;
+
+  if (!selectedOutline) {
+    setOutlineError_(true);
+    const outlineBox = document.querySelector('.outline-box');
+    if (outlineBox) outlineBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  setOutlineError_(false);
+  go(2);
 }
 
 function toggleDigitalCopy() {
@@ -765,7 +787,9 @@ function formatItemsForReceipt_(items) {
 }
 
 function updateSizeContinue_() {
-  document.getElementById('s1n').disabled = !(hasSelectedProducts_() && selectedOutline);
+  const hasProducts = hasSelectedProducts_();
+  document.getElementById('s1n').disabled = !hasProducts;
+  if (!hasProducts) setOutlineError_(false);
 }
 
 function updateRecaps() {
