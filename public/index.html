@@ -90,6 +90,11 @@ const CONFIG = {
     payee: 'Glory On International Limited',
     qrImage: 'images/fps-qr.png'
   },
+  paypal: {
+    checkoutUrl: 'https://paypal.me/justforyouandmeow',
+    qrImage: 'images/paypal-qr.png',
+    serviceFeeRate: 0.05
+  },
   products: [],
   terms: null
 };
@@ -129,12 +134,13 @@ main{padding-top:50px}
 .promo-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.promo-row{display:flex;align-items:flex-end;gap:.8rem}.promo-row .field{flex:1;margin:0}.promo-apply{height:34px;border:1px solid var(--black);background:transparent;color:var(--black);padding:0 1rem;font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.promo-apply:disabled{opacity:.35;cursor:not-allowed}.promo-result{font-size:.74rem;min-height:1.4em;margin-top:.65rem}.promo-result.ok{color:#1a6b3c}.promo-result.err{color:var(--err)}
 .outline-box{margin-top:1.7rem;padding-top:1.4rem;border-top:1px solid var(--light)}.outline-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.outline-options{display:flex;gap:.7rem;flex-wrap:wrap}.outline-option{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--light);background:transparent;padding:.65rem .85rem;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--mid);cursor:pointer}.outline-option:hover,.outline-option.sel{border-color:var(--black);color:var(--black)}.outline-swatch{width:16px;height:16px;border-radius:50%;border:1px solid #bbb;display:inline-block}.outline-swatch.black{background:#111}.outline-swatch.white{background:#fff}.outline-error{display:none;margin-top:.65rem;font-size:.74rem;line-height:1.5;color:var(--err)}.outline-error.show{display:block}
 .addon-box{margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--light)}.addon-option{width:100%;display:flex;justify-content:space-between;align-items:center;gap:1rem;border:1px solid var(--light);background:transparent;padding:.9rem 1rem;font-family:'Inter',sans-serif;color:var(--mid);cursor:pointer;text-align:left}.addon-option:hover,.addon-option.sel{border-color:var(--black);color:var(--black)}.addon-title{display:block;font-size:.78rem;color:var(--black);letter-spacing:.02em}.addon-desc{display:block;font-size:.72rem;color:var(--mid);line-height:1.55;margin-top:.25rem}.addon-price{font-size:.78rem;white-space:nowrap;color:var(--black)}
+.payment-method-box{margin:1.8rem 0 0;padding-top:1.4rem;border-top:1px solid var(--light)}.payment-method-options{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}.payment-method-option{border:1px solid var(--light);background:transparent;padding:.9rem 1rem;font-family:'Inter',sans-serif;color:var(--mid);cursor:pointer;text-align:left}.payment-method-option:hover,.payment-method-option.sel{border-color:var(--black);color:var(--black)}.payment-method-title{display:block;font-size:.78rem;color:var(--black);letter-spacing:.02em}.payment-method-desc{display:block;font-size:.72rem;color:var(--mid);line-height:1.55;margin-top:.25rem}.payment-method-error{display:none;margin-top:.65rem;font-size:.74rem;line-height:1.5;color:var(--err)}.payment-method-error.show{display:block}@media(max-width:560px){.payment-method-options{grid-template-columns:1fr}}
 .terms-check{display:flex;align-items:flex-start;gap:.65rem;font-size:.76rem;color:var(--mid);line-height:1.55;margin:1.6rem 0}.terms-check input{width:15px;height:15px;margin-top:.15rem;accent-color:var(--black);flex:0 0 auto}.terms-check a{color:var(--black);text-decoration:underline;text-underline-offset:2px}
 .terms-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 2rem));max-height:82vh;border:0;padding:0;background:var(--white);color:var(--black);cursor:default;box-shadow:0 18px 60px rgba(0,0,0,.18)}.terms-dialog:focus{outline:none}.terms-dialog::backdrop{background:rgba(0,0,0,.42)}.terms-inner{padding:clamp(1.5rem,4vw,2.5rem);overflow:auto;max-height:82vh}.terms-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--light)}.terms-head h2{font-size:1rem;font-weight:500}.terms-close{border:0;background:none;font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--mid)}.terms-section{padding-top:1.5rem}.terms-section h3{font-size:.78rem;font-weight:500;margin-bottom:.65rem}.terms-section p{font-size:.76rem;color:var(--mid);line-height:1.8;margin-bottom:.8rem}
 .btn-row{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}.btn-submit{background:var(--black);color:var(--white);border:none;padding:.8em 2.2em;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:opacity .15s}.btn-submit:hover{opacity:.65}.btn-submit:disabled{opacity:.25;cursor:not-allowed}.btn-back{font-size:.75rem;color:var(--mid);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;transition:color .15s}.btn-back:hover{color:var(--black)}
 .aside-block{border-top:1px solid var(--light);padding-top:1.4rem;margin-bottom:2rem}.aside-label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:.8rem}.aside-body{font-size:.78rem;color:var(--mid);line-height:1.85}
 .order-num-box{background:var(--black);color:var(--white);padding:1.2rem 1.5rem;margin-bottom:2rem}.order-num-label{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:.3rem}.order-num-value{font-size:1.1rem;font-weight:500;letter-spacing:.04em}.receipt{border-top:1px solid var(--light);margin-bottom:2.5rem}.r-row{display:flex;justify-content:space-between;font-size:.8rem;padding:.65rem 0;border-bottom:1px solid var(--light)}.r-row:last-child{font-weight:500;border-color:var(--black)}.r-label{color:var(--mid)}
-.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}.fps-qr img{width:100%;height:100%;object-fit:contain}.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}.fps-instructions ol{padding-left:1.1em}.fps-instructions li{margin-bottom:.4rem}
+.fps-block{border:1px solid var(--light);padding:2rem;text-align:center}.payment-block.is-hidden{display:none}.fps-eyebrow{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mid);margin-bottom:1.5rem}.fps-qr{width:130px;height:130px;background:#EDEDED;margin:0 auto 1.2rem;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mid)}.fps-qr img{width:100%;height:100%;object-fit:contain}.fps-meta{font-size:.78rem;color:var(--mid);margin-bottom:.3rem}.fps-amount{display:inline-block;background:var(--black);color:var(--white);padding:.55em 2rem;font-size:.88rem;font-weight:500;letter-spacing:.05em;margin:.8rem 0 0}.fps-instructions{text-align:left;font-size:.75rem;color:var(--mid);line-height:1.85;border-top:1px solid var(--light);margin-top:1.5rem;padding-top:1.2rem}.fps-instructions ol{padding-left:1.1em}.fps-instructions li{margin-bottom:.4rem}.paypal-logo{font-size:1.55rem;font-weight:500;letter-spacing:-.02em;color:#003087;margin-bottom:.2rem}.paypal-logo span{color:#009cde}.paypal-button{display:inline-flex;align-items:center;justify-content:center;width:min(100%,360px);min-height:52px;margin:1rem auto .4rem;border:0;background:#e5e5e5;color:var(--black);font-family:'Inter',sans-serif;font-size:1rem;font-weight:500;text-decoration:none;cursor:pointer}.paypal-button:hover{opacity:.75}.paypal-button.disabled{opacity:.45;cursor:not-allowed;pointer-events:none}.paypal-note{font-size:.75rem;color:var(--mid);line-height:1.75;margin-top:.7rem}
 .manage-wrap{max-width:760px}.manage-summary{border-top:1px solid var(--light);border-bottom:1px solid var(--light);margin:1.5rem 0 2rem}.manage-summary .r-row:last-child{font-weight:300;border-color:var(--light)}.manage-upload-panel{display:none}.manage-upload-panel.show{display:block}.manage-note{font-size:.75rem;color:var(--mid);line-height:1.8;margin-top:.8rem}.manage-actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem}
 .status-msg{font-size:.78rem;padding:.7rem 1rem;margin:.8rem 0;border-left:3px solid;display:none}.status-msg.show{display:block}.status-msg.ok{border-color:#2a9d5c;background:#f0faf5;color:#1a6b3c}.status-msg.err{border-color:var(--err);background:#fff5f5;color:var(--err)}.status-msg a{color:inherit;font-weight:500;text-decoration:underline}.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:.5rem;vertical-align:middle}@keyframes spin{to{transform:rotate(360deg)}}
 body{cursor:none}.paw-cursor-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}.paw{position:absolute;pointer-events:none;width:24px;height:28px}
@@ -265,9 +271,24 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
           <div class="panel-title">Your details</div>
           <p class="panel-sub">Contact and delivery information.</p>
           <div class="field"><label>Instagram</label><input type="text" id="f-instagram" placeholder="@accountname"></div>
+          <div class="field"><label>Email address</label><input type="email" id="f-email" placeholder="you@example.com" autocomplete="email"></div>
           <div class="field"><label>Full name</label><input type="text" id="f-name" placeholder="Your full name"></div>
           <div class="field"><label>Phone number</label><input type="tel" id="f-phone" placeholder="Your phone number"></div>
           <div class="field"><label>Delivery address</label><input type="text" id="f-addr" placeholder="Full address"></div>
+          <div class="payment-method-box">
+            <div class="outline-label">Payment method</div>
+            <div class="payment-method-options">
+              <button type="button" class="payment-method-option sel" data-payment-method="fps" onclick="pickPaymentMethod('fps')">
+                <span class="payment-method-title">FPS (Hong Kong)</span>
+                <span class="payment-method-desc">Pay by FPS and upload the screenshot.</span>
+              </button>
+              <button type="button" class="payment-method-option" data-payment-method="paypal" onclick="pickPaymentMethod('paypal')">
+                <span class="payment-method-title">PayPal (overseas)</span>
+                <span class="payment-method-desc">Checkout with PayPal. 5% service fee applies.</span>
+              </button>
+            </div>
+            <div class="payment-method-error" id="payment-method-error" role="alert" aria-live="polite">Please choose a payment method before continuing.</div>
+          </div>
           <div class="btn-row"><button class="btn-submit" onclick="v2()">Continue</button><button class="btn-back" onclick="go(1)">Back</button></div>
         </div>
 
@@ -297,10 +318,10 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
 
         <div class="panel" id="p4">
           <div class="panel-title">Order received</div>
-          <p class="panel-sub">Complete payment via FPS within 48 hours, then upload your screenshot below.</p>
+          <p class="panel-sub" id="payment-panel-sub">Complete payment within 48 hours, then upload your screenshot below.</p>
           <div class="order-num-box"><div class="order-num-label">Your order number</div><div class="order-num-value" id="order-num-display">—</div></div>
           <div class="receipt" id="receipt"></div>
-          <div class="fps-block">
+          <div class="fps-block payment-block" id="fps-payment-block">
             <div class="fps-eyebrow">FPS &nbsp;/&nbsp; Faster Payment System</div>
             <div class="fps-qr"><img src="images/fps-qr.png" alt="FPS QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>fps-qr.png</span>')"></div>
             <div class="fps-meta">識別代碼 &nbsp;102056686</div>
@@ -308,13 +329,23 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
             <div class="fps-amount" id="famt">HK$—</div>
             <div class="fps-instructions"><ol><li>Open your banking app and select FPS.</li><li>Add your name and order number as the reference, then take a screenshot.</li><li>Please upload your screenshot below and send us a direct message (DM).</li></ol></div>
           </div>
+          <div class="fps-block payment-block is-hidden" id="paypal-payment-block">
+            <div class="fps-eyebrow">PayPal &nbsp;/&nbsp; Overseas checkout</div>
+            <div class="fps-qr"><img src="images/paypal-qr.png" alt="PayPal QR code" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>paypal-qr.png</span>')"></div>
+            <div class="paypal-logo">Pay<span>Pal</span> Checkout</div>
+            <div class="fps-meta">Includes 5% PayPal service fee</div>
+            <div class="fps-amount" id="paypal-amount">HK$—</div>
+            <a class="paypal-button disabled" id="paypal-checkout-link" href="#" target="_blank" rel="noopener noreferrer">PayPal Checkout</a>
+            <div class="paypal-note" id="paypal-note">PayPal checkout link is not configured yet. Please DM us with your order number and we will send the PayPal payment request.</div>
+            <div class="fps-instructions"><ol><li>Use the PayPal checkout link or DM us for the payment request.</li><li>Add your name and order number in the PayPal note if possible.</li><li>Please upload your PayPal receipt screenshot below and send us a direct message (DM).</li></ol></div>
+          </div>
 
           <div class="field" style="margin-top:2rem">
             <label>Payment screenshot <small>Upload after payment</small></label>
             <div class="upfield">
               <input type="file" id="f-payment" accept="image/*" onchange="onPayFile(this)">
               <span class="upfield-label">Select file</span>
-              <span class="upfield-hint">Upload your FPS payment screenshot</span>
+              <span class="upfield-hint" id="payment-upload-hint">Upload your payment screenshot</span>
             </div>
             <div class="file-chosen" id="pay-file-chosen"></div>
             <div class="photo-list" id="payment-photo-list"></div>
@@ -367,6 +398,7 @@ let payFile = null;
 let appliedPromo = null;
 let selectedOutline = null;
 let selectedDigitalCopy = false;
+let selectedPaymentMethod = 'fps';
 const DIGITAL_COPY_PRICE = 150;
 let orderReadyForPayment = false;
 let pendingOrderResult = null;
@@ -468,6 +500,47 @@ function showPaymentSuccess_() {
   link.textContent = 'Instagram';
   el.appendChild(link);
   el.appendChild(document.createTextNode(' with your order number. Thank you.'));
+}
+
+function renderPaymentInstructions_(method, amount) {
+  const paymentMethod = method === 'paypal' ? 'paypal' : 'fps';
+  const isPaypal = paymentMethod === 'paypal';
+  const fpsBlock = document.getElementById('fps-payment-block');
+  const paypalBlock = document.getElementById('paypal-payment-block');
+  const subtitle = document.getElementById('payment-panel-sub');
+  const uploadHint = document.getElementById('payment-upload-hint');
+  const paypalAmount = document.getElementById('paypal-amount');
+  const paypalLink = document.getElementById('paypal-checkout-link');
+  const paypalNote = document.getElementById('paypal-note');
+
+  if (fpsBlock) fpsBlock.classList.toggle('is-hidden', isPaypal);
+  if (paypalBlock) paypalBlock.classList.toggle('is-hidden', !isPaypal);
+  if (subtitle) {
+    subtitle.textContent = isPaypal
+      ? 'Complete payment via PayPal within 48 hours, then upload your receipt screenshot below.'
+      : 'Complete payment via FPS within 48 hours, then upload your screenshot below.';
+  }
+  if (uploadHint) {
+    uploadHint.textContent = isPaypal
+      ? 'Upload your PayPal receipt screenshot'
+      : 'Upload your FPS payment screenshot';
+  }
+  if (paypalAmount) paypalAmount.textContent = 'HK$ ' + formatPrice_(amount);
+
+  if (paypalLink && paypalNote) {
+    const checkoutUrl = String(CONFIG.paypal.checkoutUrl || '').trim();
+    if (checkoutUrl) {
+      paypalLink.href = checkoutUrl;
+      paypalLink.classList.remove('disabled');
+      paypalLink.setAttribute('aria-disabled', 'false');
+      paypalNote.textContent = 'Please complete PayPal checkout, then upload the receipt screenshot below.';
+    } else {
+      paypalLink.href = '#';
+      paypalLink.classList.add('disabled');
+      paypalLink.setAttribute('aria-disabled', 'true');
+      paypalNote.textContent = 'PayPal checkout link is not configured yet. Please DM us with your order number and we will send the PayPal payment request.';
+    }
+  }
 }
 
 loadProducts();
@@ -701,6 +774,22 @@ function toggleDigitalCopy() {
   updateRecaps();
 }
 
+function pickPaymentMethod(method) {
+  if (!['fps', 'paypal'].includes(method)) return;
+  selectedPaymentMethod = method;
+  document.querySelectorAll('.payment-method-option').forEach(button => {
+    button.classList.toggle('sel', button.dataset.paymentMethod === method);
+  });
+  setPaymentMethodError_(false);
+  updateRecaps();
+}
+
+function setPaymentMethodError_(show) {
+  const error = document.getElementById('payment-method-error');
+  if (!error) return;
+  error.classList.toggle('show', Boolean(show));
+}
+
 function getProductsSubtotal_() {
   return selectedItems.reduce((sum, item) => {
     return sum + Number(item.price || 0) * Number(item.quantity || 0);
@@ -712,7 +801,21 @@ function getCurrentProductPrice_() {
 }
 
 function getOrderTotal_() {
+  return getOrderSubtotalWithAddons_() + getPaymentServiceFee_();
+}
+
+function getOrderSubtotalWithAddons_() {
   return getCurrentProductPrice_() + (selectedDigitalCopy ? DIGITAL_COPY_PRICE : 0);
+}
+
+function getPaymentServiceFee_(subtotal) {
+  if (selectedPaymentMethod !== 'paypal') return 0;
+  const base = Number.isFinite(Number(subtotal)) ? Number(subtotal) : getOrderSubtotalWithAddons_();
+  return Math.ceil(base * Number(CONFIG.paypal.serviceFeeRate || 0));
+}
+
+function getPaymentMethodLabel_(method) {
+  return method === 'paypal' ? 'PayPal (overseas)' : 'FPS (Hong Kong)';
 }
 
 function hasOwn_(object, key) {
@@ -762,8 +865,8 @@ function getReceiptTotal_(result, digitalCopySelected, digitalCopyPrice) {
     if (Number.isFinite(serverTotal)) return serverTotal;
   }
 
-  // Backward fallback: old Apps Script did not know digital copy, so use frontend cart total.
-  return getOrderTotal_();
+  // Backward fallback: old Apps Script did not know digital copy, so use frontend subtotal before payment fees.
+  return getOrderSubtotalWithAddons_();
 }
 
 function getDigitalCopyText_() {
@@ -796,6 +899,7 @@ function updateRecaps() {
   if (!hasSelectedProducts_()) return;
   const parts = [(selectedOutline || '') + ' outline'];
   if (selectedDigitalCopy) parts.push('JPG digital copy +HK$150');
+  if (selectedPaymentMethod === 'paypal') parts.push('PayPal +5%');
   ['2','3'].forEach(n => {
     document.getElementById('rb' + n + '-size').textContent = getProductsSummary_();
     document.getElementById('rb' + n + '-price').textContent = parts.join(' — ') + ' — HK$' + formatPrice_(getOrderTotal_());
@@ -888,14 +992,33 @@ function go(n) {
 }
 
 function v2() {
+  const email = document.getElementById('f-email').value.trim();
+
   if (!document.getElementById('f-instagram').value.trim() ||
+      !email ||
       !document.getElementById('f-name').value.trim() ||
       !document.getElementById('f-phone').value.trim() ||
       !document.getElementById('f-addr').value.trim()) {
     alert('Please fill in all required fields.');
     return;
   }
+
+  if (!isValidEmail_(email)) {
+    alert('Please enter a valid email address.');
+    return;
+  }
+
+  if (!selectedPaymentMethod) {
+    setPaymentMethodError_(true);
+    return;
+  }
+
+  setPaymentMethodError_(false);
   go(3);
+}
+
+function isValidEmail_(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
 
 function onPetFiles(input) {
@@ -1129,17 +1252,24 @@ async function doSubmit() {
   }
 
   const ig = document.getElementById('f-instagram').value.trim();
+  const em = document.getElementById('f-email').value.trim();
   const nm = document.getElementById('f-name').value.trim();
   const ph = document.getElementById('f-phone').value.trim();
   const ad = document.getElementById('f-addr').value.trim();
 
-  if (!ig || !nm || !ph || !ad) {
+  if (!ig || !em || !nm || !ph || !ad) {
     showMsg('msg-s3', 'err', 'Please go back and complete all your details.');
     go(2);
     return;
   }
 
-  if (ig.length > 100 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
+  if (!isValidEmail_(em)) {
+    showMsg('msg-s3', 'err', 'Please go back and enter a valid email address.');
+    go(2);
+    return;
+  }
+
+  if (ig.length > 100 || em.length > 150 || nm.length > 100 || ph.length > 20 || ad.length > 500) {
     showMsg('msg-s3', 'err', 'Some fields are too long.');
     go(2);
     return;
@@ -1228,10 +1358,16 @@ async function doSubmit() {
         items: getSelectedItemsForPayload_(),
         outline: selectedOutline,
         digitalCopy: selectedDigitalCopy,
+        paymentMethod: selectedPaymentMethod,
+        paymentMethodLabel: getPaymentMethodLabel_(selectedPaymentMethod),
+        paymentServiceFeeRate: selectedPaymentMethod === 'paypal' ? CONFIG.paypal.serviceFeeRate : 0,
+        paymentServiceFee: getPaymentServiceFee_(),
+        estimatedTotal: getOrderTotal_(),
         firstPhoto: {
           data: firstPhotoData
         },
         instagram: ig,
+        email: em,
         name: nm,
         phone: ph,
         address: ad,
@@ -1288,17 +1424,24 @@ async function doSubmit() {
     const digitalCopyPrice = hasOwn_(result, 'digitalCopyPrice')
       ? Number(result.digitalCopyPrice || 0)
       : (digitalCopySelected ? DIGITAL_COPY_PRICE : 0);
-    const receiptTotal = getReceiptTotal_(result, digitalCopySelected, digitalCopyPrice);
+    const receiptSubtotal = getReceiptTotal_(result, digitalCopySelected, digitalCopyPrice);
+    const paymentMethod = result.paymentMethod || selectedPaymentMethod;
+    const paymentServiceFee = paymentMethod === 'paypal'
+      ? firstFiniteNumber_([result.paymentServiceFee, getPaymentServiceFee_(receiptSubtotal)])
+      : 0;
+    const receiptTotal = receiptSubtotal + (Number.isFinite(paymentServiceFee) ? paymentServiceFee : 0);
 
     const rows = [
       { label: 'Order', value: orderNum },
       { label: 'Instagram', value: ig },
+      { label: 'Email', value: em },
       { label: 'Name', value: nm },
       { label: 'Phone', value: ph },
       { label: 'Address', value: ad },
       { label: 'Products', value: formatItemsForReceipt_(result.items || selectedItems) },
       { label: 'Outline', value: outlineText },
-      { label: 'Digital copy', value: digitalCopySelected ? 'Yes — JPG for personal / non-commercial use' : 'No' }
+      { label: 'Digital copy', value: digitalCopySelected ? 'Yes — JPG for personal / non-commercial use' : 'No' },
+      { label: 'Payment method', value: getPaymentMethodLabel_(paymentMethod) }
     ];
 
     if (result.promoCode) {
@@ -1309,6 +1452,10 @@ async function doSubmit() {
 
     if (digitalCopySelected && digitalCopyPrice) {
       rows.push({ label: 'Digital copy add-on', value: '+HK$' + formatPrice_(digitalCopyPrice) });
+    }
+
+    if (paymentMethod === 'paypal') {
+      rows.push({ label: 'PayPal service fee (5%)', value: '+HK$' + formatPrice_(paymentServiceFee) });
     }
 
     rows.push({ label: 'Total', value: 'HK$' + formatPrice_(receiptTotal) });
@@ -1327,6 +1474,7 @@ async function doSubmit() {
     });
 
     document.getElementById('famt').textContent = 'HK$ ' + formatPrice_(receiptTotal);
+    renderPaymentInstructions_(paymentMethod, receiptTotal);
     pendingOrderResult = null;
     go(4);
 
@@ -1407,6 +1555,8 @@ async function submitPayment() {
       type: 'payment',
       orderNumber: savedOrderNumber,
       orderToken: orderToken,
+      paymentMethod: selectedPaymentMethod,
+      paymentMethodLabel: getPaymentMethodLabel_(selectedPaymentMethod),
       screenshot: {
         data: data,
         name: payFile.name || 'payment-proof'
@@ -1849,13 +1999,14 @@ function doReset() {
   appliedPromo = null;
   selectedOutline = null;
   selectedDigitalCopy = false;
+  selectedPaymentMethod = 'fps';
   orderReadyForPayment = false;
 
   sessionStorage.removeItem('meow_order_number');
   sessionStorage.removeItem('meow_order_token');
   sessionStorage.removeItem('meow_order_request_id');
 
-  ['f-instagram','f-name','f-phone','f-addr','f-notes'].forEach(id => {
+  ['f-instagram','f-email','f-name','f-phone','f-addr','f-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1877,6 +2028,10 @@ function doReset() {
   document.querySelectorAll('.size-row').forEach(r => r.classList.remove('sel'));
   document.querySelectorAll('.qty-count').forEach(q => { q.textContent = '0'; });
   document.querySelectorAll('.outline-option').forEach(button => button.classList.remove('sel'));
+  document.querySelectorAll('.payment-method-option').forEach(button => {
+    button.classList.toggle('sel', button.dataset.paymentMethod === 'fps');
+  });
+  setPaymentMethodError_(false);
   const digitalCopyOption = document.getElementById('digital-copy-option');
   if (digitalCopyOption) digitalCopyOption.classList.remove('sel');
 
@@ -1891,6 +2046,7 @@ function doReset() {
   document.getElementById('s4n').textContent = 'Submit payment proof';
   document.getElementById('payment-back').style.display = '';
   document.getElementById('s1n').disabled = true;
+  renderPaymentInstructions_('fps', 0);
 
   hideMsg('msg-s3');
   hideMsg('msg-s4');
