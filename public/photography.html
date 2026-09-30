@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="description" content="Photography booking — just for you and meow">
+<title>Photography booking — just for you and meow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/photography.css">
+<script src="/photography.js" defer></script>
+</head>
+<body>
+<nav aria-label="主要導覽"><a class="brand" href="/">just for you and meow</a><a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram ↗</a></nav>
+<main>
+<header class="hero"><p class="eyebrow">A little moment, kept forever.</p><h1>Just you,<br>and your <span>little ones.</span></h1><div class="hero-bottom"><p>為你與毛孩，留住相聚的小日常。<br><span lang="en">Photography booking</span></p><span class="edition">just for you and meow<br>PHOTO SESSIONS / 01</span></div></header>
+<div class="booking-layout">
+<aside><p class="eyebrow">Your session / 拍攝安排</p><h2>留一點時間，<br>記錄你們。</h2><dl class="details"><div><dt>每節時間</dt><dd>30 分鐘</dd></div><div><dt>每節組數</dt><dd>1 組客人</dd></div><div><dt>預約方式</dt><dd>先留位，再人手確認</dd></div><div><dt>套餐及收費</dt><dd id="price-label">待公布</dd></div><div><dt>拍攝地點</dt><dd id="location-label">待公布</dd></div></dl><p class="muted" id="session-description">選擇合適的日期及時段，填寫資料後提交留位申請。我們會再聯絡你確認拍攝安排。</p><p class="small">所有時間均為香港時間（GMT+8）。<br>提交留位申請後，須經我們確認才完成預約。</p><a class="text-link" href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">有問題？Instagram 聯絡我們 ↗</a></aside>
+<section aria-labelledby="booking-title"><div class="section-heading"><span class="eyebrow">Book a moment</span><h2 id="booking-title">預約攝影</h2></div>
+<div id="availability-status" class="notice" role="status">正在讀取可預約時段…</div><button id="reload" class="text-button" type="button" hidden>重新載入時段 ↻</button>
+<noscript><p class="notice">請啟用 JavaScript 以查看時段及預約，或透過 Instagram 聯絡我們。</p></noscript>
+<form id="booking-form" hidden>
+<fieldset><legend><span>01</span> 選擇拍攝時段</legend><div class="field"><label for="date">日期</label><select id="date" required><option value="">請選擇日期</option></select></div><div id="slots" class="slots" role="group" aria-label="拍攝時段"></div><p class="small" id="slot-help">先選擇日期，再選擇一個 30 分鐘時段。</p></fieldset>
+<fieldset><legend><span>02</span> 關於你們</legend><div class="fields"><div class="field"><label for="name">姓名 *</label><input id="name" name="name" autocomplete="name" maxlength="80" required></div><div class="field"><label for="phone">聯絡電話 *</label><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30" pattern="\+?[0-9 ()-]{8,30}" placeholder="例如 91234567" required></div><div class="field full"><label for="instagram">Instagram 帳號 <span>（選填）</span></label><input id="instagram" name="instagram" maxlength="80" placeholder="@yourname" autocapitalize="none"></div><div class="field"><label for="people">拍攝人數 *</label><input id="people" name="people" type="number" min="1" max="99" step="1" value="1" required></div><div class="field"><label for="pets">寵物數目 *</label><input id="pets" name="pets" type="number" min="0" max="99" step="1" value="1" required></div><div class="field full" id="pet-field"><label for="petDetails">寵物種類及需要留意的事項 *</label><textarea id="petDetails" name="petDetails" maxlength="1000" rows="3" placeholder="例如：1 隻貓；比較怕生，需要時間適應。" required></textarea></div><div class="field full"><label for="notes">其他備註 <span>（選填）</span></label><textarea id="notes" name="notes" maxlength="1000" rows="2" placeholder="可以告訴我們你想拍攝的感覺或特別需要。"></textarea></div></div><p class="small">人數、寵物種類及拍攝安排會由我們再確認。</p></fieldset>
+<fieldset><legend><span>03</span> 確認留位資料</legend><div class="recap" id="recap">尚未選擇拍攝時段</div><label class="consent"><input id="consent" type="checkbox" required><span>我明白這是留位申請，須經店方確認才完成預約；以上資料只用於處理此預約及聯絡我。</span></label><div id="turnstile-widget"></div><p id="security-status" class="small" role="status"></p><p id="form-error" class="error" role="alert" hidden></p><button id="submit" class="primary" type="submit">提交留位申請 <span>↗</span></button><p class="small">此步驟不收取款項。如需更改或取消留位，請透過 Instagram 聯絡我們。</p></fieldset>
+</form>
+<section id="success" class="success" tabindex="-1" hidden><p class="eyebrow">Request received</p><h2>已收到你的留位申請。</h2><p>你的時段已暫留，待我們聯絡你確認。<strong>目前尚未正式確認預約。</strong></p><dl class="details"><div><dt>留位編號</dt><dd id="booking-reference"></dd></div><div><dt>拍攝時間</dt><dd id="booking-time"></dd></div><div><dt>狀態</dt><dd>待人手確認</dd></div></dl><p class="small">請截圖保存留位編號。更改或取消時，請提供此編號。</p><a class="text-link" href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram 聯絡我們 ↗</a></section>
+</section>
+</div>
+</main><footer><a href="/">just for you and meow</a><span>Little moments. Lasting memories.</span></footer>
+</body></html>
