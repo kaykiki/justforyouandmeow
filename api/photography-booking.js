@@ -2,7 +2,7 @@
 const HOSTS = new Set(['justforyouandmeow.com', 'www.justforyouandmeow.com', 'justforyouandmeow.vercel.app']);
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('X-Photography-API-Version', '2026-10-05.1');
+  res.setHeader('X-Photography-API-Version', '2026-10-05.2');
   if (!['GET', 'POST'].includes(req.method)) { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({success:false,error:'METHOD_NOT_ALLOWED'}); }
   try {
     const endpoint = (process.env.PHOTOGRAPHY_APPS_SCRIPT_URL || '').trim();
@@ -32,7 +32,7 @@ module.exports = async function handler(req, res) {
       if (verified.success !== true || verified.action !== 'photography_booking' || !HOSTS.has(verified.hostname)) return res.status(403).json({success:false,error:'BOT_CHECK_FAILED'});
       payload = {type:'booking',requestId:b.requestId,slotId:b.slotId,name:b.name,email:b.email,phone:b.phone,instagram:b.instagram,people:b.people,pets:b.pets,notes:b.notes,consent:b.consent};
     }
-    const upstream = await fetch(parsed.href, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,apiSecret:secret}),signal:AbortSignal.timeout(22000)});
+    const upstream = await fetch(parsed.href, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,apiSecret:secret}),signal:AbortSignal.timeout(45000)});
     if (!upstream.ok) return res.status(503).json({success:false,error:upstream.status === 401 || upstream.status === 403 ? 'APPS_SCRIPT_ACCESS_DENIED' : 'APPS_SCRIPT_HTTP_ERROR'});
     let result;
     try { result = await upstream.json(); }
