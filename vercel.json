@@ -16,7 +16,11 @@
     {
       "source": "/manage-order",
       "destination": "/manage-order.html"
-    }
+    },
+    {
+  "source": "/photography-booking",
+  "destination": "/photography-booking.html"
+}
   ],
   "headers": [
     {
