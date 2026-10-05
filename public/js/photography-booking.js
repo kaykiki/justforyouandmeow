@@ -50,6 +50,7 @@
     $('ms-continue').disabled=!loaded || !selected || !selected.available || submitting;
     $('ms-submit-booking').disabled=submitting || !token || (!attempt && (!selected || !loaded || !selected.available));
     $('ms-back').disabled=submitting || !!attempt;
+    $('ms-change-time').disabled=submitting || !!attempt;
     form.querySelectorAll('input,textarea').forEach(el=>el.disabled=submitting || !!attempt);
   }
   function renderSlots() {
@@ -86,10 +87,12 @@
       }
       if(selected){selected=slots.find(s=>s.id===selected.id)||null;
         if(!selected || !selected.available){$('ms-summary-value').textContent=selectedDate?dateLabel(selectedDate)+' · Select another time':'No sessions available';if(!form.hidden && !attempt)message('This time is no longer available. Change time to choose another slot.');}}
-      $('ms-live-status').textContent=dates.length?'Availability updated. Each session is 30 minutes.':'No sessions are currently available. Please check back later.';
+      $('ms-live-status').hidden=dates.length>0;
+      $('ms-live-status').textContent=dates.length?'':'No sessions are currently available. Please check back later.';
     } catch (_) {
       loaded=false;
-      $('ms-live-status').textContent='Availability could not be loaded. Please refresh availability or try again later.';
+      $('ms-live-status').hidden=false;
+      $('ms-live-status').textContent='Available times could not be loaded. Please try again shortly.';
     } finally { loading=false;renderCalendar();renderSlots();controls(); }
   }
   function resetSecurity(){token='';if(window.turnstile && widgetId!==null)window.turnstile.reset(widgetId);controls();}
@@ -104,14 +107,15 @@
     $('ms-selection').hidden=true;form.hidden=false;
     $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end}`;
     $('ms-step-one').removeAttribute('aria-current');$('ms-step-two').setAttribute('aria-current','step');
-    $('ms-form-session').textContent='30 minutes · '+dateLabel(selected.date);
     renderSecurity();controls();form.elements.guestName.focus({preventScroll:true});
   });
-  $('ms-back').addEventListener('click',()=>{
+  function changeTime(){
     if(attempt || submitting)return;
     form.hidden=true;$('ms-selection').hidden=false;$('ms-step-two').removeAttribute('aria-current');$('ms-step-one').setAttribute('aria-current','step');
     availability();$('ms-continue').focus({preventScroll:true});
-  });
+  }
+  $('ms-back').addEventListener('click',changeTime);
+  $('ms-change-time').addEventListener('click',changeTime);
   form.addEventListener('submit',e=>{e.preventDefault();submit();});
   $('ms-submit-booking').addEventListener('click',submit);
   form.elements.guestName.addEventListener('input',()=>form.elements.guestName.setCustomValidity(''));
@@ -130,7 +134,7 @@
       const response=await fetch('/api/photography-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...attempt,turnstileToken:token}),signal:AbortSignal.timeout(60000)});
       const data=await response.json();
       if(response.ok && data.success===true){
-        done=true;form.hidden=true;$('ms-live-status').hidden=true;$('ms-refresh').hidden=true;$('ms-receipt').hidden=false;
+        done=true;form.hidden=true;$('ms-live-status').hidden=true;$('ms-receipt').hidden=false;
         $('ms-receipt-id').textContent=`Reference: ${data.bookingId}`;
         $('ms-receipt-time').textContent=`${dateLabel(data.date)} · ${data.start}–${data.end}`;
         $('ms-receipt-status').textContent=data.status==='Confirmed'?'Status: Confirmed':data.status==='Cancelled'?'Status: Cancelled. This reference has been cancelled.':'Status: Pending — your time is held while we confirm the details. Payment has not been collected.';
@@ -145,9 +149,9 @@
     } catch (_) {message('The result could not be confirmed. Please retry below with the same details; a retry will not create a duplicate request.');}
     finally {submitting=false;$('ms-submit-booking').textContent=attempt?'Retry booking request':'Submit booking request';resetSecurity();if(!done)await availability();}
   }
-  $('ms-refresh').addEventListener('click',availability);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)availability();});
   setInterval(()=>{if(!document.hidden && !attempt)availability();},30000);
   availability();
 })();
+
 

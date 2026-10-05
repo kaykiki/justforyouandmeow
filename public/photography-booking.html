@@ -9,7 +9,7 @@
     <a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a>
   </div>
 </nav>
-  <section class="ms-hero"><div><h1>Photography Booking</h1></div><img class="ms-logo" src="images/logo.png" alt="just for you and meow cat logo"></section>
+  <section class="ms-hero"><div><h1>Photography Booking</h1></div></section>
   <section class="ms-booking" aria-label="Photography booking preview">
     <div class="ms-steps"><span id="ms-step-one" aria-current="step">01 &nbsp; Date &amp; time</span><span id="ms-step-two">02 &nbsp; Your details</span></div>
     <div id="ms-selection">
@@ -20,11 +20,27 @@
       <div class="ms-summary"><div aria-live="polite"><p class="ms-summary-label">Your session</p><p class="ms-summary-value" id="ms-summary-value">Select a date and time</p></div><button class="ms-button cursor-interaction" id="ms-continue" type="button" disabled>Continue <span aria-hidden="true">→</span></button></div>
     </div>
     <form id="ms-details" hidden>
-      <div class="ms-form-head"><div><h2>Your details</h2><p class="ms-caption" id="ms-detail-time"></p></div><button class="ms-back cursor-interaction" type="button" id="ms-back">Change time</button></div>
-      <div class="ms-form-grid"><label class="ms-field">Your name<input name="guestName" autocomplete="name" placeholder="Name" required maxlength="80"></label><label class="ms-field">Email address<input name="email" type="email" autocomplete="email" placeholder="you@email.com" required maxlength="120"></label><label class="ms-field">Phone <span>(optional)</span><input name="phone" type="tel" autocomplete="tel" maxlength="40"></label><label class="ms-field">Instagram <span>(optional)</span><input name="instagram" placeholder="@yourname" maxlength="31" pattern="@?[A-Za-z0-9._]{1,30}"></label><label class="ms-field">Number of people<input name="people" type="number" min="0" max="99" value="1" required></label><label class="ms-field">Number of pets<input name="pets" type="number" min="0" max="99" value="0" required></label><label class="ms-field ms-field-full">Anything we should know? <textarea name="notes" placeholder="Your pets, a special occasion, or anything you need." maxlength="1000"></textarea></label></div>
-      <label class="ms-consent"><input name="consent" type="checkbox" required><span>I understand this booking is pending confirmation. Price, photo inclusions and payment will be confirmed separately.</span></label><div id="ms-security"></div><div class="ms-summary"><p class="ms-caption" id="ms-form-session"></p><button type="button" id="ms-submit-booking" disabled class="ms-button cursor-interaction">Submit booking request <span aria-hidden="true">→</span></button></div><p class="ms-demo-result" id="ms-form-message" role="status" hidden></p>
+      <div class="ms-detail-recap"><span id="ms-detail-time"></span><button class="ms-detail-change" type="button" id="ms-change-time">Change</button></div>
+      <h2 class="ms-detail-title">Your details</h2>
+      <p class="ms-detail-sub">Contact information.</p>
+      <div class="ms-form-grid">
+        <label class="ms-field">Instagram <small>(optional)</small><input name="instagram" placeholder="@accountname" maxlength="31" pattern="@?[A-Za-z0-9._]{1,30}"></label>
+        <label class="ms-field">Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="120"></label>
+        <label class="ms-field">Full name<input name="guestName" autocomplete="name" placeholder="Your full name" required maxlength="80"></label>
+        <label class="ms-field">Phone number <small>(optional)</small><input name="phone" type="tel" autocomplete="tel" placeholder="Your phone number" maxlength="40"></label>
+      </div>
+      <div class="ms-session-fields">
+        <label class="ms-field">Number of people<input name="people" type="number" min="0" max="99" value="1" required></label>
+        <label class="ms-field">Number of pets<input name="pets" type="number" min="0" max="99" value="0" required></label>
+        <label class="ms-field ms-field-full">Notes <small>(optional)</small><textarea name="notes" placeholder="Your pets, a special occasion, or anything you need." maxlength="1000"></textarea></label>
+      </div>
+      <div class="ms-payment-method"><p class="ms-payment-label">Payment method</p><div class="ms-payment-option"><span class="ms-payment-title">FPS (Hong Kong)</span><span class="ms-payment-desc">Pay by FPS after your booking is confirmed.</span></div></div>
+      <label class="ms-consent"><input name="consent" type="checkbox" required><span>I understand this booking is pending confirmation. Price, photo inclusions and FPS payment details will be confirmed separately.</span></label>
+      <div id="ms-security"></div>
+      <div class="ms-detail-actions"><button type="button" id="ms-submit-booking" disabled class="ms-button">Submit booking request</button><button class="ms-back" type="button" id="ms-back">Back</button></div>
+      <p class="ms-demo-result" id="ms-form-message" role="status" hidden></p>
     </form>
-    <p class="ms-live-status" id="ms-live-status" role="status" aria-live="polite">Loading available times…</p><button type="button" class="ms-back" id="ms-refresh">Refresh availability</button><section id="ms-receipt" hidden aria-labelledby="ms-receipt-title"><h2 id="ms-receipt-title" tabindex="-1">Booking request received</h2><p id="ms-receipt-id"></p><p id="ms-receipt-time"></p><p id="ms-receipt-status"></p><p>We’ll contact you using the details you provided. Please keep your booking reference.</p></section>
+    <p class="ms-live-status" id="ms-live-status" role="status" aria-live="polite" hidden></p><section id="ms-receipt" hidden aria-labelledby="ms-receipt-title"><h2 id="ms-receipt-title" tabindex="-1">Booking request received</h2><p id="ms-receipt-id"></p><p id="ms-receipt-time"></p><p id="ms-receipt-status"></p><p>We’ll contact you using the details you provided. Please keep your booking reference.</p></section>
   </section>
   <footer class="original-footer">
   <div class="footer-meta">
@@ -34,4 +50,5 @@
 </div>
 
 <noscript>Please enable JavaScript to see availability and book a session.</noscript></body></html>
+
 
