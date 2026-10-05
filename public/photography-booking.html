@@ -11,6 +11,7 @@
 </nav>
   <section class="ms-hero"><div><h1>Photography Booking</h1></div></section>
   <section class="ms-booking" aria-label="Photography booking preview">
+    <div class="ms-policy-layout"><div class="ms-booking-main">
     <div class="ms-steps"><span id="ms-step-one" aria-current="step">01 &nbsp; Date &amp; time</span><span id="ms-step-two">02 &nbsp; Your details</span></div>
     <div id="ms-selection">
       <div class="ms-grid">
@@ -24,15 +25,14 @@
       <h2 class="ms-detail-title">Your details</h2>
       <p class="ms-detail-sub">Contact information.</p>
       <div class="ms-form-grid">
-        <label class="ms-field">Instagram <small>(optional)</small><input name="instagram" placeholder="@accountname" maxlength="31" pattern="@?[A-Za-z0-9._]{1,30}"></label>
+        <label class="ms-field">Instagram<input name="instagram" required placeholder="@accountname" maxlength="31" pattern="@?[A-Za-z0-9._]{1,30}"></label>
         <label class="ms-field">Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required maxlength="120"></label>
         <label class="ms-field">Full name<input name="guestName" autocomplete="name" placeholder="Your full name" required maxlength="80"></label>
-        <label class="ms-field">Phone number <small>(optional)</small><input name="phone" type="tel" autocomplete="tel" placeholder="Your phone number" maxlength="40"></label>
+        <label class="ms-field">Phone number<input name="phone" required type="tel" autocomplete="tel" placeholder="Your phone number" maxlength="40"></label>
       </div>
       <div class="ms-session-fields">
-        <label class="ms-field">Number of people<input name="people" type="number" min="0" max="99" value="1" required></label>
-        <label class="ms-field">Number of pets<input name="pets" type="number" min="0" max="99" value="0" required></label>
-        <label class="ms-field ms-field-full">Notes <small>(optional)</small><textarea name="notes" placeholder="Your pets, a special occasion, or anything you need." maxlength="1000"></textarea></label>
+        <label class="ms-field">Number of people<input name="people" type="number" min="0" max="2" value="1" required></label>
+        <label class="ms-field">Number of pets<input name="pets" type="number" min="0" max="2" value="0" required></label>
       </div>
       <div class="ms-payment-method"><p class="ms-payment-label">Payment method</p><div class="ms-payment-option"><span class="ms-payment-title">FPS (Hong Kong)</span><span class="ms-payment-desc">Pay by FPS after your booking is confirmed.</span></div></div>
       <label class="ms-consent"><input name="consent" type="checkbox" required><span>I understand this booking is pending confirmation. Price, photo inclusions and FPS payment details will be confirmed separately.</span></label>
@@ -41,6 +41,13 @@
       <p class="ms-demo-result" id="ms-form-message" role="status" hidden></p>
     </form>
     <p class="ms-live-status" id="ms-live-status" role="status" aria-live="polite" hidden></p><section id="ms-receipt" hidden aria-labelledby="ms-receipt-title"><h2 id="ms-receipt-title" tabindex="-1">Booking request received</h2><p id="ms-receipt-id"></p><p id="ms-receipt-time"></p><p id="ms-receipt-status"></p><p>We’ll contact you using the details you provided. Please keep your booking reference.</p></section>
+    </div><aside class="ms-policies" aria-label="Photography booking policies">
+      <div class="ms-policy-block"><h3>Session</h3><p>Each photography session is 30 minutes. Choose your date and time from the calendar.</p></div>
+      <div class="ms-policy-block"><h3>People &amp; pets</h3><p>A maximum of 2 people and 2 pets per session.</p></div>
+      <div class="ms-policy-block"><h3>Confirmation</h3><p>Your selected time is held when your booking request is received. The booking remains pending until we confirm the details.</p></div>
+      <div class="ms-policy-block"><h3>Payment</h3><p>FPS (Hong Kong). Price, photo inclusions and payment details will be confirmed separately.</p></div>
+      <div class="ms-policy-block"><h3>Changes</h3><p>Contact us on Instagram with your booking reference to request a change.</p></div>
+    </aside></div>
   </section>
   <footer class="original-footer">
   <div class="footer-meta">
@@ -50,5 +57,6 @@
 </div>
 
 <noscript>Please enable JavaScript to see availability and book a session.</noscript></body></html>
+
 
 

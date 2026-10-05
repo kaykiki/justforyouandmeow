@@ -125,8 +125,10 @@
       form.elements.guestName.setCustomValidity(form.elements.guestName.value.trim()?'':'Please enter your name.');
       const people=Number(form.elements.people.value),pets=Number(form.elements.pets.value);
       if(!form.reportValidity())return;
+      if(!Number.isInteger(people) || people<0 || people>2 || !Number.isInteger(pets) || pets<0 || pets>2){message('Each session allows a maximum of 2 people and 2 pets.');return;}
       if(people+pets<1){message('Please include at least one person or pet.');return;}
-      attempt={requestId:crypto.randomUUID(),slotId:selected.id,name:form.elements.guestName.value.trim(),email:form.elements.email.value.trim().toLowerCase(),phone:form.elements.phone.value.trim(),instagram:form.elements.instagram.value.trim(),people,pets,notes:form.elements.notes.value.trim(),consent:form.elements.consent.checked};
+      if(!form.elements.instagram.value.trim() || !form.elements.phone.value.trim()){message('Please enter your Instagram and phone number.');return;}
+      attempt={requestId:crypto.randomUUID(),slotId:selected.id,name:form.elements.guestName.value.trim(),email:form.elements.email.value.trim().toLowerCase(),phone:form.elements.phone.value.trim(),instagram:form.elements.instagram.value.trim(),people,pets,consent:form.elements.consent.checked};
     }
     submitting=true;controls();message('Sending your booking request…');
     $('ms-submit-booking').textContent='Sending…';
@@ -153,5 +155,6 @@
   setInterval(()=>{if(!document.hidden && !attempt)availability();},30000);
   availability();
 })();
+
 
 

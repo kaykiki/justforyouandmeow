@@ -1,58 +1,82 @@
-
-#meow-studio-preview{--paper:#fafaf8;--ink:#111;--muted-ink:#666;--line:#e2e2de;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:14px;font-weight:400;line-height:1.6;max-width:1200px;margin:0 auto;-webkit-font-smoothing:antialiased;color-scheme:light}
+body{margin:0;background:#fafaf8;font-family:Inter,Arial,sans-serif;font-weight:300;font-size:14px}
+#meow-studio-preview{--paper:#fafaf8;--ink:#111;--muted-ink:#555;--line:#ebebeb;--label-size:9.52px;--text-size:11.9px;--small-size:10.92px;--sub-size:11.2px;background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:14px;font-weight:300;line-height:1.6;padding-top:50px;-webkit-font-smoothing:antialiased;color-scheme:light}
 #meow-studio-preview *{box-sizing:border-box}
 #meow-studio-preview [hidden]{display:none!important}
 #meow-studio-preview h1,#meow-studio-preview h2,#meow-studio-preview h3,#meow-studio-preview p{margin:0}
 #meow-studio-preview button,#meow-studio-preview input,#meow-studio-preview textarea{font:inherit;border-radius:0}
+#meow-studio-preview button:not(:disabled),#meow-studio-preview a{cursor:pointer}
 #meow-studio-preview button:focus-visible,#meow-studio-preview input:focus-visible,#meow-studio-preview textarea:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-#meow-studio-preview .ms-nav{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:18px 40px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.02em}
-#meow-studio-preview .ms-nav-right{display:flex;gap:24px;color:var(--muted-ink)}
-#meow-studio-preview .ms-active{color:var(--ink)}
-#meow-studio-preview .ms-hero{display:flex;justify-content:space-between;gap:24px;align-items:center;padding:48px 40px 38px}
-#meow-studio-preview .ms-eyebrow{color:var(--muted-ink);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
-#meow-studio-preview h1{font-size:36px;font-weight:400;letter-spacing:-.045em;line-height:1.15;margin:12px 0}
-#meow-studio-preview .ms-intro{font-size:13px;color:var(--muted-ink)}
-#meow-studio-preview .ms-logo{width:280px;height:auto;mix-blend-mode:multiply;display:block}
-#meow-studio-preview .ms-booking{margin:0 40px;padding:24px 0 36px;border-top:1px solid var(--line)}
-#meow-studio-preview .ms-steps{display:flex;gap:30px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:30px;color:var(--muted-ink)}
-#meow-studio-preview .ms-steps span{padding-bottom:8px;border-bottom:1px solid transparent}
+#meow-studio-preview .ms-hero{padding:42px clamp(21px,5vw,49px)}
+#meow-studio-preview h1{font-size:var(--label-size);font-weight:300;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-ink)}
+#meow-studio-preview .ms-booking{margin:0 clamp(21px,5vw,49px);padding:0 0 50px}
+#meow-studio-preview .ms-policy-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(42px,6vw,84px);align-items:start}
+#meow-studio-preview .ms-booking-main{min-width:0}
+#meow-studio-preview .ms-steps{display:flex;gap:21px;font-size:var(--label-size);letter-spacing:.08em;text-transform:uppercase;margin-bottom:42px;color:var(--muted-ink)}
+#meow-studio-preview .ms-steps span{padding-bottom:7px;border-bottom:1.5px solid transparent}
 #meow-studio-preview .ms-steps [aria-current]{color:var(--ink);border-color:var(--ink)}
-#meow-studio-preview .ms-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:54px}
-#meow-studio-preview h2{font-size:16px;font-weight:400;letter-spacing:-.02em;margin-bottom:5px}
-#meow-studio-preview .ms-caption{font-size:12px;color:var(--muted-ink)}
-#meow-studio-preview .ms-calendar-head{display:flex;justify-content:space-between;align-items:center;margin:23px 0 16px;font-size:13px}
-#meow-studio-preview .ms-year{font-size:12px;color:var(--muted-ink)}
+#meow-studio-preview .ms-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+#meow-studio-preview h2{font-size:14px;font-weight:400;letter-spacing:0;margin-bottom:5.6px;color:var(--ink)}
+#meow-studio-preview .ms-caption{font-size:var(--sub-size);color:var(--muted-ink);line-height:1.75}
+#meow-studio-preview .ms-calendar-head{display:flex;justify-content:space-between;align-items:center;margin:23px 0 16px;font-size:var(--text-size)}
+#meow-studio-preview .ms-month-button{border:1px solid var(--line);background:transparent;color:var(--ink);width:28px;height:28px;padding:0;font-size:var(--text-size)}
+#meow-studio-preview .ms-month-button:disabled{opacity:.35;cursor:not-allowed}
 #meow-studio-preview .ms-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;text-align:center}
-#meow-studio-preview .ms-weekday{font-size:11px;color:var(--muted-ink);padding-bottom:7px}
-#meow-studio-preview .ms-day{display:flex;align-items:center;justify-content:center;min-height:39px;font-size:12px;color:#767672}
-#meow-studio-preview .ms-day-selected{border:1px solid var(--ink);background:var(--ink);color:var(--paper);width:100%}
-#meow-studio-preview .ms-calendar-note{font-size:11px;color:var(--muted-ink);margin-top:14px}
-#meow-studio-preview .ms-times-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:24px 0 14px;font-size:12px}
-#meow-studio-preview .ms-time-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
-#meow-studio-preview .ms-time{border:1px solid var(--line);background:transparent;color:var(--ink);min-height:44px;padding:8px 2px;font-size:12px;font-variant-numeric:tabular-nums;transition:border-color .15s,background .15s}
+#meow-studio-preview .ms-weekday{font-size:var(--label-size);color:var(--muted-ink);padding-bottom:7px}
+#meow-studio-preview .ms-day{display:flex;align-items:center;justify-content:center;min-height:36px;font-size:var(--text-size);color:#888}
+#meow-studio-preview .ms-day-bookable{border:1px solid var(--line);background:transparent;color:var(--ink);width:100%}
+#meow-studio-preview .ms-day-bookable:hover{border-color:var(--ink)}
+#meow-studio-preview .ms-day-bookable.ms-day-selected{background:var(--ink);border-color:var(--ink);color:#fff}
+#meow-studio-preview .ms-day-bookable:disabled{opacity:.45;cursor:not-allowed}
+#meow-studio-preview .ms-calendar-note{font-size:var(--small-size);color:var(--muted-ink);margin-top:14px;line-height:1.85}
+#meow-studio-preview .ms-times-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:24px 0 14px;font-size:var(--small-size)}
+#meow-studio-preview #ms-time-range{white-space:nowrap}
+#meow-studio-preview .ms-time-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+#meow-studio-preview .ms-time{border:1px solid var(--line);background:transparent;color:var(--ink);min-height:40px;padding:8px 2px;font-size:var(--text-size);font-weight:300;font-variant-numeric:tabular-nums}
 #meow-studio-preview .ms-time:hover{border-color:var(--ink)}
-#meow-studio-preview .ms-time[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-#meow-studio-preview .ms-key{display:flex;gap:18px;align-items:center;margin-top:17px;font-size:11px;color:var(--muted-ink)}
+#meow-studio-preview .ms-time[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+#meow-studio-preview .ms-time:disabled{opacity:.45;text-decoration:line-through;cursor:not-allowed}
+#meow-studio-preview .ms-time:disabled:hover{border-color:var(--line)}
+#meow-studio-preview .ms-key{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:17px;font-size:10.08px;color:var(--muted-ink)}
 #meow-studio-preview .ms-key span{display:flex;align-items:center;gap:6px}
-#meow-studio-preview .ms-key i{width:8px;height:8px;border:1px solid #b7b7b2;display:inline-block}
+#meow-studio-preview .ms-key i{width:8px;height:8px;border:1px solid #bbb;display:inline-block}
 #meow-studio-preview .ms-key .ms-filled{background:var(--ink);border-color:var(--ink)}
-#meow-studio-preview .ms-summary{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;display:flex;justify-content:space-between;align-items:center;gap:20px}
-#meow-studio-preview .ms-summary-label{font-size:11px;color:var(--muted-ink);margin-bottom:5px}
-#meow-studio-preview .ms-summary-value{font-size:13px;letter-spacing:.01em}
-#meow-studio-preview .ms-button{display:inline-flex;align-items:center;justify-content:space-between;gap:34px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);min-height:44px;padding:11px 21px;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
-#meow-studio-preview .ms-button:disabled{background:#e9e9e4;color:#787874;border-color:#e9e9e4;cursor:not-allowed}
-#meow-studio-preview .ms-preview-note{font-size:11px;color:var(--muted-ink);margin-top:15px}
-#meow-studio-preview .ms-footer{border-top:1px solid var(--line);padding:20px 40px;display:flex;justify-content:space-between;gap:20px;font-size:11px;color:var(--muted-ink)}
-#meow-studio-preview .ms-form-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:25px}
-#meow-studio-preview .ms-back{background:none;border:0;padding:8px 0;text-decoration:underline;text-underline-offset:4px;font-size:12px;color:var(--muted-ink)}
-#meow-studio-preview .ms-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-#meow-studio-preview .ms-field{display:flex;flex-direction:column;gap:9px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-ink)}
-#meow-studio-preview .ms-field input,#meow-studio-preview .ms-field textarea{font-size:14px;text-transform:none;letter-spacing:0;background:transparent;border:0;border-bottom:1px solid var(--line);padding:8px 0;min-width:0;width:100%;color:var(--ink)}
-#meow-studio-preview .ms-field textarea{resize:vertical;min-height:60px}
+#meow-studio-preview .ms-summary{border-top:1px solid var(--line);margin-top:28px;padding-top:20px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+#meow-studio-preview .ms-summary-label{font-size:var(--label-size);letter-spacing:.1em;text-transform:uppercase;color:var(--muted-ink);margin-bottom:5px}
+#meow-studio-preview .ms-summary-value{font-size:var(--small-size)}
+#meow-studio-preview .ms-button{display:inline-flex;align-items:center;justify-content:space-between;gap:24px;background:var(--ink);color:#fff;border:none;padding:8.4px 23.1px;font-size:10.5px;font-weight:500;letter-spacing:.07em;text-transform:uppercase}
+#meow-studio-preview .ms-button:hover{opacity:.65}
+#meow-studio-preview .ms-button:disabled{opacity:.25;cursor:not-allowed}
+#meow-studio-preview .ms-detail-recap{display:flex;justify-content:space-between;align-items:center;gap:18px;border:1px solid var(--line);padding:11.2px 14px;margin-bottom:28px;font-size:var(--small-size)}
+#meow-studio-preview .ms-detail-change{color:var(--muted-ink);background:none;border:none;padding:0;text-decoration:underline;font-size:10.08px;font-weight:300}
+#meow-studio-preview .ms-detail-sub{font-size:var(--sub-size);color:var(--muted-ink);margin-bottom:28px;line-height:1.75}
+#meow-studio-preview .ms-form-grid{display:block}
+#meow-studio-preview .ms-field{display:block;margin-bottom:22.4px;font-size:var(--label-size);letter-spacing:.1em;text-transform:uppercase;color:var(--muted-ink)}
+#meow-studio-preview .ms-field input,#meow-studio-preview .ms-field textarea{display:block;width:100%;border:none;border-bottom:1px solid var(--line);background:transparent;padding:6.55px 0;margin-top:8.4px;min-width:0;font-size:var(--text-size);font-weight:300;color:var(--ink);text-transform:none;letter-spacing:0}
+#meow-studio-preview .ms-field input::placeholder{color:#bbb}
+#meow-studio-preview .ms-field input:focus{border-bottom-color:var(--ink)}
+#meow-studio-preview .ms-session-fields{display:grid;grid-template-columns:1fr 1fr;column-gap:22px}
 #meow-studio-preview .ms-field-full{grid-column:1/-1}
-#meow-studio-preview .ms-demo-result{margin-top:18px;padding:14px 0;border-top:1px solid var(--line);font-size:13px}
-@media(max-width:680px){#meow-studio-preview .ms-nav{padding:16px 22px}#meow-studio-preview .ms-nav-right{gap:12px}#meow-studio-preview .ms-nav-right span:last-child{display:none}#meow-studio-preview .ms-hero{padding:32px 22px 28px;gap:18px}#meow-studio-preview h1{font-size:28px}#meow-studio-preview .ms-logo{width:135px}#meow-studio-preview .ms-booking{margin:0 22px}#meow-studio-preview .ms-grid{grid-template-columns:1fr;gap:30px}#meow-studio-preview .ms-calendar{max-width:400px;margin:auto}#meow-studio-preview .ms-calendar-head{margin-top:18px}#meow-studio-preview .ms-day{min-height:44px}#meow-studio-preview .ms-summary{align-items:flex-start;flex-direction:column;gap:16px}#meow-studio-preview .ms-button{width:100%}#meow-studio-preview .ms-footer{padding:18px 22px}#meow-studio-preview .ms-form-grid{grid-template-columns:1fr}#meow-studio-preview .ms-field input,#meow-studio-preview .ms-field textarea{font-size:16px}}
-@media(max-width:400px){#meow-studio-preview .ms-logo{display:none}#meow-studio-preview .ms-steps{gap:20px}#meow-studio-preview .ms-time-grid{gap:7px}}
+#meow-studio-preview .ms-payment-method{margin:25.2px 0 0;padding-top:19.6px;border-top:1px solid var(--line)}
+#meow-studio-preview .ms-payment-label{font-size:var(--label-size);letter-spacing:.1em;text-transform:uppercase;color:var(--muted-ink);margin-bottom:11.2px}
+#meow-studio-preview .ms-payment-option{border:1px solid var(--ink);background:transparent;padding:12.6px 14px;max-width:425px}
+#meow-studio-preview .ms-payment-title{display:block;font-size:var(--small-size);color:var(--ink);letter-spacing:.02em}
+#meow-studio-preview .ms-payment-desc{display:block;font-size:10.08px;color:var(--muted-ink);line-height:1.55;margin-top:3.5px}
+#meow-studio-preview .ms-consent{display:flex;align-items:flex-start;gap:9px;margin-top:24px;font-size:10.64px;color:var(--muted-ink);line-height:1.85}
+#meow-studio-preview .ms-consent input{margin-top:4px;accent-color:#111;flex-shrink:0}
+#meow-studio-preview #ms-security{margin-top:20px;overflow:hidden}
+#meow-studio-preview .ms-detail-actions{display:flex;align-items:center;gap:21px;margin-top:28px}
+#meow-studio-preview .ms-back{font-size:10.5px;color:var(--muted-ink);background:none;border:none;padding:0;text-decoration:underline}
+#meow-studio-preview .ms-demo-result{margin-top:18px;padding:14px 0;border-top:1px solid var(--line);font-size:var(--sub-size)}
+#meow-studio-preview .ms-live-status{font-size:var(--sub-size);color:var(--muted-ink);margin-top:14px}
+#meow-studio-preview #ms-receipt{padding:18px 0 28px}
+#meow-studio-preview #ms-receipt h2{margin-bottom:12px}
+#meow-studio-preview #ms-receipt p{margin-bottom:9px;font-size:var(--small-size)}
+#meow-studio-preview .ms-policy-block{border-top:1px solid var(--line);padding-top:19.6px;margin-bottom:28px}
+#meow-studio-preview .ms-policy-block h3{font-size:var(--label-size);font-weight:300;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-ink);margin-bottom:11.2px}
+#meow-studio-preview .ms-policy-block p{font-size:var(--small-size);color:var(--muted-ink);line-height:1.85}
+@media(max-width:1100px){#meow-studio-preview .ms-grid{grid-template-columns:1fr;gap:28px}}
+@media(max-width:760px){#meow-studio-preview .ms-policy-layout{grid-template-columns:1fr;gap:42px}#meow-studio-preview .ms-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){#meow-studio-preview .ms-grid{grid-template-columns:1fr}#meow-studio-preview .ms-hero{padding-top:28px;padding-bottom:28px}#meow-studio-preview .ms-day{min-height:44px}#meow-studio-preview .ms-summary{align-items:flex-start;flex-direction:column;gap:16px}#meow-studio-preview .ms-payment-option{max-width:none}#meow-studio-preview .ms-detail-recap{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){#meow-studio-preview *{transition:none}}
 
 #meow-studio-preview .original-nav{background:#fafaf8;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(21px,5vw,49px);height:50px;border-bottom:1px solid #ebebeb}
@@ -63,54 +87,4 @@
 #meow-studio-preview .original-footer{border-top:1px solid #ebebeb;padding:28px clamp(21px,5vw,49px);display:flex;justify-content:flex-end;align-items:center}
 #meow-studio-preview .original-footer .footer-meta{display:flex;align-items:center;gap:21px;color:#555;font-size:10.08px}
 #meow-studio-preview .original-footer .footer-brand{font-size:10.92px;font-weight:400;color:#555}
-#meow-studio-preview h1,#meow-studio-preview h2{color:var(--muted-ink);font-weight:500}
-
-body{margin:0;background:#fafaf8;font-family:Inter,Arial,sans-serif;font-weight:300;font-size:14px}
-#meow-studio-preview{padding-top:50px;max-width:none;font-weight:300}
 #meow-studio-preview .original-nav{position:fixed;top:0;left:0;right:0;z-index:100}
-#meow-studio-preview .ms-logo{width:280px;max-width:100%;height:auto}
-#meow-studio-preview .ms-time:disabled{opacity:.45;text-decoration:line-through;cursor:not-allowed}
-#meow-studio-preview .ms-time:disabled:hover{border-color:var(--line)}
-#meow-studio-preview .ms-live-status{font-size:12px;color:var(--muted-ink);margin-top:14px}
-#meow-studio-preview .ms-consent{display:flex;align-items:flex-start;gap:9px;margin-top:24px;font-size:12px;color:var(--muted-ink)}
-#meow-studio-preview .ms-consent input{margin-top:4px;accent-color:#111;flex-shrink:0}
-#meow-studio-preview #ms-security{margin-top:20px;overflow:hidden}
-#meow-studio-preview #ms-receipt{padding:18px 0 28px}
-#meow-studio-preview #ms-receipt h2{margin-bottom:12px}
-#meow-studio-preview #ms-receipt p{margin-bottom:9px;font-size:13px}
-#meow-studio-preview button:not(:disabled),#meow-studio-preview a{cursor:pointer}
-#meow-studio-preview .ms-hero{padding-left:clamp(21px,5vw,49px);padding-right:clamp(21px,5vw,49px)}
-#meow-studio-preview .ms-booking{margin-left:clamp(21px,5vw,49px);margin-right:clamp(21px,5vw,49px)}
-
-
-#meow-studio-preview .ms-month-button{border:1px solid var(--line);background:transparent;color:var(--ink);width:32px;height:32px;padding:0;font-size:14px}
-#meow-studio-preview .ms-month-button:disabled{opacity:.35;cursor:not-allowed}
-#meow-studio-preview .ms-day-bookable{border:1px solid var(--line);background:transparent;color:var(--ink);width:100%}
-#meow-studio-preview .ms-day-bookable:hover{border-color:var(--ink)}
-#meow-studio-preview .ms-day-bookable.ms-day-selected{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-#meow-studio-preview .ms-day-bookable:disabled{opacity:.45;cursor:not-allowed}
-
-
-#meow-studio-preview #ms-details{max-width:860px}
-#meow-studio-preview .ms-detail-recap{display:flex;justify-content:space-between;align-items:center;gap:18px;border:1px solid #ebebeb;padding:11.2px 14px;margin-bottom:28px;font-size:10.92px}
-#meow-studio-preview .ms-detail-change{color:#555;background:none;border:none;padding:0;text-decoration:underline;font-size:10.08px;font-weight:300}
-#meow-studio-preview #ms-details .ms-detail-title{color:#111;font-size:14px;font-weight:400;margin-bottom:5.6px;letter-spacing:0}
-#meow-studio-preview .ms-detail-sub{font-size:11.2px;color:#555;margin-bottom:28px;line-height:1.75}
-#meow-studio-preview #ms-details .ms-form-grid{display:block}
-#meow-studio-preview #ms-details .ms-field{display:block;margin-bottom:22.4px;font-size:9.52px;letter-spacing:.1em;color:#555}
-#meow-studio-preview #ms-details .ms-field small{text-transform:none;letter-spacing:0;font-weight:300;opacity:.7}
-#meow-studio-preview #ms-details .ms-field input,#meow-studio-preview #ms-details .ms-field textarea{display:block;border-bottom-color:#ebebeb;padding:6.55px 0;margin-top:8.4px;font-size:11.9px;font-weight:300}
-#meow-studio-preview #ms-details .ms-field input::placeholder,#meow-studio-preview #ms-details .ms-field textarea::placeholder{color:#bbb}
-#meow-studio-preview #ms-details .ms-field input:focus,#meow-studio-preview #ms-details .ms-field textarea:focus{border-bottom-color:#111}
-#meow-studio-preview #ms-details .ms-field textarea{min-height:68px}
-#meow-studio-preview .ms-session-fields{display:grid;grid-template-columns:1fr 1fr;column-gap:22px}
-#meow-studio-preview .ms-payment-method{margin:25.2px 0 0;padding-top:19.6px;border-top:1px solid #ebebeb}
-#meow-studio-preview .ms-payment-label{font-size:9.52px;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:11.2px}
-#meow-studio-preview .ms-payment-option{border:1px solid #111;background:transparent;padding:12.6px 14px;max-width:425px}
-#meow-studio-preview .ms-payment-title{display:block;font-size:10.92px;color:#111;letter-spacing:.02em}
-#meow-studio-preview .ms-payment-desc{display:block;font-size:10.08px;color:#555;line-height:1.55;margin-top:3.5px}
-#meow-studio-preview .ms-detail-actions{display:flex;align-items:center;gap:21px;margin-top:28px}
-#meow-studio-preview .ms-detail-actions .ms-button{min-height:0;border:none;padding:8.4px 23.1px;font-size:10.5px;font-weight:500;letter-spacing:.07em;color:#fff}
-#meow-studio-preview .ms-detail-actions .ms-button:disabled{opacity:.25;background:#111;cursor:not-allowed}
-#meow-studio-preview .ms-detail-actions .ms-back{font-size:10.5px;padding:0}
-@media(max-width:680px){#meow-studio-preview #ms-details .ms-field input,#meow-studio-preview #ms-details .ms-field textarea{font-size:16px}#meow-studio-preview .ms-payment-option{max-width:none}#meow-studio-preview .ms-detail-actions .ms-button{width:auto}#meow-studio-preview .ms-detail-recap{align-items:flex-start}}
