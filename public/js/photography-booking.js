@@ -7,13 +7,44 @@
   let slots = [], selected = null, loaded = false, loading = false, submitting = false, done = false;
   let attempt = null, token = '', widgetId = null;
   const calendar = $('ms-calendar');
-  const gap = document.createElement('span'); gap.setAttribute('aria-hidden','true'); calendar.append(gap);
-  for (let day=1; day<=31; day++) {
-    const el=document.createElement(day===19?'button':'span'); el.className='ms-day'; el.textContent=day;
-    if(day===19){el.type='button';el.classList.add('ms-day-selected');el.setAttribute('aria-pressed','true');el.setAttribute('aria-label','Saturday 19 December 2026, selected');}
-    else el.setAttribute('aria-label',`${day} December, not bookable`);
-    calendar.append(el);
+  let selectedDate = null, visibleMonth = null;
+  function dateLabel(date, weekday=false) {
+    return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',...(weekday?{weekday:'long'}:{}),timeZone:'Asia/Hong_Kong'}).format(new Date(date+'T12:00:00+08:00'));
   }
+  function bookingDates() { return [...new Set(slots.map(s=>s.date))].sort(); }
+  function renderCalendar() {
+    const dates=bookingDates(), months=[...new Set(dates.map(d=>d.slice(0,7)))];
+    if(!visibleMonth || !months.includes(visibleMonth))visibleMonth=selectedDate?selectedDate.slice(0,7):months[0]||null;
+    const index=months.indexOf(visibleMonth);
+    $('ms-prev-month').disabled=!loaded || submitting || index<=0;
+    $('ms-next-month').disabled=!loaded || submitting || index<0 || index>=months.length-1;
+    calendar.replaceChildren();
+    for(const label of ['M','T','W','T','F','S','S']){const el=document.createElement('span');el.className='ms-weekday';el.textContent=label;calendar.append(el);}
+    if(!visibleMonth){$('ms-month-title').textContent=loaded?'No dates available':'Choose a date';return;}
+    const [year,month]=visibleMonth.split('-').map(Number);
+    $('ms-month-title').textContent=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,1)));
+    calendar.setAttribute('aria-label',$('ms-month-title').textContent+' booking calendar');
+    const leading=(new Date(Date.UTC(year,month-1,1)).getUTCDay()+6)%7;
+    for(let n=0;n<leading;n++){const gap=document.createElement('span');gap.setAttribute('aria-hidden','true');calendar.append(gap);}
+    const count=new Date(Date.UTC(year,month,0)).getUTCDate();
+    for(let day=1;day<=count;day++){
+      const date=visibleMonth+'-'+String(day).padStart(2,'0'), bookable=dates.includes(date);
+      const el=document.createElement(bookable?'button':'span');el.className='ms-day';el.textContent=day;
+      if(bookable){
+        el.type='button';el.classList.add('ms-day-bookable');el.disabled=!loaded || submitting;
+        el.setAttribute('aria-pressed',String(date===selectedDate));el.setAttribute('aria-label',dateLabel(date,true));
+        if(date===selectedDate)el.classList.add('ms-day-selected');
+        el.addEventListener('click',()=>{selectedDate=date;selected=null;$('ms-summary-value').textContent=dateLabel(date)+' · Select a time';renderCalendar();renderSlots();controls();});
+      } else el.setAttribute('aria-label',dateLabel(date)+', not bookable');
+      calendar.append(el);
+    }
+  }
+  function moveMonth(offset){
+    const months=[...new Set(bookingDates().map(d=>d.slice(0,7)))], next=months[months.indexOf(visibleMonth)+offset];
+    if(next){visibleMonth=next;renderCalendar();}
+  }
+  $('ms-prev-month').addEventListener('click',()=>moveMonth(-1));
+  $('ms-next-month').addEventListener('click',()=>moveMonth(1));
   function message(text) { $('ms-form-message').hidden=false; $('ms-form-message').textContent=text; }
   function controls() {
     $('ms-continue').disabled=!loaded || !selected || !selected.available || submitting;
@@ -23,13 +54,16 @@
   }
   function renderSlots() {
     times.replaceChildren();
-    slots.forEach(slot=>{
+    const daily=slots.filter(s=>s.date===selectedDate);
+    $('ms-time-date').textContent=selectedDate?dateLabel(selectedDate,true):'Select a date';
+    $('ms-time-range').textContent=daily.length?daily[0].start+'–'+daily[daily.length-1].end:'';
+    daily.forEach(slot=>{
       const button=document.createElement('button');button.type='button';button.className='ms-time';button.textContent=slot.start;
       button.disabled=!loaded || !slot.available || submitting;
       button.setAttribute('aria-pressed',String(selected && selected.id===slot.id || false));
       button.setAttribute('aria-label',`${slot.start} to ${slot.end}, ${slot.available?'available':'unavailable'}`);
       button.addEventListener('click',()=>{
-        selected=slot;$('ms-summary-value').textContent=`19 December 2026 · ${slot.start}–${slot.end}`;
+        selected=slot;$('ms-summary-value').textContent=`${dateLabel(slot.date)} · ${slot.start}–${slot.end}`;
         renderSlots();controls();
       });
       times.append(button);
@@ -42,16 +76,21 @@
       const response=await fetch('/api/photography-booking',{cache:'no-store',signal:AbortSignal.timeout(50000)});
       const data=await response.json();
       if(!response.ok || data.success!==true || !Array.isArray(data.slots)) throw new Error('UNAVAILABLE');
-      const valid=data.slots.filter(s=>s.date==='2026-12-19' && /^\d{2}:\d{2}$/.test(s.start) && /^\d{2}:\d{2}$/.test(s.end));
+      const valid=data.slots.filter(s=>typeof s.id==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.start) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.end) && s.end>s.start && new Date(`${s.date}T${s.end}:00+08:00`).getTime()>Date.now()).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
       slots=valid.map(s=>({...s,available:s.available && new Date(`${s.date}T${s.start}:00+08:00`).getTime()>Date.now()}));
       loaded=true;
+      const dates=bookingDates();
+      if(!selectedDate || !dates.includes(selectedDate)){
+        selectedDate=dates[0]||null;
+        $('ms-summary-value').textContent=selectedDate?dateLabel(selectedDate)+' · Select a time':'No sessions available';
+      }
       if(selected){selected=slots.find(s=>s.id===selected.id)||null;
-        if(!selected || !selected.available){$('ms-summary-value').textContent='19 December 2026 · Select another time';if(!form.hidden && !attempt)message('This time is no longer available. Change time to choose another slot.');}}
-      $('ms-live-status').textContent='Availability updated. Each session is 30 minutes.';
+        if(!selected || !selected.available){$('ms-summary-value').textContent=selectedDate?dateLabel(selectedDate)+' · Select another time':'No sessions available';if(!form.hidden && !attempt)message('This time is no longer available. Change time to choose another slot.');}}
+      $('ms-live-status').textContent=dates.length?'Availability updated. Each session is 30 minutes.':'No sessions are currently available. Please check back later.';
     } catch (_) {
       loaded=false;
       $('ms-live-status').textContent='Availability could not be loaded. Please refresh availability or try again later.';
-    } finally { loading=false;renderSlots();controls(); }
+    } finally { loading=false;renderCalendar();renderSlots();controls(); }
   }
   function resetSecurity(){token='';if(window.turnstile && widgetId!==null)window.turnstile.reset(widgetId);controls();}
   function renderSecurity(){
@@ -63,8 +102,9 @@
   $('ms-continue').addEventListener('click',()=>{
     if(!loaded || !selected || !selected.available)return;
     $('ms-selection').hidden=true;form.hidden=false;
-    $('ms-detail-time').textContent=`Saturday, 19 December · ${selected.start}–${selected.end}`;
+    $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end}`;
     $('ms-step-one').removeAttribute('aria-current');$('ms-step-two').setAttribute('aria-current','step');
+    $('ms-form-session').textContent='30 minutes · '+dateLabel(selected.date);
     renderSecurity();controls();form.elements.guestName.focus({preventScroll:true});
   });
   $('ms-back').addEventListener('click',()=>{
@@ -92,7 +132,7 @@
       if(response.ok && data.success===true){
         done=true;form.hidden=true;$('ms-live-status').hidden=true;$('ms-refresh').hidden=true;$('ms-receipt').hidden=false;
         $('ms-receipt-id').textContent=`Reference: ${data.bookingId}`;
-        $('ms-receipt-time').textContent=`19 December 2026 · ${data.start}–${data.end}`;
+        $('ms-receipt-time').textContent=`${dateLabel(data.date)} · ${data.start}–${data.end}`;
         $('ms-receipt-status').textContent=data.status==='Confirmed'?'Status: Confirmed':data.status==='Cancelled'?'Status: Cancelled. This reference has been cancelled.':'Status: Pending — your time is held while we confirm the details. Payment has not been collected.';
         $('ms-receipt-title').textContent=data.status==='Cancelled'?'Booking cancelled':'Booking request received';
         $('ms-receipt-title').focus();
@@ -110,3 +150,4 @@
   setInterval(()=>{if(!document.hidden && !attempt)availability();},30000);
   availability();
 })();
+

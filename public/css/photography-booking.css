@@ -81,3 +81,11 @@ body{margin:0;background:#fafaf8;font-family:Inter,Arial,sans-serif;font-weight:
 #meow-studio-preview button:not(:disabled),#meow-studio-preview a{cursor:pointer}
 #meow-studio-preview .ms-hero{padding-left:clamp(21px,5vw,49px);padding-right:clamp(21px,5vw,49px)}
 #meow-studio-preview .ms-booking{margin-left:clamp(21px,5vw,49px);margin-right:clamp(21px,5vw,49px)}
+
+
+#meow-studio-preview .ms-month-button{border:1px solid var(--line);background:transparent;color:var(--ink);width:32px;height:32px;padding:0;font-size:14px}
+#meow-studio-preview .ms-month-button:disabled{opacity:.35;cursor:not-allowed}
+#meow-studio-preview .ms-day-bookable{border:1px solid var(--line);background:transparent;color:var(--ink);width:100%}
+#meow-studio-preview .ms-day-bookable:hover{border-color:var(--ink)}
+#meow-studio-preview .ms-day-bookable.ms-day-selected{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+#meow-studio-preview .ms-day-bookable:disabled{opacity:.45;cursor:not-allowed}
