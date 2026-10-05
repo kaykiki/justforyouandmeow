@@ -39,7 +39,7 @@
     if(loading || submitting || done || attempt) return;
     loading=true;
     try {
-      const response=await fetch('/api/photography-booking',{cache:'no-store',signal:AbortSignal.timeout(30000)});
+      const response=await fetch('/api/photography-booking',{cache:'no-store',signal:AbortSignal.timeout(50000)});
       const data=await response.json();
       if(!response.ok || data.success!==true || !Array.isArray(data.slots)) throw new Error('UNAVAILABLE');
       const valid=data.slots.filter(s=>s.date==='2026-12-19' && /^\d{2}:\d{2}$/.test(s.start) && /^\d{2}:\d{2}$/.test(s.end));
@@ -87,7 +87,7 @@
     submitting=true;controls();message('Sending your booking request…');
     $('ms-submit-booking').textContent='Sending…';
     try {
-      const response=await fetch('/api/photography-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...attempt,turnstileToken:token}),signal:AbortSignal.timeout(35000)});
+      const response=await fetch('/api/photography-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...attempt,turnstileToken:token}),signal:AbortSignal.timeout(60000)});
       const data=await response.json();
       if(response.ok && data.success===true){
         done=true;form.hidden=true;$('ms-live-status').hidden=true;$('ms-refresh').hidden=true;$('ms-receipt').hidden=false;
