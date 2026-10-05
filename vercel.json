@@ -2,6 +2,9 @@
   "functions": {
     "api/order.js": {
       "maxDuration": 60
+    },
+    "api/photography-booking.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [
@@ -18,9 +21,9 @@
       "destination": "/manage-order.html"
     },
     {
-  "source": "/photography-booking",
-  "destination": "/photography-booking.html"
-}
+      "source": "/photography-booking",
+      "destination": "/photography-booking.html"
+    }
   ],
   "headers": [
     {
