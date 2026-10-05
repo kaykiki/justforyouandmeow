@@ -11,8 +11,8 @@
 </nav>
   <section class="ms-hero"><div><h1>Photography Booking</h1></div></section>
   <section class="ms-booking" aria-label="Photography booking preview">
-    <div class="ms-policy-layout"><div class="ms-booking-main">
-    <div class="ms-steps"><span id="ms-step-one" aria-current="step">01 &nbsp; Date &amp; time</span><span id="ms-step-two">02 &nbsp; Your details</span></div>
+    <div class="ms-policy-layout ms-selection-only" id="ms-layout"><div class="ms-booking-main">
+    <div class="ms-steps" aria-label="Booking progress"><span id="ms-step-one" aria-current="step">Date &amp; time</span><span id="ms-step-two">Your details</span><span id="ms-step-three">Pay</span></div>
     <div id="ms-selection">
       <div class="ms-grid">
         <section aria-labelledby="ms-date-title"><h2 id="ms-date-title">Choose your date</h2><div class="ms-calendar-head"><button type="button" class="ms-month-button" id="ms-prev-month" aria-label="Previous booking month" disabled>←</button><span id="ms-month-title">Choose a date</span><button type="button" class="ms-month-button" id="ms-next-month" aria-label="Next booking month" disabled>→</button></div><div class="ms-calendar" id="ms-calendar" aria-label="Booking calendar"><span class="ms-weekday">M</span><span class="ms-weekday">T</span><span class="ms-weekday">W</span><span class="ms-weekday">T</span><span class="ms-weekday">F</span><span class="ms-weekday">S</span><span class="ms-weekday">S</span></div><p class="ms-calendar-note">Select an available date.</p></section>
@@ -35,13 +35,28 @@
         <label class="ms-field">Number of pets<input name="pets" type="number" min="0" max="2" value="0" required></label>
       </div>
       <div class="ms-payment-method"><p class="ms-payment-label">Payment method</p><div class="ms-payment-option"><span class="ms-payment-title">FPS (Hong Kong)</span><span class="ms-payment-desc">Pay by FPS after your booking is confirmed.</span></div></div>
-      <label class="ms-consent"><input name="consent" type="checkbox" required><span>I understand this booking is pending confirmation. Price, photo inclusions and FPS payment details will be confirmed separately.</span></label>
       <div id="ms-security"></div>
+      <label class="ms-consent"><input name="consent" type="checkbox" required><span>I understand this booking is pending confirmation. Price, photo inclusions and FPS payment details will be confirmed separately.<br>I have read and agree to the <a href="#ms-terms-content" data-ms-legal="ms-terms-content">Terms &amp; Conditions</a> and <a href="#ms-privacy-content" data-ms-legal="ms-privacy-content">Privacy Notice</a>.<br>我已閱讀並同意<a href="#ms-terms-content" data-ms-legal="ms-terms-content">條款</a>及<a href="#ms-privacy-content" data-ms-legal="ms-privacy-content">私隱聲明</a>。</span></label>
       <div class="ms-detail-actions"><button type="button" id="ms-submit-booking" disabled class="ms-button">Submit booking request</button><button class="ms-back" type="button" id="ms-back">Back</button></div>
       <p class="ms-demo-result" id="ms-form-message" role="status" hidden></p>
     </form>
-    <p class="ms-live-status" id="ms-live-status" role="status" aria-live="polite" hidden></p><section id="ms-receipt" hidden aria-labelledby="ms-receipt-title"><h2 id="ms-receipt-title" tabindex="-1">Booking request received</h2><p id="ms-receipt-id"></p><p id="ms-receipt-time"></p><p id="ms-receipt-status"></p><p>We’ll contact you using the details you provided. Please keep your booking reference.</p></section>
-    </div><aside class="ms-policies" aria-label="Photography booking policies">
+    <p class="ms-live-status" id="ms-live-status" role="status" aria-live="polite" hidden></p>
+    <section id="ms-receipt" hidden aria-labelledby="ms-receipt-title">
+      <h2 id="ms-receipt-title" tabindex="-1">Pay</h2>
+      <p class="ms-detail-sub" id="ms-pay-intro">Your booking request has been received. Please wait for us to confirm the price and photo inclusions before paying.</p>
+      <div class="ms-reference-box"><p class="ms-payment-label">Booking reference</p><p id="ms-receipt-id"></p></div>
+      <div class="ms-pay-receipt"><div class="ms-pay-row"><span>Session</span><span id="ms-receipt-time"></span></div><div class="ms-pay-row"><span>People / pets</span><span id="ms-receipt-guests"></span></div><div class="ms-pay-row"><span>Payment method</span><span>FPS (Hong Kong)</span></div><div class="ms-pay-row"><span>Amount</span><span>To be confirmed</span></div></div>
+      <p id="ms-receipt-status" role="status"></p>
+      <div class="ms-fps-block" id="ms-fps-section">
+        <p class="ms-fps-eyebrow">FPS / Faster Payment System</p>
+        <img class="ms-fps-qr" src="images/fps-qr.png" alt="FPS payment QR code" width="130" height="130">
+        <p>FPS ID: <strong>102056686</strong></p><p>Payee: Glory On International Limited</p>
+        <p class="ms-fps-amount">Pay the confirmed amount only</p>
+        <div class="ms-fps-instructions"><ol><li>Wait for us to confirm your booking, price and photo inclusions.</li><li>Pay the confirmed amount by FPS using the QR code or FPS ID above.</li><li>Send your payment screenshot and booking reference to us on <a href="https://www.instagram.com/justforyouandmeow/" target="_blank" rel="noopener noreferrer">Instagram</a>. We will verify payment manually.</li></ol><p>請先等候我們確認預約、價錢及相片內容，再以 FPS 付款，並透過 Instagram 傳送付款截圖及預約編號。</p></div>
+      </div>
+      <p>We’ll contact you using the details you provided. Please keep your booking reference.</p>
+    </section>
+    </div><aside class="ms-policies" id="ms-policies" hidden aria-label="Photography booking policies">
       <div class="ms-policy-block"><h3>Session</h3><p>Each photography session is 30 minutes. Choose your date and time from the calendar.</p></div>
       <div class="ms-policy-block"><h3>People &amp; pets</h3><p>A maximum of 2 people and 2 pets per session.</p></div>
       <div class="ms-policy-block"><h3>Confirmation</h3><p>Your selected time is held when your booking request is received. The booking remains pending until we confirm the details.</p></div>
@@ -54,9 +69,40 @@
     <span class="footer-brand">© just for you and meow. All rights reserved.</span>
   </div>
 </footer>
+<dialog class="ms-legal-dialog" id="ms-legal-dialog" aria-labelledby="ms-legal-title">
+  <div class="ms-legal-inner">
+    <div class="ms-legal-head"><h2 id="ms-legal-title">Photography booking / 攝影預約</h2><button id="ms-legal-close" type="button" aria-label="Close terms and privacy notice">×</button></div>
+    <section class="ms-legal-section" id="ms-terms-content" tabindex="-1">
+      <h3>Terms &amp; Conditions / 預約條款</h3>
+      <h4>Booking &amp; session / 預約及拍攝</h4>
+      <p>Each session is 30 minutes, with a maximum of 2 people and 2 pets. Please provide accurate contact information and arrive at your confirmed time. Contact us in advance about any access or pet-handling needs.</p>
+      <p>每節拍攝為 30 分鐘，最多 2 人及 2 隻寵物。請提供正確聯絡資料，並於已確認的時間到達。如有出入場地或寵物照顧方面的需要，請預先聯絡我們。</p>
+      <h4>Confirmation &amp; payment / 確認及付款</h4>
+      <p>Submitting a request holds the selected time but does not confirm the booking. We will contact you to confirm the price, photo inclusions and FPS payment arrangements. Pay only after receiving those details. Sending payment proof does not automatically confirm payment; we verify it manually.</p>
+      <p>提交申請後會保留所選時段，但預約尚未確認。我們會聯絡你確認價錢、相片內容及 FPS 付款安排，請收到上述資料後才付款。傳送付款證明並不代表付款已獲確認；我們會人手核實。</p>
+      <h4>Changes &amp; cancellation / 更改及取消</h4>
+      <p>Contact us on Instagram with your booking reference as soon as possible if you need to change or cancel a session. Changes depend on availability. Any cancellation or refund conditions will be provided with the booking details before payment; submitting this request does not impose a cancellation fee.</p>
+      <p>如需更改或取消，請盡早透過 Instagram 提供預約編號聯絡我們。更改須視乎可用時段。任何取消或退款條件會在付款前隨預約資料提供；提交此申請不會產生取消費用。</p>
+      <h4>Photographs / 相片</h4>
+      <p>The number, format and delivery arrangements of photographs will be confirmed before payment. Permission to use your photographs for promotion is separate from this booking agreement and will be requested separately.</p>
+      <p>相片數量、格式及交付安排會在付款前確認。如希望使用你的相片作宣傳，我們會另外徵求同意；同意本預約條款不等於同意宣傳用途。</p>
+    </section>
+    <section class="ms-legal-section" id="ms-privacy-content" tabindex="-1">
+      <h3>Privacy Notice / 私隱聲明</h3>
+      <h4>Information &amp; purpose / 資料及用途</h4>
+      <p>just for you and meow collects your name, email address, phone number, Instagram account, session date and time, numbers of people and pets, and your agreement to these terms. Contact details and session information are required to process and contact you about your booking. If you do not provide the required information, we cannot process the request.</p>
+      <p>just for you and meow 會收集你的姓名、電郵、電話、Instagram 帳戶、預約日期及時間、人數及寵物數量，以及你對本條款的同意。聯絡及預約資料為處理申請和聯絡你所必需；如未提供必填資料，我們將無法處理申請。</p>
+      <h4>Use &amp; service providers / 使用及服務供應商</h4>
+      <p>We use these details to manage availability, communicate about your session, confirm arrangements and handle payment queries. Booking records are managed using Google Sheets and Apps Script; Vercel hosts this website and Cloudflare Turnstile provides security verification. These providers may process relevant information, including technical connection and security data, outside Hong Kong. Booking consent does not include consent to direct marketing.</p>
+      <p>資料用於管理時段、聯絡拍攝事宜、確認安排及處理付款查詢。預約記錄以 Google Sheets 及 Apps Script 管理；網站由 Vercel 提供寄存，Cloudflare Turnstile 提供安全驗證。上述供應商可能在香港以外處理相關資料，包括連線及安全技術資料。同意預約並不包括同意直接促銷。</p>
+      <h4>Retention &amp; access / 保存及查閱</h4>
+      <p>Booking records should be retained only as long as necessary for the booking, payment records, follow-up enquiries and applicable record-keeping obligations. You may request access to or correction of your personal data, or enquire about retention, by contacting just for you and meow on Instagram at @justforyouandmeow with your booking reference. We may need to verify your identity before responding.</p>
+      <p>預約資料應只在處理預約、付款記錄、後續查詢及適用記錄保存要求所需期間內保存。如需查閱、更正個人資料或查詢保存安排，請透過 Instagram @justforyouandmeow 提供預約編號聯絡 just for you and meow。我們可能需要核實你的身份才可處理要求。</p>
+    </section>
+  </div>
+</dialog>
 </div>
 
 <noscript>Please enable JavaScript to see availability and book a session.</noscript></body></html>
-
 
 

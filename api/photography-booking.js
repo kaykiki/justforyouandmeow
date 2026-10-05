@@ -2,7 +2,7 @@
 const HOSTS = new Set(['justforyouandmeow.com', 'www.justforyouandmeow.com', 'justforyouandmeow.vercel.app']);
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('X-Photography-API-Version', '2026-10-05.3');
+  res.setHeader('X-Photography-API-Version', '2026-10-05.4');
   if (!['GET', 'POST'].includes(req.method)) { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({success:false,error:'METHOD_NOT_ALLOWED'}); }
   try {
     const endpoint = (process.env.PHOTOGRAPHY_APPS_SCRIPT_URL || '').trim();
@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
       if (Number(req.headers['content-length'] || 0) > 12000) return res.status(413).json({success:false,error:'INVALID_REQUEST'});
       const b = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       if (!b || Buffer.byteLength(JSON.stringify(b),'utf8') > 12000 || typeof b.turnstileToken !== 'string' || !b.turnstileToken || b.turnstileToken.length > 2048) return res.status(400).json({success:false,error:'INVALID_REQUEST'});
-      if (!Number.isInteger(b.people) || b.people < 0 || b.people > 2 || !Number.isInteger(b.pets) || b.pets < 0 || b.pets > 2 || b.people + b.pets < 1 || typeof b.instagram !== 'string' || !/^@?[A-Za-z0-9._]{1,30}$/.test(b.instagram.trim()) || typeof b.phone !== 'string' || !b.phone.trim() || b.phone.trim().length > 40) return res.status(400).json({success:false,error:'INVALID_DETAILS'});
+      if (b.consent !== true || !Number.isInteger(b.people) || b.people < 0 || b.people > 2 || !Number.isInteger(b.pets) || b.pets < 0 || b.pets > 2 || b.people + b.pets < 1 || typeof b.instagram !== 'string' || !/^@?[A-Za-z0-9._]{1,30}$/.test(b.instagram.trim()) || typeof b.phone !== 'string' || !b.phone.trim() || b.phone.trim().length > 40) return res.status(400).json({success:false,error:'INVALID_DETAILS'});
       const check = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method:'POST', body:new URLSearchParams({secret:turnstileSecret,response:b.turnstileToken}), signal:AbortSignal.timeout(10000)
       });
@@ -54,4 +54,3 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({success:true,bookingId:result.bookingId,status:result.status,date:result.date,start:result.start,end:result.end});
   } catch (error) { return res.status(503).json({success:false,error:error && ['TimeoutError','AbortError'].includes(error.name) ? 'SERVICE_TIMEOUT' : 'SERVICE_UNAVAILABLE'}); }
 };
-

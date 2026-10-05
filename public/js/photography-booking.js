@@ -98,20 +98,35 @@
   function resetSecurity(){token='';if(window.turnstile && widgetId!==null)window.turnstile.reset(widgetId);controls();}
   function renderSecurity(){
     if(!window.turnstile || widgetId!==null || form.hidden)return;
-    widgetId=window.turnstile.render($('ms-security'),{sitekey:'0x4AAAAAADvn28RYsBENDB8b',action:'photography_booking',theme:'light',size:'compact',
+    widgetId=window.turnstile.render($('ms-security'),{sitekey:'0x4AAAAAADvn28RYsBENDB8b',action:'photography_booking',theme:'light',size:'normal',
       callback:value=>{token=value;controls();},'expired-callback':()=>{token='';controls();},'error-callback':()=>{token='';message('Security check could not load. Please refresh this page.');controls();}});
   }
   const securityScript=document.createElement('script');securityScript.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';securityScript.async=true;securityScript.defer=true;securityScript.onload=renderSecurity;securityScript.onerror=()=>message('Security check could not load. Please refresh this page.');document.head.append(securityScript);
+  function showStep(step){
+    $('ms-layout').classList.toggle('ms-selection-only',step===1);
+    $('ms-layout').classList.toggle('ms-pay-only',step===3);
+    $('ms-policies').hidden=step!==2;
+    ['ms-step-one','ms-step-two','ms-step-three'].forEach((id,index)=>{
+      if(index+1===step)$(id).setAttribute('aria-current','step');else $(id).removeAttribute('aria-current');
+    });
+  }
+  const legalDialog=$('ms-legal-dialog');
+  root.querySelectorAll('[data-ms-legal]').forEach(link=>link.addEventListener('click',event=>{
+    event.preventDefault();legalDialog.showModal();
+    const section=$(link.dataset.msLegal);section.scrollIntoView({block:'start'});section.focus({preventScroll:true});
+  }));
+  $('ms-legal-close').addEventListener('click',()=>legalDialog.close());
+  legalDialog.addEventListener('click',event=>{if(event.target===legalDialog){const r=legalDialog.getBoundingClientRect();if(event.clientX<r.left || event.clientX>r.right || event.clientY<r.top || event.clientY>r.bottom)legalDialog.close();}});
   $('ms-continue').addEventListener('click',()=>{
     if(!loaded || !selected || !selected.available)return;
     $('ms-selection').hidden=true;form.hidden=false;
     $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end}`;
-    $('ms-step-one').removeAttribute('aria-current');$('ms-step-two').setAttribute('aria-current','step');
+    showStep(2);
     renderSecurity();controls();form.elements.guestName.focus({preventScroll:true});
   });
   function changeTime(){
     if(attempt || submitting)return;
-    form.hidden=true;$('ms-selection').hidden=false;$('ms-step-two').removeAttribute('aria-current');$('ms-step-one').setAttribute('aria-current','step');
+    form.hidden=true;$('ms-selection').hidden=false;showStep(1);
     availability();$('ms-continue').focus({preventScroll:true});
   }
   $('ms-back').addEventListener('click',changeTime);
@@ -125,6 +140,7 @@
       form.elements.guestName.setCustomValidity(form.elements.guestName.value.trim()?'':'Please enter your name.');
       const people=Number(form.elements.people.value),pets=Number(form.elements.pets.value);
       if(!form.reportValidity())return;
+      if(!form.elements.consent.checked){message('Please read and agree to the Terms & Conditions and Privacy Notice.');return;}
       if(!Number.isInteger(people) || people<0 || people>2 || !Number.isInteger(pets) || pets<0 || pets>2){message('Each session allows a maximum of 2 people and 2 pets.');return;}
       if(people+pets<1){message('Please include at least one person or pet.');return;}
       if(!form.elements.instagram.value.trim() || !form.elements.phone.value.trim()){message('Please enter your Instagram and phone number.');return;}
@@ -137,10 +153,14 @@
       const data=await response.json();
       if(response.ok && data.success===true){
         done=true;form.hidden=true;$('ms-live-status').hidden=true;$('ms-receipt').hidden=false;
-        $('ms-receipt-id').textContent=`Reference: ${data.bookingId}`;
+        showStep(3);
+        $('ms-receipt-id').textContent=data.bookingId;
+        $('ms-receipt-guests').textContent=`${attempt.people} people / ${attempt.pets} pets`;
         $('ms-receipt-time').textContent=`${dateLabel(data.date)} · ${data.start}–${data.end}`;
         $('ms-receipt-status').textContent=data.status==='Confirmed'?'Status: Confirmed':data.status==='Cancelled'?'Status: Cancelled. This reference has been cancelled.':'Status: Pending — your time is held while we confirm the details. Payment has not been collected.';
-        $('ms-receipt-title').textContent=data.status==='Cancelled'?'Booking cancelled':'Booking request received';
+        $('ms-fps-section').hidden=data.status==='Cancelled';
+        $('ms-pay-intro').textContent=data.status==='Cancelled'?'This booking has been cancelled. Please contact us if you need help.':data.status==='Confirmed'?'Your booking is confirmed. Pay only the amount we have confirmed with you.':'Your booking request has been received. Please wait for us to confirm the price and photo inclusions before paying.';
+        $('ms-receipt-title').textContent=data.status==='Cancelled'?'Booking cancelled':'Pay';
         $('ms-receipt-title').focus();
         return;
       }
@@ -155,6 +175,5 @@
   setInterval(()=>{if(!document.hidden && !attempt)availability();},30000);
   availability();
 })();
-
 
 

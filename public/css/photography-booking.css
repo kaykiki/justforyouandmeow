@@ -10,6 +10,7 @@ body{margin:0;background:#fafaf8;font-family:Inter,Arial,sans-serif;font-weight:
 #meow-studio-preview h1{font-size:var(--label-size);font-weight:300;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-ink)}
 #meow-studio-preview .ms-booking{margin:0 clamp(21px,5vw,49px);padding:0 0 50px}
 #meow-studio-preview .ms-policy-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(42px,6vw,84px);align-items:start}
+#meow-studio-preview .ms-policy-layout.ms-selection-only,#meow-studio-preview .ms-policy-layout.ms-pay-only{grid-template-columns:minmax(0,1fr);max-width:1000px}
 #meow-studio-preview .ms-booking-main{min-width:0}
 #meow-studio-preview .ms-steps{display:flex;gap:21px;font-size:var(--label-size);letter-spacing:.08em;text-transform:uppercase;margin-bottom:42px;color:var(--muted-ink)}
 #meow-studio-preview .ms-steps span{padding-bottom:7px;border-bottom:1.5px solid transparent}
@@ -61,22 +62,48 @@ body{margin:0;background:#fafaf8;font-family:Inter,Arial,sans-serif;font-weight:
 #meow-studio-preview .ms-payment-option{border:1px solid var(--ink);background:transparent;padding:12.6px 14px;max-width:425px}
 #meow-studio-preview .ms-payment-title{display:block;font-size:var(--small-size);color:var(--ink);letter-spacing:.02em}
 #meow-studio-preview .ms-payment-desc{display:block;font-size:10.08px;color:var(--muted-ink);line-height:1.55;margin-top:3.5px}
-#meow-studio-preview .ms-consent{display:flex;align-items:flex-start;gap:9px;margin-top:24px;font-size:10.64px;color:var(--muted-ink);line-height:1.85}
-#meow-studio-preview .ms-consent input{margin-top:4px;accent-color:#111;flex-shrink:0}
-#meow-studio-preview #ms-security{margin-top:20px;overflow:hidden}
+#meow-studio-preview .ms-consent{display:flex;align-items:flex-start;gap:9px;margin:22.4px 0;font-size:10.64px;color:var(--muted-ink);line-height:1.55}
+#meow-studio-preview .ms-consent input{width:15px;height:15px;margin:2px 0 0;accent-color:#111;flex:0 0 auto}
+#meow-studio-preview .ms-consent a,#meow-studio-preview .ms-fps-instructions a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+#meow-studio-preview #ms-security{margin-top:22.4px;min-height:65px;max-width:100%;overflow-x:auto}
 #meow-studio-preview .ms-detail-actions{display:flex;align-items:center;gap:21px;margin-top:28px}
 #meow-studio-preview .ms-back{font-size:10.5px;color:var(--muted-ink);background:none;border:none;padding:0;text-decoration:underline}
 #meow-studio-preview .ms-demo-result{margin-top:18px;padding:14px 0;border-top:1px solid var(--line);font-size:var(--sub-size)}
 #meow-studio-preview .ms-live-status{font-size:var(--sub-size);color:var(--muted-ink);margin-top:14px}
-#meow-studio-preview #ms-receipt{padding:18px 0 28px}
+#meow-studio-preview #ms-receipt{padding:0 0 28px;max-width:620px}
 #meow-studio-preview #ms-receipt h2{margin-bottom:12px}
 #meow-studio-preview #ms-receipt p{margin-bottom:9px;font-size:var(--small-size)}
+#meow-studio-preview .ms-reference-box{background:var(--ink);color:#fff;padding:16.8px 21px;margin:28px 0}
+#meow-studio-preview .ms-reference-box .ms-payment-label{color:#fff;opacity:.6;font-size:9.1px;margin-bottom:4.2px}
+#meow-studio-preview #ms-receipt-id{font-size:15.4px!important;font-weight:500;letter-spacing:.04em;overflow-wrap:anywhere}
+#meow-studio-preview .ms-pay-receipt{border-top:1px solid var(--line);margin-bottom:25px}
+#meow-studio-preview .ms-pay-row{display:flex;justify-content:space-between;gap:18px;font-size:11.2px;padding:9.1px 0;border-bottom:1px solid var(--line)}
+#meow-studio-preview .ms-pay-row span:first-child{color:var(--muted-ink)}
+#meow-studio-preview .ms-pay-row span:last-child{text-align:right}
+#meow-studio-preview .ms-fps-block{border:1px solid var(--line);padding:28px;text-align:center;margin:28px 0}
+#meow-studio-preview #ms-receipt .ms-fps-eyebrow{font-size:9.1px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-ink);margin-bottom:21px}
+#meow-studio-preview .ms-fps-qr{display:block;width:130px;height:130px;object-fit:contain;margin:0 auto 16.8px}
+#meow-studio-preview .ms-fps-block strong{font-weight:500}
+#meow-studio-preview #ms-receipt .ms-fps-amount{display:inline-block;background:var(--ink);color:#fff;padding:7.7px 28px;font-size:12.32px;font-weight:500;margin:11.2px 0 0}
+#meow-studio-preview .ms-fps-instructions{text-align:left;font-size:10.5px;color:var(--muted-ink);line-height:1.85;border-top:1px solid var(--line);margin-top:21px;padding-top:16.8px}
+#meow-studio-preview .ms-fps-instructions ol{padding-left:1.1em;margin:0 0 12px}
+#meow-studio-preview .ms-fps-instructions li{margin-bottom:5.6px}
+#meow-studio-preview .ms-legal-dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(620px,calc(100% - 28px));max-height:82vh;border:0;padding:0;background:#fff;color:var(--ink);box-shadow:0 18px 60px rgba(0,0,0,.18)}
+#meow-studio-preview .ms-legal-dialog::backdrop{background:rgba(0,0,0,.42)}
+#meow-studio-preview .ms-legal-inner{padding:clamp(21px,4vw,35px);overflow:auto;max-height:82vh}
+#meow-studio-preview .ms-legal-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+#meow-studio-preview #ms-legal-close{border:0;background:none;font-size:18.2px;line-height:1;color:var(--muted-ink)}
+#meow-studio-preview .ms-legal-section{padding-top:21px;outline:none}
+#meow-studio-preview .ms-legal-section h3{font-size:14px;font-weight:500;margin-bottom:16px}
+#meow-studio-preview .ms-legal-section h4{font-size:10.92px;font-weight:500;margin:16px 0 9px}
+#meow-studio-preview .ms-legal-section p{font-size:10.64px;color:var(--muted-ink);line-height:1.8;margin-bottom:11.2px}
 #meow-studio-preview .ms-policy-block{border-top:1px solid var(--line);padding-top:19.6px;margin-bottom:28px}
 #meow-studio-preview .ms-policy-block h3{font-size:var(--label-size);font-weight:300;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-ink);margin-bottom:11.2px}
 #meow-studio-preview .ms-policy-block p{font-size:var(--small-size);color:var(--muted-ink);line-height:1.85}
 @media(max-width:1100px){#meow-studio-preview .ms-grid{grid-template-columns:1fr;gap:28px}}
+#meow-studio-preview .ms-selection-only .ms-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 @media(max-width:760px){#meow-studio-preview .ms-policy-layout{grid-template-columns:1fr;gap:42px}#meow-studio-preview .ms-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:680px){#meow-studio-preview .ms-grid{grid-template-columns:1fr}#meow-studio-preview .ms-hero{padding-top:28px;padding-bottom:28px}#meow-studio-preview .ms-day{min-height:44px}#meow-studio-preview .ms-summary{align-items:flex-start;flex-direction:column;gap:16px}#meow-studio-preview .ms-payment-option{max-width:none}#meow-studio-preview .ms-detail-recap{align-items:flex-start}}
+@media(max-width:680px){#meow-studio-preview .ms-grid,#meow-studio-preview .ms-selection-only .ms-grid{grid-template-columns:1fr}#meow-studio-preview .ms-hero{padding-top:28px;padding-bottom:28px}#meow-studio-preview .ms-day{min-height:44px}#meow-studio-preview .ms-summary{align-items:flex-start;flex-direction:column;gap:16px}#meow-studio-preview .ms-payment-option{max-width:none}#meow-studio-preview .ms-detail-recap{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){#meow-studio-preview *{transition:none}}
 
 #meow-studio-preview .original-nav{background:#fafaf8;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(21px,5vw,49px);height:50px;border-bottom:1px solid #ebebeb}
