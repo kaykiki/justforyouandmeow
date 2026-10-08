@@ -155,8 +155,9 @@ footer{border-top:1px solid var(--light);padding:2rem clamp(1.5rem,5vw,3.5rem);d
   .mobile-order-info .aside-block:last-child{border-bottom:1px solid var(--light)}
   .mobile-order-info .aside-label{margin-bottom:.45rem;font-size:.66rem;line-height:1.4}
   .mobile-order-info .aside-body{font-size:.78rem;line-height:1.65}
-  .size-row{grid-template-columns:4rem minmax(0,1fr) auto 1rem auto;grid-template-areas:"letter details price radio qty" "letter capacity price radio qty";column-gap:.8rem;row-gap:.15rem}
-  .size-letter{grid-area:letter}
+  .size-row{grid-template-columns:minmax(0,1fr) auto 1rem auto;grid-template-areas:"letter price radio qty" "details price radio qty" "capacity price radio qty";column-gap:.8rem;row-gap:.15rem}
+  .size-letter{grid-area:letter;min-width:0;overflow-wrap:anywhere;line-height:1.4}
+  .size-dims{overflow-wrap:anywhere}
   .size-row>div:not(.size-cap):not(.size-price):not(.qty-control){grid-area:details}
   .size-cap{grid-area:capacity;display:block;font-size:.7rem;line-height:1.4}
   .size-price{grid-area:price}
