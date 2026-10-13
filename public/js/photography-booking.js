@@ -11,6 +11,7 @@
   function dateLabel(date, weekday=false) {
     return new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',...(weekday?{weekday:'long'}:{}),timeZone:'Asia/Hong_Kong'}).format(new Date(date+'T12:00:00+08:00'));
   }
+  function sessionMinutes(slot) { return Number(slot.end.slice(0,2))*60 + Number(slot.end.slice(3)) - Number(slot.start.slice(0,2))*60 - Number(slot.start.slice(3)); }
   function bookingDates() { return [...new Set(slots.map(s=>s.date))].sort(); }
   function renderCalendar() {
     const dates=bookingDates(), months=[...new Set(dates.map(d=>d.slice(0,7)))];
@@ -56,15 +57,18 @@
   function renderSlots() {
     times.replaceChildren();
     const daily=slots.filter(s=>s.date===selectedDate);
+    const lengths=[...new Set(daily.map(sessionMinutes))].sort((a,b)=>a-b);
+    $('ms-session-length').textContent=lengths.length===1?`${lengths[0]}-minute sessions`:lengths.length?`Session lengths: ${lengths.join(' / ')} minutes`:'Select a date to see session lengths.';
     $('ms-time-date').textContent=selectedDate?dateLabel(selectedDate,true):'Select a date';
     $('ms-time-range').textContent=daily.length?daily[0].start+'–'+daily[daily.length-1].end:'';
     daily.forEach(slot=>{
       const button=document.createElement('button');button.type='button';button.className='ms-time';button.textContent=slot.start;
       button.disabled=!loaded || !slot.available || submitting;
       button.setAttribute('aria-pressed',String(selected && selected.id===slot.id || false));
-      button.setAttribute('aria-label',`${slot.start} to ${slot.end}, ${slot.available?'available':'unavailable'}`);
+      button.title=`${slot.start}–${slot.end} · ${sessionMinutes(slot)} minutes`;
+      button.setAttribute('aria-label',`${slot.start} to ${slot.end}, ${sessionMinutes(slot)} minutes, ${slot.available?'available':'unavailable'}`);
       button.addEventListener('click',()=>{
-        selected=slot;$('ms-summary-value').textContent=`${dateLabel(slot.date)} · ${slot.start}–${slot.end}`;
+        selected=slot;$('ms-summary-value').textContent=`${dateLabel(slot.date)} · ${slot.start}–${slot.end} · ${sessionMinutes(slot)} minutes`;
         renderSlots();controls();
       });
       times.append(button);
@@ -120,7 +124,7 @@
   $('ms-continue').addEventListener('click',()=>{
     if(!loaded || !selected || !selected.available)return;
     $('ms-selection').hidden=true;form.hidden=false;
-    $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end}`;
+    $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end} · ${sessionMinutes(selected)} minutes`;
     showStep(2);
     renderSecurity();controls();form.elements.guestName.focus({preventScroll:true});
   });
