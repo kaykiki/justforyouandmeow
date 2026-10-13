@@ -16,7 +16,7 @@
     <div id="ms-selection">
       <div class="ms-grid">
         <section aria-labelledby="ms-date-title"><h2 id="ms-date-title">Choose your date</h2><div class="ms-calendar-head"><button type="button" class="ms-month-button" id="ms-prev-month" aria-label="Previous booking month" disabled>←</button><span id="ms-month-title">Choose a date</span><button type="button" class="ms-month-button" id="ms-next-month" aria-label="Next booking month" disabled>→</button></div><div class="ms-calendar" id="ms-calendar" aria-label="Booking calendar"><span class="ms-weekday">M</span><span class="ms-weekday">T</span><span class="ms-weekday">W</span><span class="ms-weekday">T</span><span class="ms-weekday">F</span><span class="ms-weekday">S</span><span class="ms-weekday">S</span></div><p class="ms-calendar-note">Select an available date.</p></section>
-        <section aria-labelledby="ms-time-title"><h2 id="ms-time-title">Choose your time</h2><p class="ms-caption">30-minute sessions</p><div class="ms-times-head"><span id="ms-time-date">Select a date</span><span id="ms-time-range"></span></div><div class="ms-time-grid" id="ms-times" role="group" aria-label="30-minute booking slots"></div><div class="ms-key"><span><i aria-hidden="true"></i>Available</span><span>× Unavailable</span><span><i class="ms-filled" aria-hidden="true"></i>Selected</span></div></section>
+        <section aria-labelledby="ms-time-title"><h2 id="ms-time-title">Choose your time</h2><p class="ms-caption" id="ms-session-length">Session length is shown with your selected time.</p><div class="ms-times-head"><span id="ms-time-date">Select a date</span><span id="ms-time-range"></span></div><div class="ms-time-grid" id="ms-times" role="group" aria-label="Photography booking slots"></div><div class="ms-key"><span><i aria-hidden="true"></i>Available</span><span>× Unavailable</span><span><i class="ms-filled" aria-hidden="true"></i>Selected</span></div></section>
       </div>
       <div class="ms-summary"><div aria-live="polite"><p class="ms-summary-label">Your session</p><p class="ms-summary-value" id="ms-summary-value">Select a date and time</p></div><button class="ms-button cursor-interaction" id="ms-continue" type="button" disabled>Continue <span aria-hidden="true">→</span></button></div>
     </div>
@@ -57,7 +57,7 @@
       <p>We’ll contact you using the details you provided. Please keep your booking reference.</p>
     </section>
     </div><aside class="ms-policies" id="ms-policies" hidden aria-label="Photography booking policies">
-      <div class="ms-policy-block"><h3>Session</h3><p>Each photography session is 30 minutes. Choose your date and time from the calendar.</p></div>
+      <div class="ms-policy-block"><h3>Session</h3><p>Session length is shown with your selected date and time. Choose an available session from the calendar.</p></div>
       <div class="ms-policy-block"><h3>People &amp; pets</h3><p>A maximum of 2 people and 2 pets per session.</p></div>
       <div class="ms-policy-block"><h3>Confirmation</h3><p>Your selected time is held when your booking request is received. The booking remains pending until we confirm the details.</p></div>
       <div class="ms-policy-block"><h3>Payment</h3><p>FPS (Hong Kong). Price, photo inclusions and payment details will be confirmed separately.</p></div>
@@ -75,8 +75,8 @@
     <section class="ms-legal-section" id="ms-terms-content" tabindex="-1">
       <h3>Terms &amp; Conditions / 預約條款</h3>
       <h4>Booking &amp; session / 預約及拍攝</h4>
-      <p>Each session is 30 minutes, with a maximum of 2 people and 2 pets. Please provide accurate contact information and arrive at your confirmed time. Contact us in advance about any access or pet-handling needs.</p>
-      <p>每節拍攝為 30 分鐘，最多 2 人及 2 隻寵物。請提供正確聯絡資料，並於已確認的時間到達。如有出入場地或寵物照顧方面的需要，請預先聯絡我們。</p>
+      <p>Sessions may be 30, 45 or 60 minutes, as shown with your selected date and time, with a maximum of 2 people and 2 pets. Please provide accurate contact information and arrive at your confirmed time. Contact us in advance about any access or pet-handling needs.</p>
+      <p>每節拍攝可為 30、45 或 60 分鐘，以你所選日期及時段顯示的時長為準，最多 2 人及 2 隻寵物。請提供正確聯絡資料，並於已確認的時間到達。如有出入場地或寵物照顧方面的需要，請預先聯絡我們。</p>
       <h4>Confirmation &amp; payment / 確認及付款</h4>
       <p>Submitting a request holds the selected time but does not confirm the booking. We will contact you to confirm the price, photo inclusions and FPS payment arrangements. Pay only after receiving those details. Sending payment proof does not automatically confirm payment; we verify it manually.</p>
       <p>提交申請後會保留所選時段，但預約尚未確認。我們會聯絡你確認價錢、相片內容及 FPS 付款安排，請收到上述資料後才付款。傳送付款證明並不代表付款已獲確認；我們會人手核實。</p>
