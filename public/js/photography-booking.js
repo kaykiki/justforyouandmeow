@@ -6,6 +6,9 @@
   const times = $('ms-times');
   let slots = [], selected = null, loaded = false, loading = false, submitting = false, done = false;
   let attempt = null, token = '', widgetId = null;
+  let termsVersion, termsReady=true;
+  const termSection=$('ms-terms-content');
+  const originalTerms=Array.from(termSection.children,node=>node.cloneNode(true));
   const calendar = $('ms-calendar');
   let selectedDate = null, visibleMonth = null;
   function dateLabel(date, weekday=false) {
@@ -47,9 +50,42 @@
   $('ms-prev-month').addEventListener('click',()=>moveMonth(-1));
   $('ms-next-month').addEventListener('click',()=>moveMonth(1));
   function message(text) { $('ms-form-message').hidden=false; $('ms-form-message').textContent=text; }
+  function updateTerms(terms) {
+    const version=terms == null ? terms : terms.version;
+    if (termsVersion===version) return;
+    termsVersion=version;
+    termsReady=terms!==null;
+    form.elements.consent.checked=false;
+    if (terms===undefined) {
+      termSection.replaceChildren(...originalTerms.map(node=>node.cloneNode(true)));
+      return;
+    }
+    const fragment=document.createDocumentFragment();
+    fragment.append(originalTerms[0].cloneNode(true));
+    if (terms===null) {
+      const note=document.createElement('p');
+      note.textContent='Booking terms are temporarily unavailable. Please try again shortly. / 暫時無法載入預約條款，請稍後再試。';
+      fragment.append(note);
+    } else {
+      for (const section of terms.sections) {
+        const title=document.createElement('h4');
+        title.textContent=section.topicEn+' / '+section.topicZh;
+        fragment.append(title);
+        for (const text of [section.textEn,section.textZh]) {
+          for (const paragraph of text.split(/\n\s*\n/)) {
+            const p=document.createElement('p');
+            p.textContent=paragraph.trim();
+            p.style.whiteSpace='pre-line';
+            fragment.append(p);
+          }
+        }
+      }
+    }
+    termSection.replaceChildren(fragment);
+  }
   function controls() {
     $('ms-continue').disabled=!loaded || !selected || !selected.available || submitting;
-    $('ms-submit-booking').disabled=submitting || !token || (!attempt && (!selected || !loaded || !selected.available));
+    $('ms-submit-booking').disabled=submitting || !token || (!attempt && (!termsReady || !selected || !loaded || !selected.available));
     $('ms-back').disabled=submitting || !!attempt;
     $('ms-change-time').disabled=submitting || !!attempt;
     form.querySelectorAll('input,textarea').forEach(el=>el.disabled=submitting || !!attempt);
@@ -81,6 +117,7 @@
       const response=await fetch('/api/photography-booking',{cache:'no-store',signal:AbortSignal.timeout(50000)});
       const data=await response.json();
       if(!response.ok || data.success!==true || !Array.isArray(data.slots)) throw new Error('UNAVAILABLE');
+      updateTerms(data.terms);
       const valid=data.slots.filter(s=>typeof s.id==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.start) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.end) && s.end>s.start && new Date(`${s.date}T${s.end}:00+08:00`).getTime()>Date.now()).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
       slots=valid.map(s=>({...s,available:s.available && new Date(`${s.date}T${s.start}:00+08:00`).getTime()>Date.now()}));
       loaded=true;
@@ -139,7 +176,7 @@
   $('ms-submit-booking').addEventListener('click',submit);
   form.elements.guestName.addEventListener('input',()=>form.elements.guestName.setCustomValidity(''));
   async function submit() {
-    if(submitting || !token || (!attempt && (!selected || !loaded || !selected.available)))return;
+    if(submitting || !token || (!attempt && (!termsReady || !selected || !loaded || !selected.available)))return;
     if(!attempt){
       form.elements.guestName.setCustomValidity(form.elements.guestName.value.trim()?'':'Please enter your name.');
       const people=Number(form.elements.people.value),pets=Number(form.elements.pets.value);
@@ -148,7 +185,7 @@
       if(!Number.isInteger(people) || people<0 || people>2 || !Number.isInteger(pets) || pets<0 || pets>2){message('Each session allows a maximum of 2 people and 2 pets.');return;}
       if(people+pets<1){message('Please include at least one person or pet.');return;}
       if(!form.elements.instagram.value.trim() || !form.elements.phone.value.trim()){message('Please enter your Instagram and phone number.');return;}
-      attempt={requestId:crypto.randomUUID(),slotId:selected.id,name:form.elements.guestName.value.trim(),email:form.elements.email.value.trim().toLowerCase(),phone:form.elements.phone.value.trim(),instagram:form.elements.instagram.value.trim(),people,pets,consent:form.elements.consent.checked};
+      attempt={requestId:crypto.randomUUID(),slotId:selected.id,name:form.elements.guestName.value.trim(),email:form.elements.email.value.trim().toLowerCase(),phone:form.elements.phone.value.trim(),instagram:form.elements.instagram.value.trim(),people,pets,consent:form.elements.consent.checked,termsVersion:termsVersion || undefined};
     }
     submitting=true;controls();message('Sending your booking request…');
     $('ms-submit-booking').textContent='Sending…';
@@ -168,7 +205,12 @@
         $('ms-receipt-title').focus();
         return;
       }
-      if(['SLOT_UNAVAILABLE','INVALID_DETAILS','BOT_CHECK_FAILED','REQUEST_ID_CONFLICT'].includes(data.error)) {
+      if (['TERMS_CHANGED','TERMS_UNAVAILABLE'].includes(data.error)) {
+        attempt=null;
+        form.elements.consent.checked=false;
+        updateTerms(null);
+        message(data.error==='TERMS_CHANGED'?'The booking terms changed. Please read the updated terms and tick the box again.':'Booking terms are temporarily unavailable. Please try again shortly.');
+      } else if(['SLOT_UNAVAILABLE','INVALID_DETAILS','BOT_CHECK_FAILED','REQUEST_ID_CONFLICT'].includes(data.error)) {
         attempt=null;
         message(data.error==='SLOT_UNAVAILABLE'?'This time was just booked or blocked. Change time to choose another slot.':data.error==='BOT_CHECK_FAILED'?'Please complete the security check again.':'Please check your booking details and try again.');
       } else {message('The result could not be confirmed. Please retry below with the same details; a retry will not create a duplicate request.');}

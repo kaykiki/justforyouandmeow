@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
       });
       const verified = await check.json();
       if (verified.success !== true || verified.action !== 'photography_booking' || !HOSTS.has(verified.hostname)) return res.status(403).json({success:false,error:'BOT_CHECK_FAILED'});
-      payload = {type:'booking',requestId:b.requestId,slotId:b.slotId,name:b.name,email:b.email,phone:b.phone,instagram:b.instagram.trim(),people:b.people,pets:b.pets,notes:'',consent:b.consent};
+      payload = {type:'booking',requestId:b.requestId,slotId:b.slotId,name:b.name,email:b.email,phone:b.phone,instagram:b.instagram.trim(),people:b.people,pets:b.pets,notes:'',consent:b.consent,termsVersion:b.termsVersion};
     }
     const upstream = await fetch(parsed.href, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,apiSecret:secret}),signal:AbortSignal.timeout(45000)});
     if (!upstream.ok) return res.status(503).json({success:false,error:upstream.status === 401 || upstream.status === 403 ? 'APPS_SCRIPT_ACCESS_DENIED' : 'APPS_SCRIPT_HTTP_ERROR'});
@@ -42,13 +42,23 @@ module.exports = async function handler(req, res) {
     if (result.success !== true) {
       if (result.error === 'UNAUTHORIZED') return res.status(503).json({success:false,error:'BOOKING_SECRET_MISMATCH'});
       if (result.error === 'NOT_CONFIGURED') return res.status(503).json({success:false,error:'BOOKING_SHEET_NOT_CONFIGURED'});
-      const error = ['SLOT_UNAVAILABLE','INVALID_DETAILS','REQUEST_ID_CONFLICT','BUSY'].includes(result.error) ? result.error : 'UPSTREAM_FAILED';
-      return res.status(error === 'SLOT_UNAVAILABLE' ? 409 : error === 'INVALID_DETAILS' || error === 'REQUEST_ID_CONFLICT' ? 400 : 503).json({success:false,error});
+      const error = ['SLOT_UNAVAILABLE','INVALID_DETAILS','REQUEST_ID_CONFLICT','TERMS_CHANGED','TERMS_UNAVAILABLE','BUSY'].includes(result.error) ? result.error : 'UPSTREAM_FAILED';
+      return res.status(['SLOT_UNAVAILABLE','TERMS_CHANGED'].includes(error) ? 409 : error === 'INVALID_DETAILS' || error === 'REQUEST_ID_CONFLICT' ? 400 : 503).json({success:false,error});
     }
     // Only allow public availability or the submitting customer's receipt through.
     if (req.method === 'GET') {
       if (!Array.isArray(result.slots)) throw new Error('UPSTREAM_FAILED');
-      return res.status(200).json({success:true,slots:result.slots.map(s=>({id:s.id,date:s.date,start:s.start,end:s.end,available:s.available===true}))});
+      const response={success:true,slots:result.slots.map(s=>({id:s.id,date:s.date,start:s.start,end:s.end,available:s.available===true}))};
+      if (Object.prototype.hasOwnProperty.call(result,'terms')) {
+        const t=result.terms;
+        const keys=['topicEn','topicZh','textEn','textZh'];
+        response.terms=t && /^[a-f0-9]{64}$/.test(t.version) &&
+          Array.isArray(t.sections) && t.sections.length && t.sections.length<=50 &&
+          t.sections.every(s=>s && keys.every(k=>typeof s[k]==='string' && s[k].trim() && s[k].length<=10000))
+          ? {version:t.version,sections:t.sections.map(s=>({topicEn:s.topicEn,topicZh:s.topicZh,textEn:s.textEn,textZh:s.textZh}))}
+          : null;
+      }
+      return res.status(200).json(response);
     }
     if (typeof result.bookingId !== 'string' || !['Pending','Confirmed','Cancelled'].includes(result.status)) throw new Error('UPSTREAM_FAILED');
     return res.status(200).json({success:true,bookingId:result.bookingId,status:result.status,date:result.date,start:result.start,end:result.end});
