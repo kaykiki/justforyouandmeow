@@ -1,0 +1,20 @@
+#meow-studio-preview .review-heading{display:flex;align-items:baseline;justify-content:space-between;gap:20px}
+.review-refunds{width:100%;border-collapse:collapse;margin:13px 0;font-size:var(--text-size);font-variant-numeric:tabular-nums}
+.review-refunds td{border-bottom:1px solid var(--line);padding:8px 0}
+.review-refunds td:last-child{text-align:right;font-weight:500}
+.review-full{border-block:1px solid var(--line);padding:13px 0}
+.review-full summary{cursor:pointer;font-size:var(--text-size);text-decoration:underline;text-underline-offset:3px}
+.review-full summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+#meow-studio-preview .review-full h2{font-size:var(--text-size);margin:14px 0 6px;font-weight:500}
+.review-full p{white-space:pre-line}
+@media(max-width:420px){#meow-studio-preview .original-nav .nav-right{gap:12px}#meow-studio-preview .ms-steps{gap:12px;flex-wrap:wrap}}
+.signature{border:0;padding:0;margin:24px 0;min-width:0}
+.signature legend{padding:0;margin-bottom:4px;font-size:14px;font-weight:400}
+#signature-pad,#signature-name{display:block;width:100%;margin-top:10px;border:1px solid #bcbcb7;box-sizing:border-box;background:#fff}
+#signature-pad{height:132px;touch-action:none;cursor:crosshair}
+#signature-name{padding:12px;font-size:16px}
+.signature-tools{display:flex;justify-content:space-between;gap:12px}
+#meow-studio-preview .signature-tools button{min-height:40px}
+.signature-tools button:disabled{opacity:.4}
+
+#ms-review-title:focus{outline:none}

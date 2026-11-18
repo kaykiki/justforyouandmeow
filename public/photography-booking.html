@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Photography booking — just for you and meow</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/photography-booking.css"><script src="js/photography-booking.js?v=terms-20261117" defer></script></head><body>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Photography booking — just for you and meow</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/photography-booking.css"><link rel="stylesheet" href="css/photography-review.css?v=20261118-1"><script src="js/photography-review.js?v=20261118-1" defer></script><script src="js/photography-booking.js?v=signed-20261118-1" defer></script></head><body>
 <div id="meow-studio-preview">
   <nav class="original-nav">
   <a href="index.html" class="nav-brand">just for you and meow</a>
@@ -10,9 +10,9 @@
   </div>
 </nav>
   <section class="ms-hero"><div><h1>Photography Booking</h1></div></section>
-  <section class="ms-booking" aria-label="Photography booking preview">
+  <section class="ms-booking" aria-label="Photography booking">
     <div class="ms-policy-layout ms-selection-only" id="ms-layout"><div class="ms-booking-main">
-    <div class="ms-steps" aria-label="Booking progress"><span id="ms-step-one" aria-current="step">Date &amp; time</span><span id="ms-step-two">Your details</span><span id="ms-step-three">Pay</span></div>
+    <div class="ms-steps" aria-label="Booking progress"><span id="ms-step-one" aria-current="step">Date &amp; time</span><span id="ms-step-two">Your details</span><span id="ms-step-review">Booking terms</span><span id="ms-step-three">Pay</span></div>
     <div id="ms-selection">
       <div class="ms-grid">
         <section aria-labelledby="ms-date-title"><h2 id="ms-date-title">Choose your date</h2><div class="ms-calendar-head"><button type="button" class="ms-month-button" id="ms-prev-month" aria-label="Previous booking month" disabled>←</button><span id="ms-month-title">Choose a date</span><button type="button" class="ms-month-button" id="ms-next-month" aria-label="Next booking month" disabled>→</button></div><div class="ms-calendar" id="ms-calendar" aria-label="Booking calendar"><span class="ms-weekday">M</span><span class="ms-weekday">T</span><span class="ms-weekday">W</span><span class="ms-weekday">T</span><span class="ms-weekday">F</span><span class="ms-weekday">S</span><span class="ms-weekday">S</span></div><p class="ms-calendar-note">Select an available date.</p></section>
@@ -22,7 +22,7 @@
     </div>
     <form id="ms-details" hidden>
       <div class="ms-detail-recap"><span id="ms-detail-time"></span><button class="ms-detail-change" type="button" id="ms-change-time">Change</button></div>
-      <h2 class="ms-detail-title">Your details</h2>
+      <div id="ms-contact"><h2 class="ms-detail-title">Your details</h2>
       <p class="ms-detail-sub">Contact information.</p>
       <div class="ms-form-grid">
         <label class="ms-field">Instagram<input name="instagram" required placeholder="@accountname" maxlength="31" pattern="@?[A-Za-z0-9._]{1,30}"></label>
@@ -35,10 +35,23 @@
         <label class="ms-field">Number of pets<input name="pets" type="number" min="0" max="2" value="0" required></label>
       </div>
       <div class="ms-payment-method"><p class="ms-payment-label">Payment method</p><div class="ms-payment-option"><span class="ms-payment-title">FPS (Hong Kong)</span><span class="ms-payment-desc">Pay by FPS after your booking is confirmed.</span></div></div>
-      <div id="ms-security"></div>
-      <label class="ms-consent"><input name="consent" type="checkbox" required><span>I understand this booking is pending confirmation. Price, photo inclusions and FPS payment details will be confirmed separately.<br>I have read and agree to the <a href="#ms-terms-content" data-ms-legal="ms-terms-content">Terms &amp; Conditions</a> and <a href="#ms-privacy-content" data-ms-legal="ms-privacy-content">Privacy Notice</a>.<br>我已閱讀並同意<a href="#ms-terms-content" data-ms-legal="ms-terms-content">條款</a>及<a href="#ms-privacy-content" data-ms-legal="ms-privacy-content">私隱聲明</a>。</span></label>
-      <div class="ms-detail-actions"><button type="button" id="ms-submit-booking" disabled class="ms-button">Submit booking request</button><button class="ms-back" type="button" id="ms-back">Back</button></div>
-      <p class="ms-demo-result" id="ms-form-message" role="status" hidden></p>
+      <div class="ms-detail-actions"><button type="button" class="ms-button" id="ms-to-review">Continue</button><button class="ms-back" type="button" id="ms-back">Back</button></div></div><div id="ms-review" hidden><div class="review-heading"><h2 id="ms-review-title" tabindex="-1"></h2><button type="button" class="ms-detail-change" id="lang"></button></div>
+
+<section class="ms-policy-block"><h3 id="cancel"></h3><p id="reschedule"></p><table class="review-refunds" aria-labelledby="cancel"><tbody id="refunds"></tbody></table><p id="exception"></p></section>
+<div id="other"></div>
+<details class="review-full"><summary id="expand"></summary><div id="sections" class="ms-legal-section"></div></details>
+<label class="ms-consent"><input type="checkbox" required id="agree" name="consent"><span id="consent"></span></label>
+<fieldset class="signature">
+  <legend id="signature-label">Your signature</legend>
+  <p class="ms-caption" id="signature-help"></p>
+  <canvas id="signature-pad" aria-labelledby="signature-label" aria-describedby="signature-help"></canvas>
+  <input type="text" hidden id="signature-name" autocomplete="off" maxlength="120" aria-labelledby="signature-label" aria-describedby="signature-help">
+  <div class="signature-tools">
+    <button type="button" id="signature-mode" class="ms-detail-change"></button>
+    <button type="button" id="signature-clear" class="ms-detail-change" disabled></button>
+  </div>
+</fieldset>
+<a class="ms-back" href="#ms-privacy-content" data-ms-legal="ms-privacy-content">Privacy Notice / 私隱聲明</a><div id="ms-security"></div><div class="ms-detail-actions"><button type="submit" id="ms-submit-booking" disabled class="ms-button">Submit booking request</button><button class="ms-back" type="button" id="ms-review-back">Back</button></div></div><p class="ms-demo-result" id="ms-form-message" role="status" hidden></p>
     </form>
     <p class="ms-live-status" id="ms-live-status" role="status" aria-live="polite" hidden></p>
     <section id="ms-receipt" hidden aria-labelledby="ms-receipt-title">
@@ -61,8 +74,10 @@
       <div class="ms-policy-block"><h3>People &amp; pets</h3><p>A maximum of 2 people and 2 pets per session.</p></div>
       <div class="ms-policy-block"><h3>Confirmation</h3><p>Your selected time is held when your booking request is received. The booking remains pending until we confirm the details.</p></div>
       <div class="ms-policy-block"><h3>Payment</h3><p>FPS (Hong Kong). Price, photo inclusions and payment details will be confirmed separately.</p></div>
-      <div class="ms-policy-block"><h3>Changes</h3><p>Contact us on Instagram with your booking reference to request a change.</p></div>
-    </aside></div>
+
+    </aside><aside id="review-package" hidden><div class="ms-policy-block"><h3 id="package-label"></h3><h2 id="package-title"></h2><p id="package-content"></p></div>
+<div class="ms-policy-block"><h3 id="people-label"></h3><p id="people-content"></p></div>
+<div class="ms-policy-block"><h3 id="confirm-label"></h3><p id="confirm-content"></p></div></aside></div>
   </section>
   <footer class="original-footer">
   <div class="footer-meta">
@@ -90,8 +105,8 @@
     <section class="ms-legal-section" id="ms-privacy-content" tabindex="-1">
       <h3>Privacy Notice / 私隱聲明</h3>
       <h4>Information &amp; purpose / 資料及用途</h4>
-      <p>just for you and meow collects your name, email address, phone number, Instagram account, session date and time, numbers of people and pets, and your agreement to these terms. Contact details and session information are required to process and contact you about your booking. If you do not provide the required information, we cannot process the request.</p>
-      <p>just for you and meow 會收集你的姓名、電郵、電話、Instagram 帳戶、預約日期及時間、人數及寵物數量，以及你對本條款的同意。聯絡及預約資料為處理申請和聯絡你所必需；如未提供必填資料，我們將無法處理申請。</p>
+      <p>just for you and meow collects your name, email address, phone number, Instagram account, session date and time, numbers of people and pets, and your signature (drawn or typed) to record which booking terms you accepted. Contact details and session information are required to process and contact you about your booking. If you do not provide the required information, we cannot process the request.</p>
+      <p>just for you and meow 會收集你的姓名、電郵、電話、Instagram 帳戶、預約日期及時間、人數及寵物數量，以及你的手寫或輸入簽名，用作記錄你同意的預約條款版本。聯絡及預約資料為處理申請和聯絡你所必需；如未提供必填資料，我們將無法處理申請。</p>
       <h4>Use &amp; service providers / 使用及服務供應商</h4>
       <p>We use these details to manage availability, communicate about your session, confirm arrangements and handle payment queries. Booking records are managed using Google Sheets and Apps Script; Vercel hosts this website and Cloudflare Turnstile provides security verification. These providers may process relevant information, including technical connection and security data, outside Hong Kong. Booking consent does not include consent to direct marketing.</p>
       <p>資料用於管理時段、聯絡拍攝事宜、確認安排及處理付款查詢。預約記錄以 Google Sheets 及 Apps Script 管理；網站由 Vercel 提供寄存，Cloudflare Turnstile 提供安全驗證。上述供應商可能在香港以外處理相關資料，包括連線及安全技術資料。同意預約並不包括同意直接促銷。</p>

@@ -6,7 +6,8 @@
   const times = $('ms-times');
   let slots = [], selected = null, loaded = false, loading = false, submitting = false, done = false;
   let attempt = null, token = '', widgetId = null;
-  let termsVersion, termsReady=true;
+  let termsVersion, termsReady=false, reviewing=false;
+  const review = setupPhotographyReview(controls);
   const termSection=$('ms-terms-content');
   const originalTerms=Array.from(termSection.children,node=>node.cloneNode(true));
   const calendar = $('ms-calendar');
@@ -54,7 +55,8 @@
     const version=terms == null ? terms : terms.version;
     if (termsVersion===version) return;
     termsVersion=version;
-    termsReady=terms!==null;
+    termsReady=!!terms;
+    review.setTerms(terms);
     form.elements.consent.checked=false;
     if (terms===undefined) {
       termSection.replaceChildren(...originalTerms.map(node=>node.cloneNode(true)));
@@ -85,7 +87,11 @@
   }
   function controls() {
     $('ms-continue').disabled=!loaded || !selected || !selected.available || submitting;
-    $('ms-submit-booking').disabled=submitting || !token || (!attempt && (!termsReady || !selected || !loaded || !selected.available));
+    $('ms-submit-booking').disabled=!reviewing || submitting || !token || (!attempt && (!termsReady || !selected?.available || !loaded || !form.elements.consent.checked || !review.hasSignature()));
+    review.lock(submitting || !!attempt);
+    $('ms-submit-booking').textContent=review.submitLabel(!!attempt,submitting);
+    $('ms-review-back').disabled=submitting || !!attempt;
+    $('ms-to-review').disabled=!termsReady || !selected?.available || !loaded;
     $('ms-back').disabled=submitting || !!attempt;
     $('ms-change-time').disabled=submitting || !!attempt;
     form.querySelectorAll('input,textarea').forEach(el=>el.disabled=submitting || !!attempt);
@@ -117,7 +123,8 @@
       const response=await fetch('/api/photography-booking',{cache:'no-store',signal:AbortSignal.timeout(50000)});
       const data=await response.json();
       if(!response.ok || data.success!==true || !Array.isArray(data.slots)) throw new Error('UNAVAILABLE');
-      updateTerms(data.terms);
+      if (done || attempt) return;
+      updateTerms(data.terms || null);
       const valid=data.slots.filter(s=>typeof s.id==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.start) && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.end) && s.end>s.start && new Date(`${s.date}T${s.end}:00+08:00`).getTime()>Date.now()).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
       slots=valid.map(s=>({...s,available:s.available && new Date(`${s.date}T${s.start}:00+08:00`).getTime()>Date.now()}));
       loaded=true;
@@ -138,16 +145,20 @@
   }
   function resetSecurity(){token='';if(window.turnstile && widgetId!==null)window.turnstile.reset(widgetId);controls();}
   function renderSecurity(){
-    if(!window.turnstile || widgetId!==null || form.hidden)return;
+    if(!window.turnstile || widgetId!==null || form.hidden || !reviewing)return;
     widgetId=window.turnstile.render($('ms-security'),{sitekey:'0x4AAAAAADvn28RYsBENDB8b',action:'photography_booking',theme:'light',size:'normal',
       callback:value=>{token=value;controls();},'expired-callback':()=>{token='';controls();},'error-callback':()=>{token='';message('Security check could not load. Please refresh this page.');controls();}});
   }
   const securityScript=document.createElement('script');securityScript.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';securityScript.async=true;securityScript.defer=true;securityScript.onload=renderSecurity;securityScript.onerror=()=>message('Security check could not load. Please refresh this page.');document.head.append(securityScript);
   function showStep(step){
     $('ms-layout').classList.toggle('ms-selection-only',step===1);
-    $('ms-layout').classList.toggle('ms-pay-only',step===3);
+    $('ms-layout').classList.toggle('ms-pay-only',step===4);
     $('ms-policies').hidden=step!==2;
-    ['ms-step-one','ms-step-two','ms-step-three'].forEach((id,index)=>{
+    $('review-package').hidden=step!==3;
+    $('ms-contact').hidden=step!==2;
+    $('ms-review').hidden=step!==3;
+    reviewing=step===3;
+    ['ms-step-one','ms-step-two','ms-step-review','ms-step-three'].forEach((id,index)=>{
       if(index+1===step)$(id).setAttribute('aria-current','step');else $(id).removeAttribute('aria-current');
     });
   }
@@ -163,29 +174,43 @@
     $('ms-selection').hidden=true;form.hidden=false;
     $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end} · ${sessionMinutes(selected)} minutes`;
     showStep(2);
-    renderSecurity();controls();form.elements.guestName.focus({preventScroll:true});
+    controls();form.elements.guestName.focus({preventScroll:true});
   });
   function changeTime(){
     if(attempt || submitting)return;
     form.hidden=true;$('ms-selection').hidden=false;showStep(1);
     availability();$('ms-continue').focus({preventScroll:true});
   }
+  function toReview(){
+    form.elements.guestName.setCustomValidity(form.elements.guestName.value.trim()?'':'Please enter your name.');
+    for(const field of $('ms-contact').querySelectorAll('input,textarea')) if(!field.reportValidity()) return;
+    if(Number(form.elements.people.value)+Number(form.elements.pets.value)<1){message('Please include at least one person or pet.');return;}
+    if(!termsReady || !selected?.available || !loaded)return;
+    $('ms-form-message').hidden=true;
+    showStep(3);review.render();renderSecurity();controls();$('ms-review-title').focus();
+  }
+  $('ms-to-review').addEventListener('click',toReview);
+  $('ms-review-back').addEventListener('click',()=>{
+    if(!attempt && !submitting){showStep(2);controls();$('ms-to-review').focus();}
+  });
   $('ms-back').addEventListener('click',changeTime);
   $('ms-change-time').addEventListener('click',changeTime);
   form.addEventListener('submit',e=>{e.preventDefault();submit();});
-  $('ms-submit-booking').addEventListener('click',submit);
+
   form.elements.guestName.addEventListener('input',()=>form.elements.guestName.setCustomValidity(''));
   async function submit() {
+    if(!reviewing){toReview();return;}
     if(submitting || !token || (!attempt && (!termsReady || !selected || !loaded || !selected.available)))return;
     if(!attempt){
       form.elements.guestName.setCustomValidity(form.elements.guestName.value.trim()?'':'Please enter your name.');
       const people=Number(form.elements.people.value),pets=Number(form.elements.pets.value);
       if(!form.reportValidity())return;
+      if(!review.hasSignature()){message('Please sign before submitting. / 請先簽名。');return;}
       if(!form.elements.consent.checked){message('Please read and agree to the Terms & Conditions and Privacy Notice.');return;}
       if(!Number.isInteger(people) || people<0 || people>2 || !Number.isInteger(pets) || pets<0 || pets>2){message('Each session allows a maximum of 2 people and 2 pets.');return;}
       if(people+pets<1){message('Please include at least one person or pet.');return;}
       if(!form.elements.instagram.value.trim() || !form.elements.phone.value.trim()){message('Please enter your Instagram and phone number.');return;}
-      attempt={requestId:crypto.randomUUID(),slotId:selected.id,name:form.elements.guestName.value.trim(),email:form.elements.email.value.trim().toLowerCase(),phone:form.elements.phone.value.trim(),instagram:form.elements.instagram.value.trim(),people,pets,consent:form.elements.consent.checked,termsVersion:termsVersion || undefined};
+      attempt={requestId:crypto.randomUUID(),slotId:selected.id,name:form.elements.guestName.value.trim(),email:form.elements.email.value.trim().toLowerCase(),phone:form.elements.phone.value.trim(),instagram:form.elements.instagram.value.trim(),people,pets,consent:form.elements.consent.checked,termsVersion,signature:review.value()};
     }
     submitting=true;controls();message('Sending your booking request…');
     $('ms-submit-booking').textContent='Sending…';
@@ -194,7 +219,7 @@
       const data=await response.json();
       if(response.ok && data.success===true){
         done=true;form.hidden=true;$('ms-live-status').hidden=true;$('ms-receipt').hidden=false;
-        showStep(3);
+        showStep(4);
         $('ms-receipt-id').textContent=data.bookingId;
         $('ms-receipt-guests').textContent=`${attempt.people} people / ${attempt.pets} pets`;
         $('ms-receipt-time').textContent=`${dateLabel(data.date)} · ${data.start}–${data.end}`;
@@ -202,6 +227,7 @@
         $('ms-fps-section').hidden=data.status==='Cancelled';
         $('ms-pay-intro').textContent=data.status==='Cancelled'?'This booking has been cancelled. Please contact us if you need help.':data.status==='Confirmed'?'Your booking is confirmed. Pay only the amount we have confirmed with you.':'Your booking request has been received. Please wait for us to confirm the price and photo inclusions before paying.';
         $('ms-receipt-title').textContent=data.status==='Cancelled'?'Booking cancelled':'Pay';
+        attempt=null;review.reset();
         $('ms-receipt-title').focus();
         return;
       }
@@ -210,7 +236,7 @@
         form.elements.consent.checked=false;
         updateTerms(null);
         message(data.error==='TERMS_CHANGED'?'The booking terms changed. Please read the updated terms and tick the box again.':'Booking terms are temporarily unavailable. Please try again shortly.');
-      } else if(['SLOT_UNAVAILABLE','INVALID_DETAILS','BOT_CHECK_FAILED','REQUEST_ID_CONFLICT'].includes(data.error)) {
+      } else if(['SLOT_UNAVAILABLE','INVALID_DETAILS','SIGNATURE_REQUIRED','BOT_CHECK_FAILED','REQUEST_ID_CONFLICT'].includes(data.error)) {
         attempt=null;
         message(data.error==='SLOT_UNAVAILABLE'?'This time was just booked or blocked. Change time to choose another slot.':data.error==='BOT_CHECK_FAILED'?'Please complete the security check again.':'Please check your booking details and try again.');
       } else {message('The result could not be confirmed. Please retry below with the same details; a retry will not create a duplicate request.');}
