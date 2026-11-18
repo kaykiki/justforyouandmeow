@@ -18,3 +18,13 @@
 .signature-tools button:disabled{opacity:.4}
 
 #ms-review-title:focus{outline:none}
+
+#meow-studio-preview .ms-steps{align-items:center;gap:clamp(7px,2vw,18px);flex-wrap:wrap}
+#meow-studio-preview .ms-steps button{
+  background:transparent;color:var(--ink);border:1px solid #99968f;
+  padding:7px 10px;letter-spacing:inherit;text-transform:inherit;cursor:pointer;
+}
+#meow-studio-preview .ms-steps button[aria-current="step"],
+#meow-studio-preview .ms-steps button:enabled:hover{color:var(--paper);background:var(--ink);border-color:var(--ink)}
+#meow-studio-preview .ms-steps button:disabled{color:var(--muted-ink);border-color:var(--line);cursor:default}
+#meow-studio-preview .ms-steps button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}

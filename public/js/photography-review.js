@@ -126,7 +126,7 @@ function render() {
   const policies=sections.filter(s=>s!==confirmation);
   el('cancel').closest('section').hidden = !showHighlights;
   el('other').hidden = !showHighlights;
-  el('expand').textContent=zh?'閱讀完整預約條款':'Read full booking terms';
+  el('expand').textContent=zh?'完整預約條款':'Full booking terms';
   el('sections').replaceChildren(...policies.map(s=>{
     const article=document.createElement('article');
     article.append(node('h2',s[topic]),node('p',s[body])); return article;
@@ -174,7 +174,7 @@ return {
   setTerms(data){
     sections=data?.sections || [];
     showHighlights=data?.showHighlights === true;
-    el('expand').closest('details').open = !showHighlights;
+    el('expand').closest('details').open = true;
     reset();render();
   },
   submitLabel(retry,sending) {

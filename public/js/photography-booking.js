@@ -91,6 +91,9 @@
     review.lock(submitting || !!attempt);
     $('ms-submit-booking').textContent=review.submitLabel(!!attempt,submitting);
     $('ms-review-back').disabled=submitting || !!attempt;
+    const navigationLocked = done || submitting || !!attempt;
+    $('ms-step-two').disabled = navigationLocked || (form.hidden && (!loaded || !selected?.available));
+    $('ms-step-review').disabled = navigationLocked || !termsReady || !loaded || !selected?.available;
     $('ms-to-review').disabled=!termsReady || !selected?.available || !loaded;
     $('ms-back').disabled=submitting || !!attempt;
     $('ms-change-time').disabled=submitting || !!attempt;
@@ -169,32 +172,45 @@
   }));
   $('ms-legal-close').addEventListener('click',()=>legalDialog.close());
   legalDialog.addEventListener('click',event=>{if(event.target===legalDialog){const r=legalDialog.getBoundingClientRect();if(event.clientX<r.left || event.clientX>r.right || event.clientY<r.top || event.clientY>r.bottom)legalDialog.close();}});
-  $('ms-continue').addEventListener('click',()=>{
-    if(!loaded || !selected || !selected.available)return;
+  function openForm() {
     $('ms-selection').hidden=true;form.hidden=false;
-    $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end} · ${sessionMinutes(selected)} minutes`;
-    showStep(2);
-    controls();form.elements.guestName.focus({preventScroll:true});
-  });
+    if(selected) $('ms-detail-time').textContent=`${dateLabel(selected.date,true)} · ${selected.start}–${selected.end} · ${sessionMinutes(selected)} minutes`;
+  }
+  function openDetails() {
+    if($('ms-step-two').disabled)return;
+    openForm();showStep(2);controls();form.elements.guestName.focus();
+  }
+  function openTerms() {
+    if($('ms-step-review').disabled)return;
+    openForm();showStep(3);review.render();renderSecurity();controls();$('ms-review-title').focus();
+  }
+  $('ms-continue').addEventListener('click',openDetails);
+  $('ms-step-two').addEventListener('click',openDetails);
+  $('ms-step-review').addEventListener('click',openTerms);
   function changeTime(){
     if(attempt || submitting)return;
     form.hidden=true;$('ms-selection').hidden=false;showStep(1);
     availability();$('ms-continue').focus({preventScroll:true});
   }
-  function toReview(){
+  function validContact() {
     form.elements.guestName.setCustomValidity(form.elements.guestName.value.trim()?'':'Please enter your name.');
-    for(const field of $('ms-contact').querySelectorAll('input,textarea')) if(!field.reportValidity()) return;
-    if(Number(form.elements.people.value)+Number(form.elements.pets.value)<1){message('Please include at least one person or pet.');return;}
-    if(!termsReady || !selected?.available || !loaded)return;
+    const invalid=Array.from($('ms-contact').querySelectorAll('input,textarea')).find(field=>!field.validity.valid);
+    if(invalid){openDetails();invalid.reportValidity();return false;}
+    if(Number(form.elements.people.value)+Number(form.elements.pets.value)<1){
+      openDetails();message('Please include at least one person or pet.');return false;
+    }
+    return true;
+  }
+  function toReview(){
+    if(!validContact())return;
     $('ms-form-message').hidden=true;
-    showStep(3);review.render();renderSecurity();controls();$('ms-review-title').focus();
+    openTerms();
   }
   $('ms-to-review').addEventListener('click',toReview);
-  $('ms-review-back').addEventListener('click',()=>{
-    if(!attempt && !submitting){showStep(2);controls();$('ms-to-review').focus();}
-  });
+  $('ms-review-back').addEventListener('click',openDetails);
   $('ms-back').addEventListener('click',changeTime);
   $('ms-change-time').addEventListener('click',changeTime);
+  form.noValidate=true;
   form.addEventListener('submit',e=>{e.preventDefault();submit();});
 
   form.elements.guestName.addEventListener('input',()=>form.elements.guestName.setCustomValidity(''));
@@ -204,7 +220,7 @@
     if(!attempt){
       form.elements.guestName.setCustomValidity(form.elements.guestName.value.trim()?'':'Please enter your name.');
       const people=Number(form.elements.people.value),pets=Number(form.elements.pets.value);
-      if(!form.reportValidity())return;
+      if(!validContact() || !form.reportValidity())return;
       if(!review.hasSignature()){message('Please sign before submitting. / 請先簽名。');return;}
       if(!form.elements.consent.checked){message('Please read and agree to the Terms & Conditions and Privacy Notice.');return;}
       if(!Number.isInteger(people) || people<0 || people>2 || !Number.isInteger(pets) || pets<0 || pets>2){message('Each session allows a maximum of 2 people and 2 pets.');return;}

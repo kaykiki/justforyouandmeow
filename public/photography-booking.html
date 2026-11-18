@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Photography booking — just for you and meow</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/photography-booking.css"><link rel="stylesheet" href="css/photography-review.css?v=20261118-1"><script src="js/photography-review.js?v=20261118-1" defer></script><script src="js/photography-booking.js?v=signed-20261118-1" defer></script></head><body>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Photography booking — just for you and meow</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/photography-booking.css"><link rel="stylesheet" href="css/photography-review.css?v=20261118-2"><script src="js/photography-review.js?v=20261118-2" defer></script><script src="js/photography-booking.js?v=signed-20261118-2" defer></script></head><body>
 <div id="meow-studio-preview">
   <nav class="original-nav">
   <a href="index.html" class="nav-brand">just for you and meow</a>
@@ -12,7 +12,7 @@
   <section class="ms-hero"><div><h1>Photography Booking</h1></div></section>
   <section class="ms-booking" aria-label="Photography booking">
     <div class="ms-policy-layout ms-selection-only" id="ms-layout"><div class="ms-booking-main">
-    <div class="ms-steps" aria-label="Booking progress"><span id="ms-step-one" aria-current="step">Date &amp; time</span><span id="ms-step-two">Your details</span><span id="ms-step-review">Booking terms</span><span id="ms-step-three">Pay</span></div>
+    <div class="ms-steps" aria-label="Booking progress"><span id="ms-step-one" aria-current="step">Date &amp; time</span><button type="button" id="ms-step-two" aria-controls="ms-contact" disabled>Your details</button><button type="button" id="ms-step-review" aria-controls="ms-review" disabled>Booking terms</button><span id="ms-step-three">Pay</span></div>
     <div id="ms-selection">
       <div class="ms-grid">
         <section aria-labelledby="ms-date-title"><h2 id="ms-date-title">Choose your date</h2><div class="ms-calendar-head"><button type="button" class="ms-month-button" id="ms-prev-month" aria-label="Previous booking month" disabled>←</button><span id="ms-month-title">Choose a date</span><button type="button" class="ms-month-button" id="ms-next-month" aria-label="Next booking month" disabled>→</button></div><div class="ms-calendar" id="ms-calendar" aria-label="Booking calendar"><span class="ms-weekday">M</span><span class="ms-weekday">T</span><span class="ms-weekday">W</span><span class="ms-weekday">T</span><span class="ms-weekday">F</span><span class="ms-weekday">S</span><span class="ms-weekday">S</span></div><p class="ms-calendar-note">Select an available date.</p></section>
@@ -39,7 +39,7 @@
 
 <section class="ms-policy-block"><h3 id="cancel"></h3><p id="reschedule"></p><table class="review-refunds" aria-labelledby="cancel"><tbody id="refunds"></tbody></table><p id="exception"></p></section>
 <div id="other"></div>
-<details class="review-full"><summary id="expand"></summary><div id="sections" class="ms-legal-section"></div></details>
+<details class="review-full" open><summary id="expand"></summary><div id="sections" class="ms-legal-section"></div></details>
 <label class="ms-consent"><input type="checkbox" required id="agree" name="consent"><span id="consent"></span></label>
 <fieldset class="signature">
   <legend id="signature-label">Your signature</legend>
